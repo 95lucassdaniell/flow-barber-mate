@@ -41,7 +41,7 @@ const SchedulePage = () => {
           .select(`
             *,
             clients(name, phone),
-            services(name, price),
+            services(name),
             profiles!appointments_barber_id_fkey(full_name)
           `)
           .eq('barber_id', selectedBarberId)

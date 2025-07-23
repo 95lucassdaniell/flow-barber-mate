@@ -25,7 +25,6 @@ const ServiceModal = ({ isOpen, onClose, service }: ServiceModalProps) => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    price: "",
     duration_minutes: "",
     is_active: true,
   });
@@ -40,7 +39,6 @@ const ServiceModal = ({ isOpen, onClose, service }: ServiceModalProps) => {
       setFormData({
         name: service.name || "",
         description: service.description || "",
-        price: service.price.toString() || "",
         duration_minutes: service.duration_minutes.toString() || "",
         is_active: service.is_active ?? true,
       });
@@ -48,7 +46,6 @@ const ServiceModal = ({ isOpen, onClose, service }: ServiceModalProps) => {
       setFormData({
         name: "",
         description: "",
-        price: "",
         duration_minutes: "",
         is_active: true,
       });
@@ -67,15 +64,6 @@ const ServiceModal = ({ isOpen, onClose, service }: ServiceModalProps) => {
       toast({
         title: "Campo obrigatório",
         description: "O nome do serviço é obrigatório.",
-        variant: "destructive",
-      });
-      return false;
-    }
-
-    if (!formData.price || parseFloat(formData.price) <= 0) {
-      toast({
-        title: "Preço inválido",
-        description: "Digite um preço válido maior que zero.",
         variant: "destructive",
       });
       return false;
@@ -106,7 +94,6 @@ const ServiceModal = ({ isOpen, onClose, service }: ServiceModalProps) => {
       const serviceData = {
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
-        price: parseFloat(formData.price),
         duration_minutes: parseInt(formData.duration_minutes),
         is_active: formData.is_active,
       };
@@ -135,12 +122,6 @@ const ServiceModal = ({ isOpen, onClose, service }: ServiceModalProps) => {
     }
   };
 
-  const formatPrice = (value: string) => {
-    // Remove caracteres não numéricos exceto ponto e vírgula
-    const numericValue = value.replace(/[^\d.,]/g, '');
-    // Substitui vírgula por ponto para parsing
-    return numericValue.replace(',', '.');
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -183,35 +164,18 @@ const ServiceModal = ({ isOpen, onClose, service }: ServiceModalProps) => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="price">Preço (R$) *</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.price}
-                  onChange={(e) => handleInputChange("price", formatPrice(e.target.value))}
-                  placeholder="25.00"
-                  disabled={loading}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="duration_minutes">Duração (minutos) *</Label>
-                <Input
-                  id="duration_minutes"
-                  type="number"
-                  min="1"
-                  value={formData.duration_minutes}
-                  onChange={(e) => handleInputChange("duration_minutes", e.target.value)}
-                  placeholder="30"
-                  disabled={loading}
-                  required
-                />
-              </div>
+            <div>
+              <Label htmlFor="duration_minutes">Duração (minutos) *</Label>
+              <Input
+                id="duration_minutes"
+                type="number"
+                min="1"
+                value={formData.duration_minutes}
+                onChange={(e) => handleInputChange("duration_minutes", e.target.value)}
+                placeholder="30"
+                disabled={loading}
+                required
+              />
             </div>
 
             <div className="flex items-center space-x-2">

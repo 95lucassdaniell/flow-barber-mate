@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Edit, MoreVertical } from "lucide-react";
+import { Plus, Search, Edit, MoreVertical, Settings } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +28,7 @@ import {
 import { useProviders } from "@/hooks/useProviders";
 import { useAuth } from "@/hooks/useAuth";
 import ProviderModal from "./ProviderModal";
+import ProviderServicesModal from "./ProviderServicesModal";
 
 const ProvidersManagement = () => {
   const { providers, loading, toggleProviderStatus } = useProviders();
@@ -37,6 +38,8 @@ const ProvidersManagement = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(null);
+  const [isServicesModalOpen, setIsServicesModalOpen] = useState(false);
+  const [selectedProviderForServices, setSelectedProviderForServices] = useState(null);
 
   const filteredProviders = providers.filter((provider) => {
     const matchesSearch = provider.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -56,6 +59,11 @@ const ProvidersManagement = () => {
   const handleAdd = () => {
     setSelectedProvider(null);
     setIsModalOpen(true);
+  };
+
+  const handleManageServices = (provider: any) => {
+    setSelectedProviderForServices(provider);
+    setIsServicesModalOpen(true);
   };
 
   const getRoleBadgeColor = (role: string) => {
@@ -212,6 +220,10 @@ const ProvidersManagement = () => {
                             <Edit className="mr-2 h-4 w-4" />
                             Editar
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleManageServices(provider)}>
+                            <Settings className="mr-2 h-4 w-4" />
+                            Gerenciar Serviços
+                          </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => toggleProviderStatus(provider.id, !provider.is_active)}
                           >
@@ -239,6 +251,12 @@ const ProvidersManagement = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         provider={selectedProvider}
+      />
+
+      <ProviderServicesModal
+        isOpen={isServicesModalOpen}
+        onClose={() => setIsServicesModalOpen(false)}
+        provider={selectedProviderForServices}
       />
     </div>
   );

@@ -224,6 +224,51 @@ export type Database = {
           },
         ]
       }
+      provider_services: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          price: number
+          provider_id: string
+          service_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          price: number
+          provider_id: string
+          service_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          price?: number
+          provider_id?: string
+          service_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_services_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           barbershop_id: string
@@ -233,7 +278,6 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
-          price: number
           updated_at: string
         }
         Insert: {
@@ -244,7 +288,6 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
-          price: number
           updated_at?: string
         }
         Update: {
@@ -255,7 +298,6 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
-          price?: number
           updated_at?: string
         }
         Relationships: [

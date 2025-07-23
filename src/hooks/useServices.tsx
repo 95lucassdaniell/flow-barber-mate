@@ -7,7 +7,6 @@ export interface Service {
   id: string;
   name: string;
   description?: string;
-  price: number;
   duration_minutes: number;
   is_active: boolean;
   barbershop_id: string;

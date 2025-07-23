@@ -7,7 +7,6 @@ import {
   Edit, 
   Trash2, 
   Clock, 
-  DollarSign,
   MoreVertical,
   Scissors
 } from "lucide-react";
@@ -57,12 +56,6 @@ const ServicesList = ({ services, loading, onEditService }: ServicesListProps) =
     await toggleServiceStatus(service.id, !service.is_active);
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(price);
-  };
 
   const formatDuration = (minutes: number) => {
     if (minutes >= 60) {
@@ -137,10 +130,6 @@ const ServicesList = ({ services, loading, onEditService }: ServicesListProps) =
                     )}
                     
                     <div className="flex items-center gap-4 text-sm">
-                      <div className="flex items-center gap-1 text-green-600">
-                        <DollarSign className="w-3 h-3" />
-                        {formatPrice(service.price)}
-                      </div>
                       <div className="flex items-center gap-1 text-blue-600">
                         <Clock className="w-3 h-3" />
                         {formatDuration(service.duration_minutes)}

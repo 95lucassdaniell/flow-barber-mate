@@ -34,9 +34,6 @@ const ServicesManagement = () => {
   ) || [];
 
   const activeServices = services?.filter(service => service.is_active) || [];
-  const averagePrice = services?.length > 0 
-    ? services.reduce((sum, service) => sum + service.price, 0) / services.length 
-    : 0;
   const averageDuration = services?.length > 0 
     ? services.reduce((sum, service) => sum + service.duration_minutes, 0) / services.length 
     : 0;
@@ -79,7 +76,7 @@ const ServicesManagement = () => {
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Serviços</CardTitle>
@@ -102,21 +99,6 @@ const ServicesManagement = () => {
             <div className="text-2xl font-bold">{activeServices.length}</div>
             <p className="text-xs text-muted-foreground">
               Disponíveis para agendamento
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Preço Médio</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              R$ {averagePrice.toFixed(2)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Valor médio dos serviços
             </p>
           </CardContent>
         </Card>
