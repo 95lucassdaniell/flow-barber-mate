@@ -13,6 +13,7 @@ import ProvidersPage from "./pages/ProvidersPage";
 import ClientsPage from "./pages/ClientsPage";
 import ServicesPage from "./pages/ServicesPage";
 import SettingsPage from "./pages/SettingsPage";
+import WhatsAppPage from "./pages/WhatsAppPage";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
           <Route path="/dashboard/:slug/services" element={<ServicesPage />} />
           <Route path="/dashboard/:slug/servicos" element={<ServicesPage />} />
           <Route path="/dashboard/:slug/settings" element={<SettingsPage />} />
+          <Route path="/dashboard/:slug/whatsapp" element={<WhatsAppPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
