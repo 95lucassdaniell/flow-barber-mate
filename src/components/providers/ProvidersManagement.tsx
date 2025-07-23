@@ -32,13 +32,6 @@ import ProviderModal from "./ProviderModal";
 const ProvidersManagement = () => {
   const { providers, loading, toggleProviderStatus } = useProviders();
   const { canManageAll, profile, loading: authLoading } = useAuth();
-  
-  // Debug logs
-  console.log('ProvidersManagement - providers:', providers);
-  console.log('ProvidersManagement - loading:', loading);
-  console.log('ProvidersManagement - authLoading:', authLoading);
-  console.log('ProvidersManagement - profile:', profile);
-  console.log('ProvidersManagement - canManageAll:', canManageAll);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -99,8 +92,28 @@ const ProvidersManagement = () => {
         </div>
         <Card>
           <CardContent className="p-6">
-            <div className="text-center">
-              Carregando... (providers: {loading ? 'sim' : 'não'}, auth: {authLoading ? 'sim' : 'não'})
+            <div className="text-center">Carregando...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Se não há perfil ou barbershop_id, mostrar orientação
+  if (!profile?.barbershop_id) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Prestadores</h1>
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center space-y-4">
+              <div className="text-lg font-medium">Configuração necessária</div>
+              <p className="text-muted-foreground">
+                Para gerenciar prestadores, você precisa estar vinculado a uma barbearia. 
+                Entre em contato com o administrador do sistema.
+              </p>
             </div>
           </CardContent>
         </Card>
