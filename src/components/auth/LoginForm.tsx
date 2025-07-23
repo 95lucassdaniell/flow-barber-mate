@@ -47,20 +47,39 @@ const LoginForm = () => {
         throw new Error("Erro ao fazer login");
       }
 
+      console.log('Login realizado, buscando perfil...');
+      
+      // Aguardar um momento para garantir que a sessão foi estabelecida
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
       // Buscar perfil do usuário para obter a barbearia
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          barbershops (
-            slug
-          )
-        `)
+        .select('*, barbershop_id')
         .eq('user_id', authData.user.id)
         .single();
 
-      if (profileError || !profile) {
+      if (profileError) {
+        console.error('Erro ao buscar perfil:', profileError);
         throw new Error("Perfil não encontrado. Entre em contato com o suporte.");
+      }
+
+      if (!profile) {
+        throw new Error("Perfil não encontrado. Entre em contato com o suporte.");
+      }
+
+      console.log('Perfil encontrado, buscando barbearia...');
+
+      // Buscar dados da barbearia
+      const { data: barbershop, error: barbershopError } = await supabase
+        .from('barbershops')
+        .select('slug')
+        .eq('id', profile.barbershop_id)
+        .single();
+
+      if (barbershopError || !barbershop) {
+        console.error('Erro ao buscar barbearia:', barbershopError);
+        throw new Error("Barbearia não encontrada. Entre em contato com o suporte.");
       }
 
       toast({
@@ -68,13 +87,10 @@ const LoginForm = () => {
         description: "Bem-vindo de volta ao BarberFlow!",
       });
 
+      console.log('Redirecionando para:', `/dashboard/${barbershop.slug}`);
+      
       // Redirecionar para o dashboard da barbearia do usuário
-      const barbershopSlug = (profile.barbershops as any)?.slug;
-      if (barbershopSlug) {
-        navigate(`/dashboard/${barbershopSlug}`);
-      } else {
-        throw new Error("Barbearia não encontrada");
-      }
+      navigate(`/dashboard/${barbershop.slug}`);
 
     } catch (error: any) {
       console.error('Erro no login:', error);

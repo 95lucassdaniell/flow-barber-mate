@@ -116,7 +116,21 @@ const RegisterForm = () => {
     setLoading(true);
 
     try {
-      // 1. Criar usuário no Supabase Auth
+      console.log('Iniciando processo de registro...');
+
+      // 1. Verificar se o slug já existe antes de criar o usuário
+      const { data: existingBarbershop } = await supabase
+        .from('barbershops')
+        .select('slug')
+        .eq('slug', formData.businessSlug)
+        .single();
+
+      if (existingBarbershop) {
+        throw new Error("Este nome de barbearia já está em uso. Tente outro.");
+      }
+
+      // 2. Criar usuário no Supabase Auth
+      console.log('Criando usuário...');
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -130,6 +144,7 @@ const RegisterForm = () => {
       });
 
       if (authError) {
+        console.error('Erro ao criar usuário:', authError);
         throw new Error(authError.message);
       }
 
@@ -137,18 +152,19 @@ const RegisterForm = () => {
         throw new Error("Erro ao criar usuário");
       }
 
-      // 2. Verificar se o slug já existe
-      const { data: existingBarbershop } = await supabase
-        .from('barbershops')
-        .select('slug')
-        .eq('slug', formData.businessSlug)
-        .single();
+      console.log('Usuário criado com sucesso:', authData.user.id);
 
-      if (existingBarbershop) {
-        throw new Error("Este nome de barbearia já está em uso. Tente outro.");
+      // 3. Aguardar um momento para garantir que o usuário foi persistido
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // 4. Verificar se o usuário foi realmente criado
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.user) {
+        throw new Error("Falha na autenticação do usuário. Tente fazer login.");
       }
 
-      // 3. Criar a barbearia
+      // 5. Criar a barbearia
+      console.log('Criando barbearia...');
       const { data: barbershopData, error: barbershopError } = await supabase
         .from('barbershops')
         .insert([
@@ -173,25 +189,47 @@ const RegisterForm = () => {
         .single();
 
       if (barbershopError) {
+        console.error('Erro ao criar barbearia:', barbershopError);
         throw new Error("Erro ao criar barbearia: " + barbershopError.message);
       }
 
-      // 4. Criar o perfil do usuário como admin
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([
-          {
-            user_id: authData.user.id,
-            barbershop_id: barbershopData.id,
-            full_name: formData.ownerName,
-            email: formData.email,
-            phone: formData.phone,
-            role: 'admin'
-          }
-        ]);
+      console.log('Barbearia criada com sucesso:', barbershopData.id);
 
-      if (profileError) {
-        throw new Error("Erro ao criar perfil: " + profileError.message);
+      // 6. Criar o perfil do usuário como admin com retry
+      console.log('Criando perfil...');
+      let profileCreated = false;
+      let attempts = 0;
+      const maxAttempts = 3;
+
+      while (!profileCreated && attempts < maxAttempts) {
+        attempts++;
+        console.log(`Tentativa ${attempts} de criar perfil...`);
+
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              user_id: session.session.user.id,
+              barbershop_id: barbershopData.id,
+              full_name: formData.ownerName,
+              email: formData.email,
+              phone: formData.phone,
+              role: 'admin'
+            }
+          ]);
+
+        if (!profileError) {
+          profileCreated = true;
+          console.log('Perfil criado com sucesso');
+        } else {
+          console.error(`Erro na tentativa ${attempts}:`, profileError);
+          
+          if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } else {
+            throw new Error("Erro ao criar perfil: " + profileError.message);
+          }
+        }
       }
 
       toast({
@@ -204,9 +242,19 @@ const RegisterForm = () => {
       
     } catch (error: any) {
       console.error('Erro no registro:', error);
+      
+      // Tratamento específico de erros
+      let errorMessage = error.message || "Ocorreu um erro inesperado. Tente novamente.";
+      
+      if (error.message.includes("User already registered")) {
+        errorMessage = "Este e-mail já está cadastrado. Tente fazer login ou use outro e-mail.";
+      } else if (error.message.includes("duplicate key value")) {
+        errorMessage = "Este nome de barbearia já está em uso. Tente outro nome.";
+      }
+      
       toast({
         title: "Erro ao criar conta",
-        description: error.message || "Ocorreu um erro inesperado. Tente novamente.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
