@@ -16,6 +16,7 @@ import SettingsPage from "./pages/SettingsPage";
 import WhatsAppPage from "./pages/WhatsAppPage";
 import SuperAdminPage from "./pages/SuperAdminPage";
 import SuperAdminBarbershopsPage from "./pages/SuperAdminBarbershopsPage";
+import SuperAdminUsersPage from "./pages/SuperAdminUsersPage";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/dashboard/:slug/whatsapp" element={<WhatsAppPage />} />
           <Route path="/super-admin" element={<SuperAdminPage />} />
           <Route path="/super-admin/barbershops" element={<SuperAdminBarbershopsPage />} />
+          <Route path="/super-admin/users" element={<SuperAdminUsersPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
