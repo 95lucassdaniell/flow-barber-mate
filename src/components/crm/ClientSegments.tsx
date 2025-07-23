@@ -14,9 +14,13 @@ import {
   Users,
   MessageCircle
 } from "lucide-react";
-import { useClients } from "@/hooks/useClients";
+import { useClients, Client } from "@/hooks/useClients";
 
-const ClientSegments = () => {
+interface ClientSegmentsProps {
+  onClientSelect?: (client?: Client) => void;
+}
+
+const ClientSegments = ({ onClientSelect }: ClientSegmentsProps = {}) => {
   const { clients, loading } = useClients();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSegment, setSelectedSegment] = useState("all");
@@ -95,7 +99,12 @@ const ClientSegments = () => {
         <CardContent className="pt-0">
           <p className="text-xs text-muted-foreground mb-3">{segment.criteria}</p>
           <div className="flex space-x-2">
-            <Button size="sm" variant="outline" className="flex-1">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="flex-1"
+              onClick={() => onClientSelect?.()}
+            >
               <Users className="h-3 w-3 mr-1" />
               Ver Lista
             </Button>

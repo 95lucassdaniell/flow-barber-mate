@@ -13,10 +13,14 @@ import {
   Eye,
   MessageCircle
 } from "lucide-react";
-import { useClients } from "@/hooks/useClients";
+import { useClients, Client } from "@/hooks/useClients";
 import { useMemo } from "react";
 
-const CRMDashboard = () => {
+interface CRMDashboardProps {
+  onClientSelect?: (client?: Client) => void;
+}
+
+const CRMDashboard = ({ onClientSelect }: CRMDashboardProps = {}) => {
   const { clients, loading } = useClients();
 
   const metrics = useMemo(() => {
@@ -183,7 +187,12 @@ const CRMDashboard = () => {
             <MessageCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="space-y-2">
-            <Button variant="outline" size="sm" className="w-full justify-start">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full justify-start"
+              onClick={() => onClientSelect?.()}
+            >
               <Eye className="h-3 w-3 mr-2" />
               Ver Clientes em Risco
             </Button>
