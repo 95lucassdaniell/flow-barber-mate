@@ -165,7 +165,7 @@ export default function BarbershopModal({ barbershop, onClose }: BarbershopModal
             required
           />
           <p className="text-xs text-muted-foreground">
-            URL: /dashboard/{formData.slug}
+            URL: /app/{formData.slug}
           </p>
         </div>
       </div>

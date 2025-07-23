@@ -37,14 +37,14 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
   });
 
   const navigation = [
-    { id: "dashboard", name: "Dashboard", icon: BarChart3, href: `/dashboard/${slug}` },
-    { id: "agenda", name: "Agenda", icon: Calendar, href: `/dashboard/${slug}/agenda` },
-    { id: "clients", name: "Clientes", icon: Users, href: `/dashboard/${slug}/clients` },
-    { id: "providers", name: "Prestadores", icon: Users, href: `/dashboard/${slug}/prestadores` },
-    { id: "services", name: "Serviços", icon: Scissors, href: `/dashboard/${slug}/services` },
-    { id: "whatsapp", name: "WhatsApp", icon: MessageCircle, href: `/dashboard/${slug}/whatsapp` },
-    { id: "financial", name: "Financeiro", icon: DollarSign, href: `/dashboard/${slug}/financial` },
-    { id: "settings", name: "Configurações", icon: Settings, href: `/dashboard/${slug}/settings` },
+    { id: "dashboard", name: "Dashboard", icon: BarChart3, href: `/app/${slug}` },
+    { id: "agenda", name: "Agenda", icon: Calendar, href: `/app/${slug}/agenda` },
+    { id: "clients", name: "Clientes", icon: Users, href: `/app/${slug}/clients` },
+    { id: "providers", name: "Prestadores", icon: Users, href: `/app/${slug}/prestadores` },
+    { id: "services", name: "Serviços", icon: Scissors, href: `/app/${slug}/services` },
+    { id: "whatsapp", name: "WhatsApp", icon: MessageCircle, href: `/app/${slug}/whatsapp` },
+    { id: "financial", name: "Financeiro", icon: DollarSign, href: `/app/${slug}/financial` },
+    { id: "settings", name: "Configurações", icon: Settings, href: `/app/${slug}/settings` },
   ];
 
   useEffect(() => {

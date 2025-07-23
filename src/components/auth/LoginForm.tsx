@@ -90,7 +90,7 @@ const LoginForm = () => {
       console.log('Redirecionando para:', `/dashboard/${barbershop.slug}`);
       
       // Redirecionar para o dashboard da barbearia do usuário
-      navigate(`/dashboard/${barbershop.slug}`);
+      navigate(`/app/${barbershop.slug}`);
 
     } catch (error: any) {
       console.error('Erro no login:', error);

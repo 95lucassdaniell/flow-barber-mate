@@ -33,14 +33,14 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/dashboard/:slug" element={<DashboardPage />} />
-          <Route path="/dashboard/:slug/agenda" element={<SchedulePageWithLayout />} />
-          <Route path="/dashboard/:slug/prestadores" element={<ProvidersPage />} />
-          <Route path="/dashboard/:slug/clients" element={<ClientsPage />} />
-          <Route path="/dashboard/:slug/services" element={<ServicesPage />} />
-          <Route path="/dashboard/:slug/servicos" element={<ServicesPage />} />
-          <Route path="/dashboard/:slug/settings" element={<SettingsPage />} />
-          <Route path="/dashboard/:slug/whatsapp" element={<WhatsAppPage />} />
+          <Route path="/app/:slug" element={<DashboardPage />} />
+          <Route path="/app/:slug/agenda" element={<SchedulePageWithLayout />} />
+          <Route path="/app/:slug/prestadores" element={<ProvidersPage />} />
+          <Route path="/app/:slug/clients" element={<ClientsPage />} />
+          <Route path="/app/:slug/services" element={<ServicesPage />} />
+          <Route path="/app/:slug/servicos" element={<ServicesPage />} />
+          <Route path="/app/:slug/settings" element={<SettingsPage />} />
+          <Route path="/app/:slug/whatsapp" element={<WhatsAppPage />} />
         <Route path="/super-admin" element={<SuperAdminPage />} />
         <Route path="/super-admin/barbershops" element={<SuperAdminBarbershopsPage />} />
         <Route path="/super-admin/users" element={<SuperAdminUsersPage />} />

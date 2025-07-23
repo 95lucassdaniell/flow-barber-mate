@@ -238,7 +238,7 @@ const RegisterForm = () => {
       });
 
       // Redirecionamento para o dashboard da barbearia
-      navigate(`/dashboard/${formData.businessSlug}`);
+      navigate(`/app/${formData.businessSlug}`);
       
     } catch (error: any) {
       console.error('Erro no registro:', error);

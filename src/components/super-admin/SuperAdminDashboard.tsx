@@ -245,7 +245,7 @@ export default function SuperAdminDashboard() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(`/dashboard/${barbershop.slug}`)}
+                      onClick={() => navigate(`/app/${barbershop.slug}`)}
                     >
                       <ExternalLink className="h-4 w-4 mr-1" />
                       Acessar
