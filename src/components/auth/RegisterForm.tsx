@@ -5,10 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/barberflow-logo.png";
 
 const RegisterForm = () => {
   const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     // Dados pessoais
     ownerName: "",
@@ -59,6 +61,24 @@ const RegisterForm = () => {
         });
         return;
       }
+
+      if (!validateEmail(formData.email)) {
+        toast({
+          title: "E-mail inválido",
+          description: "Digite um e-mail válido.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!validatePassword(formData.password)) {
+        toast({
+          title: "Senha muito fraca",
+          description: "A senha deve ter pelo menos 6 caracteres.",
+          variant: "destructive",
+        });
+        return;
+      }
       
       if (formData.password !== formData.confirmPassword) {
         toast({
@@ -73,6 +93,15 @@ const RegisterForm = () => {
     setStep(2);
   };
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePassword = (password: string) => {
+    return password.length >= 6;
+  };
+
   const handleSubmit = async () => {
     // Validação do step 2
     if (!formData.businessName || !formData.address || !formData.city) {
@@ -84,14 +113,105 @@ const RegisterForm = () => {
       return;
     }
 
-    // TODO: Aqui será a integração com a API
-    toast({
-      title: "Conta criada com sucesso!",
-      description: `Bem-vindo ao BarberFlow, ${formData.ownerName}!`,
-    });
+    setLoading(true);
 
-    // Simular redirecionamento para o dashboard da barbearia
-    navigate(`/dashboard/${formData.businessSlug}`);
+    try {
+      // 1. Criar usuário no Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            full_name: formData.ownerName,
+            phone: formData.phone,
+          }
+        }
+      });
+
+      if (authError) {
+        throw new Error(authError.message);
+      }
+
+      if (!authData.user) {
+        throw new Error("Erro ao criar usuário");
+      }
+
+      // 2. Verificar se o slug já existe
+      const { data: existingBarbershop } = await supabase
+        .from('barbershops')
+        .select('slug')
+        .eq('slug', formData.businessSlug)
+        .single();
+
+      if (existingBarbershop) {
+        throw new Error("Este nome de barbearia já está em uso. Tente outro.");
+      }
+
+      // 3. Criar a barbearia
+      const { data: barbershopData, error: barbershopError } = await supabase
+        .from('barbershops')
+        .insert([
+          {
+            name: formData.businessName,
+            slug: formData.businessSlug,
+            address: `${formData.address}, ${formData.city}${formData.state ? `, ${formData.state}` : ''}`,
+            phone: formData.phone,
+            email: formData.email,
+            opening_hours: {
+              monday: { open: "09:00", close: "18:00" },
+              tuesday: { open: "09:00", close: "18:00" },
+              wednesday: { open: "09:00", close: "18:00" },
+              thursday: { open: "09:00", close: "18:00" },
+              friday: { open: "09:00", close: "18:00" },
+              saturday: { open: "09:00", close: "18:00" },
+              sunday: { open: "09:00", close: "18:00" }
+            }
+          }
+        ])
+        .select()
+        .single();
+
+      if (barbershopError) {
+        throw new Error("Erro ao criar barbearia: " + barbershopError.message);
+      }
+
+      // 4. Criar o perfil do usuário como admin
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          {
+            user_id: authData.user.id,
+            barbershop_id: barbershopData.id,
+            full_name: formData.ownerName,
+            email: formData.email,
+            phone: formData.phone,
+            role: 'admin'
+          }
+        ]);
+
+      if (profileError) {
+        throw new Error("Erro ao criar perfil: " + profileError.message);
+      }
+
+      toast({
+        title: "Conta criada com sucesso!",
+        description: `Bem-vindo ao BarberFlow, ${formData.ownerName}!`,
+      });
+
+      // Redirecionamento para o dashboard da barbearia
+      navigate(`/dashboard/${formData.businessSlug}`);
+      
+    } catch (error: any) {
+      console.error('Erro no registro:', error);
+      toast({
+        title: "Erro ao criar conta",
+        description: error.message || "Ocorreu um erro inesperado. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -178,7 +298,7 @@ const RegisterForm = () => {
                   />
                 </div>
 
-                <Button onClick={handleNextStep} className="w-full">
+                <Button onClick={handleNextStep} className="w-full" disabled={loading}>
                   Próximo Passo
                 </Button>
               </>
@@ -250,11 +370,11 @@ const RegisterForm = () => {
                 </div>
 
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
+                  <Button variant="outline" onClick={() => setStep(1)} className="flex-1" disabled={loading}>
                     Voltar
                   </Button>
-                  <Button onClick={handleSubmit} className="flex-1">
-                    Criar Barbearia
+                  <Button onClick={handleSubmit} className="flex-1" disabled={loading}>
+                    {loading ? "Criando..." : "Criar Barbearia"}
                   </Button>
                 </div>
               </>
