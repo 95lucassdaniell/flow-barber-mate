@@ -28,7 +28,7 @@ import {
 import { useProviders } from "@/hooks/useProviders";
 import { useAuth } from "@/hooks/useAuth";
 import ProviderModal from "./ProviderModal";
-import ProviderServicesModal from "./ProviderServicesModal";
+import ProviderServicesModal from "./ProviderServicesModalSimple";
 
 const ProvidersManagement = () => {
   const { providers, loading, toggleProviderStatus } = useProviders();
