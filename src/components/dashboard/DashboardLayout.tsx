@@ -30,6 +30,7 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
     { id: "dashboard", name: "Dashboard", icon: BarChart3, href: `/dashboard/${slug}` },
     { id: "agenda", name: "Agenda", icon: Calendar, href: `/dashboard/${slug}/agenda` },
     { id: "clients", name: "Clientes", icon: Users, href: `/dashboard/${slug}/clients` },
+    { id: "providers", name: "Prestadores", icon: Users, href: `/dashboard/${slug}/prestadores` },
     { id: "services", name: "Serviços", icon: Scissors, href: `/dashboard/${slug}/services` },
     { id: "whatsapp", name: "WhatsApp", icon: MessageCircle, href: `/dashboard/${slug}/whatsapp` },
     { id: "financial", name: "Financeiro", icon: DollarSign, href: `/dashboard/${slug}/financial` },
