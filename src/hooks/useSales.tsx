@@ -93,7 +93,7 @@ export const useSales = () => {
     }
   };
 
-  const createSale = async (saleData: SaleFormData): Promise<string | null> => {
+  const createSale = async (saleData: SaleFormData, cashRegisterId?: string): Promise<string | null> => {
     if (!profile?.barbershop_id || !profile?.id) return null;
 
     try {
@@ -117,6 +117,7 @@ export const useSales = () => {
             payment_method: saleData.payment_method,
             notes: saleData.notes,
             created_by: profile.id,
+            cash_register_id: cashRegisterId,
           }
         ])
         .select()

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,9 +17,13 @@ import { useServices } from '@/hooks/useServices';
 import { useProducts } from '@/hooks/useProducts';
 import { useProviderServices } from '@/hooks/useProviderServices';
 import { useSales, type SaleFormData } from '@/hooks/useSales';
+import { useCashRegister } from '@/hooks/useCashRegister';
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useFullscreen } from '@/hooks/useFullscreen';
+import { CashRegisterStatus } from '@/components/pdv/CashRegisterStatus';
+import { SalesHistory } from '@/components/pdv/SalesHistory';
+import { CloseCashModal } from '@/components/pdv/CloseCashModal';
 
 interface CartItem {
   id: string;
@@ -35,12 +39,13 @@ interface CartItem {
 const PDVPage = () => {
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [selectedBarber, setSelectedBarber] = useState<string>('');
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [discount, setDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix' | 'multiple'>('cash');
   const [notes, setNotes] = useState('');
   const [serviceSearchTerm, setServiceSearchTerm] = useState('');
   const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [showSalesHistory, setShowSalesHistory] = useState(false);
+  const [showCloseCashModal, setShowCloseCashModal] = useState(false);
   
   const { isFullscreen, toggleFullscreen } = useFullscreen();
   const debouncedServiceSearch = useDebounce(serviceSearchTerm, 300);
@@ -52,6 +57,16 @@ const PDVPage = () => {
   const { data: products } = useProducts();
   const { getServicesWithPrices } = useProviderServices(selectedBarber);
   const { createSale } = useSales();
+  const { 
+    currentCashRegister, 
+    cartItems: persistedCartItems, 
+    loading: cashLoading,
+    saveCartItem, 
+    removeCartItem, 
+    updateCartItemQuantity,
+    clearCartItems,
+    updateCashRegisterTotals 
+  } = useCashRegister();
   const { toast } = useToast();
 
   const servicesWithPrices = getServicesWithPrices();
@@ -80,36 +95,55 @@ const PDVPage = () => {
     ) || [];
   }, [products, debouncedProductSearch]);
 
-  const addToCart = (item: CartItem) => {
-    const existingItem = cart.find(cartItem => 
-      cartItem.type === item.type && 
+  // Converter itens persistidos para formato do carrinho local
+  const cart = useMemo(() => {
+    return persistedCartItems.map(item => ({
+      id: item.id,
+      type: item.item_type,
+      name: item.item_type === 'service' 
+        ? services.find(s => s.id === item.service_id)?.name || 'Serviço'
+        : products?.find(p => p.id === item.product_id)?.name || 'Produto',
+      price: item.unit_price,
+      quantity: item.quantity,
+      commission_rate: item.commission_rate,
+      service_id: item.service_id,
+      product_id: item.product_id,
+    }));
+  }, [persistedCartItems, services, products]);
+
+  const addToCart = async (item: CartItem) => {
+    const existingItem = persistedCartItems.find(cartItem => 
+      cartItem.item_type === item.type && 
       (cartItem.service_id === item.service_id || cartItem.product_id === item.product_id)
     );
 
     if (existingItem) {
-      setCart(cart.map(cartItem => 
-        cartItem.id === existingItem.id 
-          ? { ...cartItem, quantity: cartItem.quantity + 1 }
-          : cartItem
-      ));
+      await updateCartItemQuantity(existingItem.id, existingItem.quantity + 1);
     } else {
-      setCart([...cart, { ...item, quantity: 1 }]);
+      await saveCartItem({
+        item_type: item.type,
+        service_id: item.service_id,
+        product_id: item.product_id,
+        quantity: 1,
+        unit_price: item.price,
+        commission_rate: item.commission_rate,
+        client_id: selectedClient || undefined,
+        barber_id: selectedBarber || undefined,
+      });
     }
   };
 
-  const removeFromCart = (itemId: string) => {
-    setCart(cart.filter(item => item.id !== itemId));
+  const removeFromCart = async (itemId: string) => {
+    await removeCartItem(itemId);
   };
 
-  const updateQuantity = (itemId: string, quantity: number) => {
+  const updateQuantity = async (itemId: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(itemId);
+      await removeCartItem(itemId);
       return;
     }
 
-    setCart(cart.map(item => 
-      item.id === itemId ? { ...item, quantity } : item
-    ));
+    await updateCartItemQuantity(itemId, quantity);
   };
 
   const getTotalAmount = () => {
@@ -156,12 +190,12 @@ const PDVPage = () => {
     const saleData: SaleFormData = {
       client_id: selectedClient,
       barber_id: selectedBarber,
-      items: cart.map(item => ({
-        item_type: item.type,
+      items: persistedCartItems.map(item => ({
+        item_type: item.item_type,
         service_id: item.service_id,
         product_id: item.product_id,
         quantity: item.quantity,
-        unit_price: item.price,
+        unit_price: item.unit_price,
         commission_rate: item.commission_rate,
       })),
       discount_amount: discount,
@@ -169,11 +203,14 @@ const PDVPage = () => {
       notes: notes,
     };
 
-    const saleId = await createSale(saleData);
+    const saleId = await createSale(saleData, currentCashRegister?.id);
     
     if (saleId) {
+      // Atualizar totais do caixa
+      await updateCashRegisterTotals(getFinalAmount(), paymentMethod);
+      
       // Limpar carrinho e formulário
-      setCart([]);
+      await clearCartItems();
       setSelectedClient('');
       setSelectedBarber('');
       setDiscount(0);
@@ -212,6 +249,14 @@ const PDVPage = () => {
           )}
         </Button>
       </div>
+
+      {/* Status do Caixa */}
+      {currentCashRegister && (
+        <CashRegisterStatus
+          onViewHistory={() => setShowSalesHistory(true)}
+          onCloseCash={() => setShowCloseCashModal(true)}
+        />
+      )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Seleção de Cliente e Profissional */}
@@ -526,14 +571,54 @@ const PDVPage = () => {
     </div>
   );
 
-  return isFullscreen ? (
-    <div className="min-h-screen bg-background">
-      <PDVContent />
-    </div>
-  ) : (
-    <DashboardLayout activeTab="pdv">
-      <PDVContent />
-    </DashboardLayout>
+  if (cashLoading) {
+    return (
+      <DashboardLayout activeTab="pdv">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">Carregando caixa...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!currentCashRegister) {
+    return (
+      <DashboardLayout activeTab="pdv">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className="text-muted-foreground">Nenhum caixa ativo encontrado.</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <>
+      {isFullscreen ? (
+        <div className="min-h-screen bg-background p-6">
+          <PDVContent />
+        </div>
+      ) : (
+        <DashboardLayout activeTab="pdv">
+          <PDVContent />
+        </DashboardLayout>
+      )}
+
+      {/* Modais */}
+      <SalesHistory
+        isOpen={showSalesHistory}
+        onClose={() => setShowSalesHistory(false)}
+      />
+      
+      <CloseCashModal
+        isOpen={showCloseCashModal}
+        onClose={() => setShowCloseCashModal(false)}
+      />
+    </>
   );
 };
 

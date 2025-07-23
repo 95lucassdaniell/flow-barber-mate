@@ -258,6 +258,155 @@ export type Database = {
           },
         ]
       }
+      cash_register_items: {
+        Row: {
+          barber_id: string | null
+          cash_register_id: string
+          client_id: string | null
+          commission_rate: number
+          created_at: string
+          id: string
+          item_type: string
+          product_id: string | null
+          quantity: number
+          service_id: string | null
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          barber_id?: string | null
+          cash_register_id: string
+          client_id?: string | null
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          item_type: string
+          product_id?: string | null
+          quantity?: number
+          service_id?: string | null
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string | null
+          cash_register_id?: string
+          client_id?: string | null
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          item_type?: string
+          product_id?: string | null
+          quantity?: number
+          service_id?: string | null
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_register_items_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_items_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_items_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_registers: {
+        Row: {
+          barbershop_id: string
+          closed_at: string | null
+          closing_balance: number | null
+          created_at: string
+          id: string
+          notes: string | null
+          opened_at: string
+          opening_balance: number
+          sales_count: number
+          status: string
+          total_card: number
+          total_cash: number
+          total_multiple: number
+          total_pix: number
+          total_sales: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          barbershop_id: string
+          closed_at?: string | null
+          closing_balance?: number | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opening_balance?: number
+          sales_count?: number
+          status?: string
+          total_card?: number
+          total_cash?: number
+          total_multiple?: number
+          total_pix?: number
+          total_sales?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          barbershop_id?: string
+          closed_at?: string | null
+          closing_balance?: number | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opening_balance?: number
+          sales_count?: number
+          status?: string
+          total_card?: number
+          total_cash?: number
+          total_multiple?: number
+          total_pix?: number
+          total_sales?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_registers_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           barbershop_id: string
@@ -584,6 +733,7 @@ export type Database = {
         Row: {
           barber_id: string
           barbershop_id: string
+          cash_register_id: string | null
           client_id: string
           created_at: string
           created_by: string
@@ -601,6 +751,7 @@ export type Database = {
         Insert: {
           barber_id: string
           barbershop_id: string
+          cash_register_id?: string | null
           client_id: string
           created_at?: string
           created_by: string
@@ -618,6 +769,7 @@ export type Database = {
         Update: {
           barber_id?: string
           barbershop_id?: string
+          cash_register_id?: string | null
           client_id?: string
           created_at?: string
           created_by?: string
@@ -632,7 +784,15 @@ export type Database = {
           total_amount?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sales_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       services: {
         Row: {
