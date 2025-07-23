@@ -10,6 +10,7 @@ import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import SchedulePageWithLayout from "./pages/SchedulePageWithLayout";
 import ProvidersPage from "./pages/ProvidersPage";
+import ClientsPage from "./pages/ClientsPage";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/dashboard/:slug" element={<DashboardPage />} />
           <Route path="/dashboard/:slug/agenda" element={<SchedulePageWithLayout />} />
           <Route path="/dashboard/:slug/prestadores" element={<ProvidersPage />} />
+          <Route path="/dashboard/:slug/clients" element={<ClientsPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
