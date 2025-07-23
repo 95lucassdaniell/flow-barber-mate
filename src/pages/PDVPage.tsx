@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Calculator, ShoppingCart, User, CreditCard, Trash2, Plus, Minus } from 'lucide-react';
+import { SearchInput } from '@/components/ui/search-input';
+import { Calculator, ShoppingCart, User, CreditCard, Trash2, Plus, Minus, Maximize2, Minimize2 } from 'lucide-react';
 import { useClients } from '@/hooks/useClients';
 import { useProviders } from '@/hooks/useProviders';
 import { useServices } from '@/hooks/useServices';
@@ -17,6 +18,8 @@ import { useProducts } from '@/hooks/useProducts';
 import { useProviderServices } from '@/hooks/useProviderServices';
 import { useSales, type SaleFormData } from '@/hooks/useSales';
 import { useToast } from '@/hooks/use-toast';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useFullscreen } from '@/hooks/useFullscreen';
 
 interface CartItem {
   id: string;
@@ -36,6 +39,12 @@ const PDVPage = () => {
   const [discount, setDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix' | 'multiple'>('cash');
   const [notes, setNotes] = useState('');
+  const [serviceSearchTerm, setServiceSearchTerm] = useState('');
+  const [productSearchTerm, setProductSearchTerm] = useState('');
+  
+  const { isFullscreen, toggleFullscreen } = useFullscreen();
+  const debouncedServiceSearch = useDebounce(serviceSearchTerm, 300);
+  const debouncedProductSearch = useDebounce(productSearchTerm, 300);
 
   const { clients } = useClients();
   const { providers } = useProviders();
@@ -46,6 +55,30 @@ const PDVPage = () => {
   const { toast } = useToast();
 
   const servicesWithPrices = getServicesWithPrices();
+
+  // Filtrar serviços com base na pesquisa
+  const filteredServices = useMemo(() => {
+    if (!debouncedServiceSearch) return servicesWithPrices;
+    
+    return servicesWithPrices.filter(service =>
+      service.name.toLowerCase().includes(debouncedServiceSearch.toLowerCase())
+    );
+  }, [servicesWithPrices, debouncedServiceSearch]);
+
+  // Filtrar produtos com base na pesquisa (nome ou código de barras)
+  const filteredProducts = useMemo(() => {
+    if (!debouncedProductSearch) {
+      return products?.filter(product => product.is_active && product.stock_quantity > 0) || [];
+    }
+    
+    const searchTerm = debouncedProductSearch.toLowerCase();
+    return products?.filter(product => 
+      product.is_active && 
+      product.stock_quantity > 0 &&
+      (product.name.toLowerCase().includes(searchTerm) ||
+       product.barcode?.toLowerCase().includes(searchTerm))
+    ) || [];
+  }, [products, debouncedProductSearch]);
 
   const addToCart = (item: CartItem) => {
     const existingItem = cart.find(cartItem => 
@@ -93,6 +126,14 @@ const PDVPage = () => {
     );
   };
 
+  const handleBarcodeClick = () => {
+    // Implementar scanner de código de barras em versão futura
+    toast({
+      title: "Scanner de código de barras",
+      description: "Funcionalidade será implementada em breve.",
+    });
+  };
+
   const handleFinalizeSale = async () => {
     if (!selectedClient || !selectedBarber) {
       toast({
@@ -138,20 +179,39 @@ const PDVPage = () => {
       setDiscount(0);
       setNotes('');
       setPaymentMethod('cash');
+      setServiceSearchTerm('');
+      setProductSearchTerm('');
     }
   };
 
-  return (
-    <DashboardLayout activeTab="pdv">
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">PDV - Ponto de Venda</h1>
-            <p className="text-muted-foreground">
-              Registre vendas de produtos e serviços
-            </p>
-          </div>
+  const PDVContent = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">PDV - Ponto de Venda</h1>
+          <p className="text-muted-foreground">
+            Registre vendas de produtos e serviços
+          </p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={toggleFullscreen}
+          className="flex items-center gap-2"
+        >
+          {isFullscreen ? (
+            <>
+              <Minimize2 className="h-4 w-4" />
+              Sair Tela Cheia
+            </>
+          ) : (
+            <>
+              <Maximize2 className="h-4 w-4" />
+              Tela Cheia
+            </>
+          )}
+        </Button>
+      </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Seleção de Cliente e Profissional */}
@@ -213,9 +273,20 @@ const PDVPage = () => {
                   </TabsList>
                   
                   <TabsContent value="services" className="space-y-4">
+                    <SearchInput
+                      value={serviceSearchTerm}
+                      onChange={setServiceSearchTerm}
+                      placeholder="Pesquisar serviços..."
+                      className="mb-4"
+                    />
                     <ScrollArea className="h-96">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {servicesWithPrices.map(service => (
+                        {filteredServices.length === 0 ? (
+                          <div className="col-span-2 text-center py-8 text-muted-foreground">
+                            {serviceSearchTerm ? 'Nenhum serviço encontrado' : 'Nenhum serviço disponível'}
+                          </div>
+                        ) : (
+                          filteredServices.map(service => (
                           <Card 
                             key={service.id} 
                             className="cursor-pointer hover:bg-accent transition-colors"
@@ -249,15 +320,28 @@ const PDVPage = () => {
                               </div>
                             </CardContent>
                           </Card>
-                        ))}
+                        )))}
                       </div>
                     </ScrollArea>
                   </TabsContent>
 
                   <TabsContent value="products" className="space-y-4">
+                    <SearchInput
+                      value={productSearchTerm}
+                      onChange={setProductSearchTerm}
+                      placeholder="Pesquisar por nome ou código de barras..."
+                      className="mb-4"
+                      showBarcodeScanner
+                      onBarcodeClick={handleBarcodeClick}
+                    />
                     <ScrollArea className="h-96">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {products?.filter(product => product.is_active && product.stock_quantity > 0).map(product => (
+                        {filteredProducts.length === 0 ? (
+                          <div className="col-span-2 text-center py-8 text-muted-foreground">
+                            {productSearchTerm ? 'Nenhum produto encontrado' : 'Nenhum produto em estoque'}
+                          </div>
+                        ) : (
+                          filteredProducts.map(product => (
                           <Card 
                             key={product.id} 
                             className="cursor-pointer hover:bg-accent transition-colors"
@@ -275,9 +359,16 @@ const PDVPage = () => {
                               <div className="flex justify-between items-start">
                                 <div>
                                   <h4 className="font-medium">{product.name}</h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    Estoque: {product.stock_quantity}
-                                  </p>
+                                  <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground">
+                                      Estoque: {product.stock_quantity}
+                                    </p>
+                                    {product.barcode && (
+                                      <p className="text-xs text-muted-foreground">
+                                        Código: {product.barcode}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
                                 <div className="text-right">
                                   <p className="font-bold text-primary">
@@ -292,7 +383,7 @@ const PDVPage = () => {
                               </div>
                             </CardContent>
                           </Card>
-                        ))}
+                        )))}
                       </div>
                     </ScrollArea>
                   </TabsContent>
@@ -432,7 +523,16 @@ const PDVPage = () => {
             </Card>
           </div>
         </div>
-      </div>
+    </div>
+  );
+
+  return isFullscreen ? (
+    <div className="min-h-screen bg-background">
+      <PDVContent />
+    </div>
+  ) : (
+    <DashboardLayout activeTab="pdv">
+      <PDVContent />
     </DashboardLayout>
   );
 };
