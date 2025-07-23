@@ -91,41 +91,97 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          super_admin_id: string | null
+          target_id: string | null
+          target_type: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          super_admin_id?: string | null
+          target_id?: string | null
+          target_type: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          super_admin_id?: string | null
+          target_id?: string | null
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_super_admin_id_fkey"
+            columns: ["super_admin_id"]
+            isOneToOne: false
+            referencedRelation: "super_admins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       barbershops: {
         Row: {
           address: string | null
           created_at: string
+          created_by: string | null
           email: string | null
           id: string
           logo_url: string | null
+          monthly_revenue: number | null
           name: string
           opening_hours: Json | null
           phone: string | null
+          plan: string
           slug: string
+          status: string
+          total_appointments: number | null
+          total_users: number | null
           updated_at: string
         }
         Insert: {
           address?: string | null
           created_at?: string
+          created_by?: string | null
           email?: string | null
           id?: string
           logo_url?: string | null
+          monthly_revenue?: number | null
           name: string
           opening_hours?: Json | null
           phone?: string | null
+          plan?: string
           slug: string
+          status?: string
+          total_appointments?: number | null
+          total_users?: number | null
           updated_at?: string
         }
         Update: {
           address?: string | null
           created_at?: string
+          created_by?: string | null
           email?: string | null
           id?: string
           logo_url?: string | null
+          monthly_revenue?: number | null
           name?: string
           opening_hours?: Json | null
           phone?: string | null
+          plan?: string
           slug?: string
+          status?: string
+          total_appointments?: number | null
+          total_users?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -310,18 +366,61 @@ export type Database = {
           },
         ]
       }
+      super_admins: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      get_super_admin_info: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          full_name: string
+          email: string
+        }[]
+      }
       get_user_barbershop_id: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      is_super_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_user_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      update_barbershop_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
     }
     Enums: {
