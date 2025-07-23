@@ -13,7 +13,8 @@ import {
   LogOut,
   BarChart3,
   Scissors,
-  TrendingUp
+  TrendingUp,
+  Package
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +45,7 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
     { id: "crm", name: "CRM", icon: TrendingUp, href: `/app/${slug}/crm` },
     { id: "providers", name: "Prestadores", icon: Users, href: `/app/${slug}/prestadores` },
     { id: "services", name: "Serviços", icon: Scissors, href: `/app/${slug}/services` },
+    { id: "produtos", name: "Produtos", icon: Package, href: `/app/${slug}/produtos` },
     { id: "whatsapp", name: "WhatsApp", icon: MessageCircle, href: `/app/${slug}/whatsapp` },
     { id: "financial", name: "Financeiro", icon: DollarSign, href: `/app/${slug}/financial` },
     { id: "settings", name: "Configurações", icon: Settings, href: `/app/${slug}/settings` },

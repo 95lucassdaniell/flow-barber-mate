@@ -332,6 +332,60 @@ export type Database = {
         }
         Relationships: []
       }
+      products: {
+        Row: {
+          barbershop_id: string
+          barcode: string | null
+          category: string
+          cost_price: number
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          min_stock_alert: number
+          name: string
+          selling_price: number
+          stock_quantity: number
+          supplier: string | null
+          updated_at: string
+        }
+        Insert: {
+          barbershop_id: string
+          barcode?: string | null
+          category?: string
+          cost_price?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          min_stock_alert?: number
+          name: string
+          selling_price?: number
+          stock_quantity?: number
+          supplier?: string | null
+          updated_at?: string
+        }
+        Update: {
+          barbershop_id?: string
+          barcode?: string | null
+          category?: string
+          cost_price?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          min_stock_alert?: number
+          name?: string
+          selling_price?: number
+          stock_quantity?: number
+          supplier?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           barbershop_id: string
