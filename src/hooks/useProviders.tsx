@@ -29,12 +29,22 @@ export const useProviders = () => {
   const fetchProviders = async () => {
     try {
       setLoading(true);
+      console.log('useProviders - fetchProviders started, profile:', profile);
+      
+      if (!profile?.barbershop_id) {
+        console.log('useProviders - No barbershop_id found in profile');
+        setLoading(false);
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('barbershop_id', profile!.barbershop_id)
+        .eq('barbershop_id', profile.barbershop_id)
         .order('full_name');
 
+      console.log('useProviders - Supabase response:', { data, error });
+      
       if (error) throw error;
       setProviders((data || []) as Provider[]);
     } catch (error) {

@@ -31,7 +31,14 @@ import ProviderModal from "./ProviderModal";
 
 const ProvidersManagement = () => {
   const { providers, loading, toggleProviderStatus } = useProviders();
-  const { canManageAll } = useAuth();
+  const { canManageAll, profile, loading: authLoading } = useAuth();
+  
+  // Debug logs
+  console.log('ProvidersManagement - providers:', providers);
+  console.log('ProvidersManagement - loading:', loading);
+  console.log('ProvidersManagement - authLoading:', authLoading);
+  console.log('ProvidersManagement - profile:', profile);
+  console.log('ProvidersManagement - canManageAll:', canManageAll);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -84,7 +91,7 @@ const ProvidersManagement = () => {
     }
   };
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -92,7 +99,9 @@ const ProvidersManagement = () => {
         </div>
         <Card>
           <CardContent className="p-6">
-            <div className="text-center">Carregando...</div>
+            <div className="text-center">
+              Carregando... (providers: {loading ? 'sim' : 'não'}, auth: {authLoading ? 'sim' : 'não'})
+            </div>
           </CardContent>
         </Card>
       </div>
