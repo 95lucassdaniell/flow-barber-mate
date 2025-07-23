@@ -18,6 +18,7 @@ import SuperAdminPage from "./pages/SuperAdminPage";
 import SuperAdminBarbershopsPage from "./pages/SuperAdminBarbershopsPage";
 import SuperAdminUsersPage from "./pages/SuperAdminUsersPage";
 import SuperAdminAuditPage from "./pages/SuperAdminAuditPage";
+import SuperAdminSettingsPage from "./pages/SuperAdminSettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +44,7 @@ const App = () => (
           <Route path="/super-admin/barbershops" element={<SuperAdminBarbershopsPage />} />
           <Route path="/super-admin/users" element={<SuperAdminUsersPage />} />
           <Route path="/super-admin/audit" element={<SuperAdminAuditPage />} />
+          <Route path="/super-admin/settings" element={<SuperAdminSettingsPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
