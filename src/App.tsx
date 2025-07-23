@@ -17,6 +17,7 @@ import WhatsAppPage from "./pages/WhatsAppPage";
 import SuperAdminPage from "./pages/SuperAdminPage";
 import SuperAdminBarbershopsPage from "./pages/SuperAdminBarbershopsPage";
 import SuperAdminUsersPage from "./pages/SuperAdminUsersPage";
+import SuperAdminFinancialPage from "./pages/SuperAdminFinancialPage";
 import SuperAdminAuditPage from "./pages/SuperAdminAuditPage";
 import SuperAdminSettingsPage from "./pages/SuperAdminSettingsPage";
 
@@ -40,11 +41,12 @@ const App = () => (
           <Route path="/dashboard/:slug/servicos" element={<ServicesPage />} />
           <Route path="/dashboard/:slug/settings" element={<SettingsPage />} />
           <Route path="/dashboard/:slug/whatsapp" element={<WhatsAppPage />} />
-          <Route path="/super-admin" element={<SuperAdminPage />} />
-          <Route path="/super-admin/barbershops" element={<SuperAdminBarbershopsPage />} />
-          <Route path="/super-admin/users" element={<SuperAdminUsersPage />} />
-          <Route path="/super-admin/audit" element={<SuperAdminAuditPage />} />
-          <Route path="/super-admin/settings" element={<SuperAdminSettingsPage />} />
+        <Route path="/super-admin" element={<SuperAdminPage />} />
+        <Route path="/super-admin/barbershops" element={<SuperAdminBarbershopsPage />} />
+        <Route path="/super-admin/users" element={<SuperAdminUsersPage />} />
+        <Route path="/super-admin/financial" element={<SuperAdminFinancialPage />} />
+        <Route path="/super-admin/audit" element={<SuperAdminAuditPage />} />
+        <Route path="/super-admin/settings" element={<SuperAdminSettingsPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

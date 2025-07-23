@@ -10,7 +10,8 @@ import {
   Settings, 
   LogOut,
   Shield,
-  Activity
+  Activity,
+  DollarSign
 } from "lucide-react";
 import { useSuperAuth } from "@/hooks/useSuperAuth";
 import { Link, useLocation } from "react-router-dom";
@@ -29,6 +30,7 @@ export default function SuperAdminLayout({ children, activeTab }: SuperAdminLayo
     { name: "Dashboard", icon: BarChart3, href: "/super-admin", current: location.pathname === "/super-admin" },
     { name: "Barbearias", icon: Building2, href: "/super-admin/barbershops", current: location.pathname === "/super-admin/barbershops" },
     { name: "Usuários", icon: Users, href: "/super-admin/users", current: location.pathname === "/super-admin/users" },
+    { name: "Financeiro", icon: DollarSign, href: "/super-admin/financial", current: location.pathname === "/super-admin/financial" },
     { name: "Auditoria", icon: Activity, href: "/super-admin/audit", current: location.pathname === "/super-admin/audit" },
     { name: "Configurações", icon: Settings, href: "/super-admin/settings", current: location.pathname === "/super-admin/settings" },
   ];
