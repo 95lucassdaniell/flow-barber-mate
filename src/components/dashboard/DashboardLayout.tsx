@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,6 +15,8 @@ import {
   Scissors
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import logo from "@/assets/barberflow-logo.png";
 
 interface DashboardLayoutProps {
@@ -25,6 +27,14 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { slug } = useParams();
+  const { profile } = useAuth();
+  const [barbershopData, setBarbershopData] = useState<{
+    name: string;
+    logo_url: string;
+  }>({
+    name: "Barbearia",
+    logo_url: ""
+  });
 
   const navigation = [
     { id: "dashboard", name: "Dashboard", icon: BarChart3, href: `/dashboard/${slug}` },
@@ -37,6 +47,33 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
     { id: "settings", name: "Configurações", icon: Settings, href: `/dashboard/${slug}/settings` },
   ];
 
+  useEffect(() => {
+    if (profile?.barbershop_id) {
+      fetchBarbershopData();
+    }
+  }, [profile]);
+
+  const fetchBarbershopData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('barbershops')
+        .select('name, logo_url')
+        .eq('id', profile!.barbershop_id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setBarbershopData({
+          name: data.name || "Barbearia",
+          logo_url: data.logo_url || ""
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching barbershop data:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-secondary/20 flex">
       {/* Sidebar */}
@@ -45,10 +82,18 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
       }`}>
         <div className="p-4 border-b border-border">
           <div className="flex items-center space-x-3">
-            <img src={logo} alt="BarberFlow" className="w-8 h-8" />
+            <Avatar className="w-8 h-8">
+              <AvatarImage src={barbershopData.logo_url} alt="Logo da barbearia" />
+              <AvatarFallback>
+                {barbershopData.name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
             <div className={`${sidebarOpen ? "block" : "hidden md:block"}`}>
-              <h2 className="font-semibold">Navalha de Ouro</h2>
-              <p className="text-sm text-muted-foreground">Admin</p>
+              <h2 className="font-semibold truncate">{barbershopData.name}</h2>
+              <p className="text-sm text-muted-foreground">
+                {profile?.role === 'admin' ? 'Administrador' : 
+                 profile?.role === 'receptionist' ? 'Recepcionista' : 'Barbeiro'}
+              </p>
             </div>
           </div>
         </div>
@@ -112,7 +157,9 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
               </Button>
               <Avatar className="w-8 h-8">
                 <AvatarImage src="" />
-                <AvatarFallback>CS</AvatarFallback>
+                <AvatarFallback>
+                  {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'U'}
+                </AvatarFallback>
               </Avatar>
             </div>
           </div>
