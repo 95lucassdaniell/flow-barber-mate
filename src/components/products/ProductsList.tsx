@@ -191,6 +191,18 @@ export const ProductsList = () => {
                       </span>
                     </div>
                   </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Comissão:</span>
+                    <div className="flex items-center gap-1">
+                      <DollarSign className="h-3 w-3 text-blue-600" />
+                      <span className="font-medium text-blue-600">
+                        {product.commission_type === 'percentage' 
+                          ? `${product.commission_rate}%`
+                          : `R$ ${product.commission_rate.toFixed(2)}`
+                        }
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex justify-between items-center p-2 bg-muted rounded-lg">

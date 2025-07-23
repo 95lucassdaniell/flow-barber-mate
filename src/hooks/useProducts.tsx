@@ -16,6 +16,8 @@ export interface Product {
   supplier?: string;
   image_url?: string;
   is_active: boolean;
+  commission_rate: number;
+  commission_type: 'percentage' | 'fixed';
   created_at: string;
   updated_at: string;
 }
@@ -32,6 +34,8 @@ export interface ProductFormData {
   supplier?: string;
   image_url?: string;
   is_active: boolean;
+  commission_rate: number;
+  commission_type: 'percentage' | 'fixed';
 }
 
 export const useProducts = () => {

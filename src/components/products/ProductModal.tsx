@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useCreateProduct, useUpdateProduct, Product, ProductFormData } from '@/hooks/useProducts';
-import { Calculator } from 'lucide-react';
+import { Calculator, DollarSign } from 'lucide-react';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -39,6 +39,8 @@ export const ProductModal = ({ isOpen, onClose, product }: ProductModalProps) =>
     supplier: '',
     image_url: '',
     is_active: true,
+    commission_rate: 0,
+    commission_type: 'percentage',
   });
 
   const createProduct = useCreateProduct();
@@ -58,6 +60,8 @@ export const ProductModal = ({ isOpen, onClose, product }: ProductModalProps) =>
         supplier: product.supplier || '',
         image_url: product.image_url || '',
         is_active: product.is_active,
+        commission_rate: product.commission_rate,
+        commission_type: product.commission_type,
       });
     } else {
       setFormData({
@@ -72,6 +76,8 @@ export const ProductModal = ({ isOpen, onClose, product }: ProductModalProps) =>
         supplier: '',
         image_url: '',
         is_active: true,
+        commission_rate: 0,
+        commission_type: 'percentage',
       });
     }
   }, [product, isOpen]);
@@ -105,6 +111,13 @@ export const ProductModal = ({ isOpen, onClose, product }: ProductModalProps) =>
       return markup.toFixed(1);
     }
     return '0';
+  };
+
+  const calculateCommission = () => {
+    if (formData.commission_type === 'percentage') {
+      return ((formData.selling_price * formData.commission_rate) / 100).toFixed(2);
+    }
+    return formData.commission_rate.toFixed(2);
   };
 
   return (
@@ -230,6 +243,60 @@ export const ProductModal = ({ isOpen, onClose, product }: ProductModalProps) =>
                   <span className="text-muted-foreground">Markup:</span>
                   <span className="ml-2 font-medium text-blue-600">
                     {calculateMarkup()}%
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              <h3 className="font-medium">Comissão por Venda</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="commission_type">Tipo de Comissão</Label>
+                <Select
+                  value={formData.commission_type}
+                  onValueChange={(value: 'percentage' | 'fixed') => 
+                    setFormData({ ...formData, commission_type: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percentage">Percentual (%)</SelectItem>
+                    <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="commission_rate">
+                  {formData.commission_type === 'percentage' ? 'Percentual (%)' : 'Valor (R$)'}
+                </Label>
+                <Input
+                  id="commission_rate"
+                  type="number"
+                  step={formData.commission_type === 'percentage' ? '0.1' : '0.01'}
+                  min="0"
+                  max={formData.commission_type === 'percentage' ? '100' : undefined}
+                  value={formData.commission_rate}
+                  onChange={(e) => setFormData({ ...formData, commission_rate: parseFloat(e.target.value) || 0 })}
+                  placeholder={formData.commission_type === 'percentage' ? '0.0' : '0.00'}
+                />
+              </div>
+            </div>
+
+            {formData.selling_price > 0 && formData.commission_rate > 0 && (
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Comissão por venda:</span>
+                  <span className="ml-2 font-medium text-primary">
+                    R$ {calculateCommission()}
                   </span>
                 </div>
               </div>

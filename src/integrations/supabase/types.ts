@@ -337,6 +337,8 @@ export type Database = {
           barbershop_id: string
           barcode: string | null
           category: string
+          commission_rate: number | null
+          commission_type: string | null
           cost_price: number
           created_at: string
           description: string | null
@@ -354,6 +356,8 @@ export type Database = {
           barbershop_id: string
           barcode?: string | null
           category?: string
+          commission_rate?: number | null
+          commission_type?: string | null
           cost_price?: number
           created_at?: string
           description?: string | null
@@ -371,6 +375,8 @@ export type Database = {
           barbershop_id?: string
           barcode?: string | null
           category?: string
+          commission_rate?: number | null
+          commission_type?: string | null
           cost_price?: number
           created_at?: string
           description?: string | null
