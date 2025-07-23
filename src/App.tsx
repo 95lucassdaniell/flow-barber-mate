@@ -14,6 +14,7 @@ import ClientsPage from "./pages/ClientsPage";
 import ServicesPage from "./pages/ServicesPage";
 import SettingsPage from "./pages/SettingsPage";
 import WhatsAppPage from "./pages/WhatsAppPage";
+import CRMPage from "./pages/CRMPage";
 import SuperAdminPage from "./pages/SuperAdminPage";
 import SuperAdminBarbershopsPage from "./pages/SuperAdminBarbershopsPage";
 import SuperAdminUsersPage from "./pages/SuperAdminUsersPage";
@@ -41,6 +42,7 @@ const App = () => (
           <Route path="/app/:slug/servicos" element={<ServicesPage />} />
           <Route path="/app/:slug/settings" element={<SettingsPage />} />
           <Route path="/app/:slug/whatsapp" element={<WhatsAppPage />} />
+          <Route path="/app/:slug/crm" element={<CRMPage />} />
         <Route path="/super-admin" element={<SuperAdminPage />} />
         <Route path="/super-admin/barbershops" element={<SuperAdminBarbershopsPage />} />
         <Route path="/super-admin/users" element={<SuperAdminUsersPage />} />

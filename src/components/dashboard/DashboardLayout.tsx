@@ -12,7 +12,8 @@ import {
   Bell,
   LogOut,
   BarChart3,
-  Scissors
+  Scissors,
+  TrendingUp
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,6 +41,7 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
     { id: "dashboard", name: "Dashboard", icon: BarChart3, href: `/app/${slug}` },
     { id: "agenda", name: "Agenda", icon: Calendar, href: `/app/${slug}/agenda` },
     { id: "clients", name: "Clientes", icon: Users, href: `/app/${slug}/clients` },
+    { id: "crm", name: "CRM", icon: TrendingUp, href: `/app/${slug}/crm` },
     { id: "providers", name: "Prestadores", icon: Users, href: `/app/${slug}/prestadores` },
     { id: "services", name: "Serviços", icon: Scissors, href: `/app/${slug}/services` },
     { id: "whatsapp", name: "WhatsApp", icon: MessageCircle, href: `/app/${slug}/whatsapp` },
