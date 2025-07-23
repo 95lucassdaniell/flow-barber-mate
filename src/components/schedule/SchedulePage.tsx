@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -13,47 +13,62 @@ import {
 } from "lucide-react";
 import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useBarberSelection } from "@/hooks/useBarberSelection";
 import { AppointmentModal } from "./AppointmentModal";
+import { BarberSelector } from "./BarberSelector";
 
 const SchedulePage = () => {
+  const { profile, loading: authLoading } = useAuth();
+  const { selectedBarberId, selectedBarber, loading: barberLoading } = useBarberSelection();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week">("day");
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Mock data - virá da API
-  const appointments = [
-    {
-      id: "1",
-      time: "09:00",
-      client: "João Silva",
-      service: "Corte + Barba",
-      barber: "Carlos",
-      status: "confirmed",
-      price: 45.00,
-      phone: "(11) 99999-9999"
-    },
-    {
-      id: "2", 
-      time: "09:30",
-      client: "Pedro Santos",
-      service: "Corte Masculino",
-      barber: "Roberto",
-      status: "confirmed",
-      price: 25.00,
-      phone: "(11) 88888-8888"
-    },
-    {
-      id: "3",
-      time: "10:00",
-      client: "Marcos Lima", 
-      service: "Sobrancelha",
-      barber: "Carlos",
-      status: "pending",
-      price: 15.00,
-      phone: "(11) 77777-7777"
-    }
-  ];
+  // Fetch appointments for selected barber and date
+  useEffect(() => {
+    if (!selectedBarberId || !profile) return;
+
+    const fetchAppointments = async () => {
+      setLoading(true);
+      try {
+        const { data } = await supabase
+          .from('appointments')
+          .select(`
+            *,
+            clients(name, phone),
+            services(name, price),
+            profiles!appointments_barber_id_fkey(full_name)
+          `)
+          .eq('barber_id', selectedBarberId)
+          .eq('appointment_date', format(selectedDate, 'yyyy-MM-dd'))
+          .order('start_time');
+
+        const formattedAppointments = data?.map(apt => ({
+          id: apt.id,
+          time: apt.start_time.slice(0, 5), // HH:MM format
+          client: apt.clients?.name || 'Cliente',
+          service: apt.services?.name || 'Serviço',
+          barber: apt.profiles?.full_name || 'Barbeiro',
+          status: apt.status,
+          price: Number(apt.total_price),
+          phone: apt.clients?.phone || ''
+        })) || [];
+
+        setAppointments(formattedAppointments);
+      } catch (error) {
+        console.error('Error fetching appointments:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAppointments();
+  }, [selectedBarberId, selectedDate, profile]);
 
   const timeSlots = [
     "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -84,6 +99,21 @@ const SchedulePage = () => {
   const getAppointmentForTimeSlot = (timeSlot: string) => {
     return appointments.find(apt => apt.time === timeSlot);
   };
+
+  if (authLoading || barberLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-muted rounded w-32 mb-2" />
+          <div className="h-4 bg-muted rounded w-64" />
+        </div>
+        <div className="grid lg:grid-cols-4 gap-6">
+          <div className="h-96 bg-muted rounded-lg animate-pulse" />
+          <div className="lg:col-span-3 h-96 bg-muted rounded-lg animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
   const handleTimeSlotClick = (timeSlot: string) => {
     setSelectedTimeSlot(timeSlot);
@@ -204,28 +234,32 @@ const SchedulePage = () => {
           </p>
         </div>
         
-        <div className="flex items-center space-x-2">
-          <Button
-            variant={viewMode === "day" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setViewMode("day")}
-          >
-            Dia
-          </Button>
-          <Button
-            variant={viewMode === "week" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setViewMode("week")}
-          >
-            Semana
-          </Button>
-          <Button
-            variant="hero"
-            onClick={() => setShowAppointmentModal(true)}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Agendamento
-          </Button>
+        <div className="flex items-center space-x-4">
+          <BarberSelector />
+          
+          <div className="flex items-center space-x-2">
+            <Button
+              variant={viewMode === "day" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("day")}
+            >
+              Dia
+            </Button>
+            <Button
+              variant={viewMode === "week" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("week")}
+            >
+              Semana
+            </Button>
+            <Button
+              variant="hero"
+              onClick={() => setShowAppointmentModal(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Agendamento
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -256,7 +290,10 @@ const SchedulePage = () => {
               <CardTitle className="flex items-center space-x-2">
                 <Clock className="w-5 h-5" />
                 <span>
-                  {viewMode === "day" ? "Agenda do Dia" : "Visão Semanal"}
+                  {viewMode === "day" 
+                    ? `Agenda ${selectedBarber ? `- ${selectedBarber.full_name}` : ''}` 
+                    : "Visão Semanal"
+                  }
                 </span>
               </CardTitle>
               
@@ -282,9 +319,17 @@ const SchedulePage = () => {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            {viewMode === "day" ? renderDayView() : renderWeekView()}
-          </CardContent>
+           <CardContent>
+             {loading ? (
+               <div className="space-y-3">
+                 {Array.from({ length: 8 }).map((_, i) => (
+                   <div key={i} className="h-16 bg-muted rounded-lg animate-pulse" />
+                 ))}
+               </div>
+             ) : (
+               viewMode === "day" ? renderDayView() : renderWeekView()
+             )}
+           </CardContent>
         </Card>
       </div>
 
@@ -298,6 +343,7 @@ const SchedulePage = () => {
           }}
           selectedDate={selectedDate}
           selectedTime={selectedTimeSlot}
+          selectedBarberId={selectedBarberId}
         />
       )}
     </div>

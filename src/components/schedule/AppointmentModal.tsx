@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,12 +18,15 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useAuth } from "@/hooks/useAuth";
+import { useBarberSelection } from "@/hooks/useBarberSelection";
 
 interface AppointmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedDate: Date;
   selectedTime?: string | null;
+  selectedBarberId?: string;
   appointment?: any; // Para edição
 }
 
@@ -32,6 +35,7 @@ export const AppointmentModal = ({
   onClose, 
   selectedDate, 
   selectedTime,
+  selectedBarberId,
   appointment 
 }: AppointmentModalProps) => {
   const [step, setStep] = useState<"client" | "details">("client");
@@ -41,12 +45,21 @@ export const AppointmentModal = ({
     phone: "",
     email: ""
   });
+  const { canManageAll } = useAuth();
+  const { barbers } = useBarberSelection();
   const [appointmentData, setAppointmentData] = useState({
-    barberId: "",
+    barberId: selectedBarberId || "",
     serviceId: "",
     time: selectedTime || "",
     notes: ""
   });
+
+  // Update barber selection when prop changes
+  useEffect(() => {
+    if (selectedBarberId && !canManageAll) {
+      setAppointmentData(prev => ({ ...prev, barberId: selectedBarberId }));
+    }
+  }, [selectedBarberId, canManageAll]);
 
   // Mock data - virá da API
   const mockClients = [
@@ -55,10 +68,11 @@ export const AppointmentModal = ({
     { id: "3", name: "Marcos Lima", phone: "(11) 77777-7777", email: "marcos@email.com" }
   ];
 
-  const mockBarbers = [
-    { id: "1", name: "Carlos Silva" },
-    { id: "2", name: "Roberto Santos" }
-  ];
+  // Use real barbers from the hook
+  const availableBarbers = barbers.map(b => ({
+    id: b.id,
+    name: b.full_name
+  }));
 
   const mockServices = [
     { id: "1", name: "Corte Masculino", duration: 30, price: 25.00 },
@@ -267,18 +281,24 @@ export const AppointmentModal = ({
                   <Select 
                     value={appointmentData.barberId} 
                     onValueChange={(value) => setAppointmentData(prev => ({ ...prev, barberId: value }))}
+                    disabled={!canManageAll}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o profissional" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockBarbers.map((barber) => (
+                      {availableBarbers.map((barber) => (
                         <SelectItem key={barber.id} value={barber.id}>
                           {barber.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {!canManageAll && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Agendamento será feito para você
+                    </p>
+                  )}
                 </div>
 
                 {/* Serviço */}
