@@ -1,287 +1,383 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
-import { Save, TestTube, AlertCircle, CheckCircle } from "lucide-react";
+import { toast } from "sonner";
+import { Loader2, CheckCircle, XCircle, QrCode, Smartphone } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface WhatsAppConfigProps {
   isConnected: boolean;
   setIsConnected: (connected: boolean) => void;
 }
 
-const WhatsAppConfig = ({ isConnected, setIsConnected }: WhatsAppConfigProps) => {
-  const { toast } = useToast();
+const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConnected }) => {
   const [loading, setLoading] = useState(false);
-  const [testing, setTesting] = useState(false);
-  
-  const [config, setConfig] = useState({
-    apiUrl: "",
-    accessToken: "",
-    phoneNumberId: "",
-    webhookVerifyToken: "",
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [instanceStatus, setInstanceStatus] = useState<string>('disconnected');
+  const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
+  const [settings, setSettings] = useState({
     businessName: "",
-    autoReply: true,
-    notifications: {
-      newAppointment: true,
-      appointmentReminder: true,
-      appointmentConfirmation: true,
-      cancellation: true,
-    }
+    autoReply: false,
+    autoReplyMessage: "Olá! Obrigado por entrar em contato. Em breve responderemos sua mensagem.",
+  });
+  const [notifications, setNotifications] = useState({
+    appointmentConfirmation: true,
+    appointmentReminder24h: true,
+    appointmentReminder1h: true,
+    appointmentCancellation: true,
   });
 
-  const handleSave = async () => {
+  useEffect(() => {
+    checkConnectionStatus();
+    loadSettings();
+  }, []);
+
+  const checkConnectionStatus = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('whatsapp-status');
+      
+      if (error) {
+        console.error('Error checking status:', error);
+        return;
+      }
+
+      setInstanceStatus(data.status);
+      setIsConnected(data.connected);
+      setPhoneNumber(data.phone_number);
+    } catch (error) {
+      console.error('Error checking connection status:', error);
+    }
+  };
+
+  const loadSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_settings')
+        .select('*')
+        .single();
+
+      if (data) {
+        setSettings({
+          businessName: data.business_name || "",
+          autoReply: data.auto_reply || false,
+          autoReplyMessage: data.auto_reply_message || "Olá! Obrigado por entrar em contato. Em breve responderemos sua mensagem.",
+        });
+        const notificationSettings = data.notification_settings as any;
+        if (notificationSettings) {
+          setNotifications({
+            appointmentConfirmation: notificationSettings.appointmentConfirmation ?? true,
+            appointmentReminder24h: notificationSettings.appointmentReminder24h ?? true,
+            appointmentReminder1h: notificationSettings.appointmentReminder1h ?? true,
+            appointmentCancellation: notificationSettings.appointmentCancellation ?? true,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  };
+
+  const generateQRCode = async () => {
+    setQrLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('whatsapp-connect');
+      
+      if (error) {
+        toast.error("Erro ao gerar QR Code");
+        return;
+      }
+
+      setQrCode(data.qr_code);
+      setInstanceStatus(data.status);
+      
+      // Start checking status periodically
+      const statusInterval = setInterval(async () => {
+        await checkConnectionStatus();
+        if (instanceStatus === 'connected') {
+          clearInterval(statusInterval);
+          setQrCode(null);
+          toast.success("WhatsApp conectado com sucesso!");
+        }
+      }, 3000);
+
+      // Clear interval after 5 minutes
+      setTimeout(() => clearInterval(statusInterval), 300000);
+      
+    } catch (error) {
+      toast.error("Erro ao conectar WhatsApp");
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  const saveSettings = async () => {
     setLoading(true);
     try {
-      // Simular salvamento
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Get current user's barbershop_id
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('barbershop_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!profile?.barbershop_id) {
+        toast.error("Barbearia não encontrada");
+        return;
+      }
+
+      const { error } = await supabase
+        .from('whatsapp_settings')
+        .upsert({
+          barbershop_id: profile.barbershop_id,
+          business_name: settings.businessName,
+          auto_reply: settings.autoReply,
+          auto_reply_message: settings.autoReplyMessage,
+          notification_settings: notifications,
+        });
+
+      if (error) {
+        console.error('Error saving settings:', error);
+        toast.error("Erro ao salvar configurações");
+        return;
+      }
       
-      toast({
-        title: "Configurações salvas",
-        description: "As configurações do WhatsApp foram atualizadas com sucesso.",
-      });
+      toast.success("Configurações salvas com sucesso!");
     } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar as configurações.",
-        variant: "destructive",
-      });
+      console.error('Error saving settings:', error);
+      toast.error("Erro ao salvar configurações");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleTest = async () => {
-    setTesting(true);
-    try {
-      // Simular teste de conexão
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setIsConnected(true);
-      toast({
-        title: "Teste realizado com sucesso",
-        description: "Conexão com WhatsApp Business API estabelecida.",
-      });
-    } catch (error) {
-      toast({
-        title: "Falha no teste",
-        description: "Não foi possível conectar com a API. Verifique as configurações.",
-        variant: "destructive",
-      });
-    } finally {
-      setTesting(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {/* API Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            {isConnected ? (
-              <CheckCircle className="w-5 h-5 text-green-600" />
-            ) : (
-              <AlertCircle className="w-5 h-5 text-orange-600" />
-            )}
-            Configuração da API
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="apiUrl">URL da API</Label>
-              <Input
-                id="apiUrl"
-                placeholder="https://graph.facebook.com/v17.0"
-                value={config.apiUrl}
-                onChange={(e) => setConfig(prev => ({ ...prev, apiUrl: e.target.value }))}
-              />
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Conexão WhatsApp</CardTitle>
+              <CardDescription>
+                Conecte seu número do WhatsApp usando o QR Code
+              </CardDescription>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="accessToken">Access Token</Label>
-              <Input
-                id="accessToken"
-                type="password"
-                placeholder="EAAxxxxxxxxxxxxx"
-                value={config.accessToken}
-                onChange={(e) => setConfig(prev => ({ ...prev, accessToken: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phoneNumberId">Phone Number ID</Label>
-              <Input
-                id="phoneNumberId"
-                placeholder="123456789012345"
-                value={config.phoneNumberId}
-                onChange={(e) => setConfig(prev => ({ ...prev, phoneNumberId: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="webhookVerifyToken">Webhook Verify Token</Label>
-              <Input
-                id="webhookVerifyToken"
-                placeholder="meu_token_verificacao"
-                value={config.webhookVerifyToken}
-                onChange={(e) => setConfig(prev => ({ ...prev, webhookVerifyToken: e.target.value }))}
-              />
+            <div className="flex items-center space-x-2">
+              {isConnected ? (
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-500" />
+              )}
+              <span className={isConnected ? "text-green-500" : "text-red-500"}>
+                {isConnected ? "Conectado" : "Desconectado"}
+              </span>
             </div>
           </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isConnected && phoneNumber ? (
+            <div className="flex items-center space-x-2 p-4 bg-green-50 rounded-lg">
+              <Smartphone className="h-5 w-5 text-green-600" />
+              <span className="text-green-700">
+                WhatsApp conectado: {phoneNumber}
+              </span>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {qrCode ? (
+                <div className="text-center space-y-4">
+                  <div className="p-4 bg-white rounded-lg border inline-block">
+                    <img 
+                      src={`data:image/png;base64,${qrCode}`} 
+                      alt="QR Code WhatsApp" 
+                      className="w-48 h-48"
+                    />
+                  </div>
+                  <div className="text-sm text-muted-foreground space-y-2">
+                    <p>1. Abra o WhatsApp no seu celular</p>
+                    <p>2. Toque em Menu ou Configurações</p>
+                    <p>3. Toque em Aparelhos conectados</p>
+                    <p>4. Toque em Conectar um aparelho</p>
+                    <p>5. Aponte o celular para esta tela para capturar o código</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center space-y-4">
+                  <QrCode className="h-12 w-12 text-muted-foreground mx-auto" />
+                  <p className="text-muted-foreground">
+                    Clique no botão abaixo para gerar o QR Code e conectar seu WhatsApp
+                  </p>
+                  <Button onClick={generateQRCode} disabled={qrLoading}>
+                    {qrLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <QrCode className="mr-2 h-4 w-4" />
+                    Gerar QR Code
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Configurações do Negócio</CardTitle>
+          <CardDescription>
+            Configure as informações da sua barbearia
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="businessName">Nome do Negócio</Label>
             <Input
               id="businessName"
               placeholder="Minha Barbearia"
-              value={config.businessName}
-              onChange={(e) => setConfig(prev => ({ ...prev, businessName: e.target.value }))}
+              value={settings.businessName}
+              onChange={(e) => setSettings({ ...settings, businessName: e.target.value })}
             />
           </div>
 
-          <div className="flex items-center justify-between pt-4">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="autoReply">Resposta Automática</Label>
-              <Switch
-                id="autoReply"
-                checked={config.autoReply}
-                onCheckedChange={(checked) => setConfig(prev => ({ ...prev, autoReply: checked }))}
-              />
-            </div>
-            
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleTest} disabled={testing}>
-                <TestTube className="w-4 h-4 mr-2" />
-                {testing ? "Testando..." : "Testar Conexão"}
-              </Button>
-              <Button onClick={handleSave} disabled={loading}>
-                <Save className="w-4 h-4 mr-2" />
-                {loading ? "Salvando..." : "Salvar"}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Notification Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Configurações de Notificações</CardTitle>
-        </CardHeader>
-        <CardContent>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div>
-                <Label>Novo Agendamento</Label>
-                <p className="text-sm text-muted-foreground">
-                  Notificar cliente quando um agendamento for criado
-                </p>
+              <div className="space-y-0.5">
+                <Label>Resposta Automática</Label>
+                <div className="text-sm text-muted-foreground">
+                  Enviar resposta automática para novas mensagens
+                </div>
               </div>
               <Switch
-                checked={config.notifications.newAppointment}
-                onCheckedChange={(checked) => 
-                  setConfig(prev => ({ 
-                    ...prev, 
-                    notifications: { ...prev.notifications, newAppointment: checked }
-                  }))
-                }
+                checked={settings.autoReply}
+                onCheckedChange={(checked) => setSettings({ ...settings, autoReply: checked })}
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Lembrete de Agendamento</Label>
-                <p className="text-sm text-muted-foreground">
-                  Enviar lembrete 1 hora antes do agendamento
-                </p>
+            {settings.autoReply && (
+              <div className="space-y-2">
+                <Label htmlFor="autoReplyMessage">Mensagem de Resposta Automática</Label>
+                <Input
+                  id="autoReplyMessage"
+                  placeholder="Olá! Obrigado por entrar em contato..."
+                  value={settings.autoReplyMessage}
+                  onChange={(e) => setSettings({ ...settings, autoReplyMessage: e.target.value })}
+                />
               </div>
-              <Switch
-                checked={config.notifications.appointmentReminder}
-                onCheckedChange={(checked) => 
-                  setConfig(prev => ({ 
-                    ...prev, 
-                    notifications: { ...prev.notifications, appointmentReminder: checked }
-                  }))
-                }
-              />
-            </div>
+            )}
+          </div>
 
+          <Button onClick={saveSettings} disabled={loading}>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Salvar Configurações
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Configurações de Notificação</CardTitle>
+          <CardDescription>
+            Configure quando e como enviar notificações automáticas
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="space-y-0.5">
                 <Label>Confirmação de Agendamento</Label>
-                <p className="text-sm text-muted-foreground">
-                  Solicitar confirmação do cliente
-                </p>
+                <div className="text-sm text-muted-foreground">
+                  Enviar confirmação quando um agendamento for criado
+                </div>
               </div>
               <Switch
-                checked={config.notifications.appointmentConfirmation}
-                onCheckedChange={(checked) => 
-                  setConfig(prev => ({ 
-                    ...prev, 
-                    notifications: { ...prev.notifications, appointmentConfirmation: checked }
-                  }))
-                }
+                checked={notifications.appointmentConfirmation}
+                onCheckedChange={(checked) => setNotifications({ ...notifications, appointmentConfirmation: checked })}
               />
             </div>
 
             <div className="flex items-center justify-between">
-              <div>
-                <Label>Cancelamento</Label>
-                <p className="text-sm text-muted-foreground">
-                  Notificar sobre cancelamentos
-                </p>
+              <div className="space-y-0.5">
+                <Label>Lembrete 24h antes</Label>
+                <div className="text-sm text-muted-foreground">
+                  Enviar lembrete 24 horas antes do agendamento
+                </div>
               </div>
               <Switch
-                checked={config.notifications.cancellation}
-                onCheckedChange={(checked) => 
-                  setConfig(prev => ({ 
-                    ...prev, 
-                    notifications: { ...prev.notifications, cancellation: checked }
-                  }))
-                }
+                checked={notifications.appointmentReminder24h}
+                onCheckedChange={(checked) => setNotifications({ ...notifications, appointmentReminder24h: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Lembrete 1h antes</Label>
+                <div className="text-sm text-muted-foreground">
+                  Enviar lembrete 1 hora antes do agendamento
+                </div>
+              </div>
+              <Switch
+                checked={notifications.appointmentReminder1h}
+                onCheckedChange={(checked) => setNotifications({ ...notifications, appointmentReminder1h: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Cancelamento de Agendamento</Label>
+                <div className="text-sm text-muted-foreground">
+                  Notificar quando um agendamento for cancelado
+                </div>
+              </div>
+              <Switch
+                checked={notifications.appointmentCancellation}
+                onCheckedChange={(checked) => setNotifications({ ...notifications, appointmentCancellation: checked })}
               />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Integration Guide */}
       <Card>
         <CardHeader>
-          <CardTitle>Como Configurar</CardTitle>
+          <CardTitle>Como Usar</CardTitle>
+          <CardDescription>
+            Guia rápido para usar o WhatsApp na sua barbearia
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4 text-sm">
             <div>
-              <h4 className="font-medium mb-2">1. Criar uma Conta Meta for Developers</h4>
+              <h4 className="font-medium mb-2">1. Conectar WhatsApp</h4>
               <p className="text-muted-foreground">
-                Acesse developers.facebook.com e crie uma conta Meta for Developers
+                Use o QR Code acima para conectar seu número do WhatsApp
               </p>
             </div>
             
             <div>
-              <h4 className="font-medium mb-2">2. Criar um App WhatsApp Business</h4>
+              <h4 className="font-medium mb-2">2. Configurar Automações</h4>
               <p className="text-muted-foreground">
-                No painel do Meta for Developers, crie um novo app e adicione o produto WhatsApp Business
+                Ative as notificações que deseja enviar automaticamente para seus clientes
               </p>
             </div>
             
             <div>
-              <h4 className="font-medium mb-2">3. Obter Credenciais</h4>
+              <h4 className="font-medium mb-2">3. Enviar Mensagens</h4>
               <p className="text-muted-foreground">
-                Copie o Access Token e Phone Number ID do painel do WhatsApp Business
+                Use a aba "Enviar Mensagem" para comunicar-se diretamente com os clientes
               </p>
             </div>
             
             <div>
-              <h4 className="font-medium mb-2">4. Configurar Webhook</h4>
+              <h4 className="font-medium mb-2">4. Histórico</h4>
               <p className="text-muted-foreground">
-                Configure o webhook URL para receber mensagens: {window.location.origin}/api/whatsapp/webhook
+                Acompanhe todas as mensagens enviadas e recebidas na aba "Histórico"
               </p>
             </div>
           </div>

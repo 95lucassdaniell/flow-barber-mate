@@ -545,6 +545,221 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_instances: {
+        Row: {
+          barbershop_id: string
+          created_at: string
+          id: string
+          instance_id: string | null
+          instance_token: string | null
+          last_connected_at: string | null
+          phone_number: string | null
+          qr_code: string | null
+          status: string
+          updated_at: string
+          webhook_url: string | null
+        }
+        Insert: {
+          barbershop_id: string
+          created_at?: string
+          id?: string
+          instance_id?: string | null
+          instance_token?: string | null
+          last_connected_at?: string | null
+          phone_number?: string | null
+          qr_code?: string | null
+          status?: string
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Update: {
+          barbershop_id?: string
+          created_at?: string
+          id?: string
+          instance_id?: string | null
+          instance_token?: string | null
+          last_connected_at?: string | null
+          phone_number?: string | null
+          qr_code?: string | null
+          status?: string
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_instances_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: true
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_messages: {
+        Row: {
+          appointment_id: string | null
+          barbershop_id: string
+          client_id: string | null
+          contact_name: string | null
+          content: Json
+          created_at: string
+          direction: string
+          id: string
+          instance_id: string
+          message_id: string | null
+          message_type: string
+          phone_number: string
+          status: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barbershop_id: string
+          client_id?: string | null
+          contact_name?: string | null
+          content: Json
+          created_at?: string
+          direction: string
+          id?: string
+          instance_id: string
+          message_id?: string | null
+          message_type?: string
+          phone_number: string
+          status?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barbershop_id?: string
+          client_id?: string | null
+          contact_name?: string | null
+          content?: Json
+          created_at?: string
+          direction?: string
+          id?: string
+          instance_id?: string
+          message_id?: string | null
+          message_type?: string
+          phone_number?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_settings: {
+        Row: {
+          auto_reply: boolean
+          auto_reply_message: string | null
+          barbershop_id: string
+          business_hours: Json | null
+          business_name: string | null
+          created_at: string
+          id: string
+          notification_settings: Json | null
+          updated_at: string
+        }
+        Insert: {
+          auto_reply?: boolean
+          auto_reply_message?: string | null
+          barbershop_id: string
+          business_hours?: Json | null
+          business_name?: string | null
+          created_at?: string
+          id?: string
+          notification_settings?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          auto_reply?: boolean
+          auto_reply_message?: string | null
+          barbershop_id?: string
+          business_hours?: Json | null
+          business_name?: string | null
+          created_at?: string
+          id?: string
+          notification_settings?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_settings_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: true
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_templates: {
+        Row: {
+          barbershop_id: string
+          category: string
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          variables: Json | null
+        }
+        Insert: {
+          barbershop_id: string
+          category?: string
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Update: {
+          barbershop_id?: string
+          category?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_templates_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
