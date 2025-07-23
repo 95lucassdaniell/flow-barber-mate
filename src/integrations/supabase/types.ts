@@ -398,6 +398,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_super_admin: {
+        Args: { user_email: string; user_full_name: string }
+        Returns: string
+      }
       get_super_admin_info: {
         Args: Record<PropertyKey, never>
         Returns: {
