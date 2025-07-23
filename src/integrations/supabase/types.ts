@@ -302,6 +302,54 @@ export type Database = {
           },
         ]
       }
+      commissions: {
+        Row: {
+          barber_id: string
+          barbershop_id: string
+          base_amount: number
+          commission_amount: number
+          commission_date: string
+          commission_rate: number
+          commission_type: string
+          created_at: string
+          id: string
+          sale_id: string
+          sale_item_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          barbershop_id: string
+          base_amount?: number
+          commission_amount?: number
+          commission_date?: string
+          commission_rate?: number
+          commission_type: string
+          created_at?: string
+          id?: string
+          sale_id: string
+          sale_item_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          barbershop_id?: string
+          base_amount?: number
+          commission_amount?: number
+          commission_date?: string
+          commission_rate?: number
+          commission_type?: string
+          created_at?: string
+          id?: string
+          sale_id?: string
+          sale_item_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       plan_features: {
         Row: {
           created_at: string
@@ -486,6 +534,105 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sale_items: {
+        Row: {
+          commission_amount: number
+          commission_rate: number
+          created_at: string
+          id: string
+          item_type: string
+          product_id: string | null
+          quantity: number
+          sale_id: string
+          service_id: string | null
+          total_price: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          commission_amount?: number
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          item_type: string
+          product_id?: string | null
+          quantity?: number
+          sale_id: string
+          service_id?: string | null
+          total_price?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          commission_amount?: number
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          item_type?: string
+          product_id?: string | null
+          quantity?: number
+          sale_id?: string
+          service_id?: string | null
+          total_price?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sales: {
+        Row: {
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at: string
+          created_by: string
+          discount_amount: number
+          final_amount: number
+          id: string
+          notes: string | null
+          payment_method: string
+          payment_status: string
+          sale_date: string
+          sale_time: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at?: string
+          created_by: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       services: {
         Row: {
