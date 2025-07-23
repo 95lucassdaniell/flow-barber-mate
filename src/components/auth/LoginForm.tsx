@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/barberflow-logo.png";
 
 const LoginForm = () => {
@@ -12,6 +13,7 @@ const LoginForm = () => {
     email: "",
     password: "",
   });
+  const [loading, setLoading] = useState(false);
   
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -28,14 +30,74 @@ const LoginForm = () => {
       return;
     }
 
-    // TODO: Aqui será a integração com a API de autenticação
-    toast({
-      title: "Login realizado!",
-      description: "Bem-vindo de volta ao BarberFlow!",
-    });
+    setLoading(true);
 
-    // Simular redirecionamento (depois será baseado no usuário logado)
-    navigate("/dashboard/navalha-de-ouro");
+    try {
+      // Fazer login com Supabase
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (authError) {
+        throw new Error(authError.message);
+      }
+
+      if (!authData.user) {
+        throw new Error("Erro ao fazer login");
+      }
+
+      // Buscar perfil do usuário para obter a barbearia
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          barbershops (
+            slug
+          )
+        `)
+        .eq('user_id', authData.user.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error("Perfil não encontrado. Entre em contato com o suporte.");
+      }
+
+      toast({
+        title: "Login realizado!",
+        description: "Bem-vindo de volta ao BarberFlow!",
+      });
+
+      // Redirecionar para o dashboard da barbearia do usuário
+      const barbershopSlug = (profile.barbershops as any)?.slug;
+      if (barbershopSlug) {
+        navigate(`/dashboard/${barbershopSlug}`);
+      } else {
+        throw new Error("Barbearia não encontrada");
+      }
+
+    } catch (error: any) {
+      console.error('Erro no login:', error);
+      
+      // Tratamento de erros específicos
+      let errorMessage = "Ocorreu um erro inesperado. Tente novamente.";
+      
+      if (error.message.includes("Invalid login credentials")) {
+        errorMessage = "E-mail ou senha incorretos.";
+      } else if (error.message.includes("Email not confirmed")) {
+        errorMessage = "Confirme seu e-mail antes de fazer login.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast({
+        title: "Erro no login",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -89,8 +151,8 @@ const LoginForm = () => {
                 </Link>
               </div>
 
-              <Button type="submit" className="w-full">
-                Entrar
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Entrando..." : "Entrar"}
               </Button>
             </form>
 
