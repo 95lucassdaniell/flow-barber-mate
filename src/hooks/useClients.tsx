@@ -64,6 +64,7 @@ export const useClients = () => {
         .insert([
           {
             ...clientData,
+            phone: normalizePhone(clientData.phone), // Normalizar telefone antes de salvar
             barbershop_id: profile.barbershop_id,
           }
         ])
@@ -99,9 +100,14 @@ export const useClients = () => {
 
   const updateClient = async (clientId: string, clientData: Partial<Client>) => {
     try {
+      const updateData = { ...clientData };
+      if (updateData.phone) {
+        updateData.phone = normalizePhone(updateData.phone);
+      }
+      
       const { data, error } = await supabase
         .from('clients')
-        .update(clientData)
+        .update(updateData)
         .eq('id', clientId)
         .select()
         .single();
@@ -174,15 +180,25 @@ export const useClients = () => {
     fetchClients();
   }, [profile?.barbershop_id]);
 
+  const normalizePhone = (phone: string): string => {
+    // Remove todos os caracteres não numéricos
+    return phone.replace(/\D/g, '');
+  };
+
   const checkClientByPhone = async (phone: string): Promise<Client | null> => {
     if (!profile?.barbershop_id || !phone.trim()) return null;
+
+    const normalizedPhone = normalizePhone(phone);
+    
+    // Verificar se o telefone tem pelo menos 10 dígitos (DDD + número)
+    if (normalizedPhone.length < 10) return null;
 
     try {
       const { data, error } = await supabase
         .from('clients')
         .select('*')
         .eq('barbershop_id', profile.barbershop_id)
-        .eq('phone', phone.trim())
+        .eq('phone', normalizedPhone)
         .maybeSingle();
 
       if (error) {
