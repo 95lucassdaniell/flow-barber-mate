@@ -351,6 +351,51 @@ export const useAppointments = () => {
     }
   }, [profile?.barbershop_id]);
 
+  const getClientAppointments = async (clientId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          id,
+          appointment_date,
+          start_time,
+          end_time,
+          total_price,
+          status,
+          notes,
+          services (
+            name,
+            duration_minutes
+          ),
+          profiles!barber_id (
+            full_name
+          )
+        `)
+        .eq('client_id', clientId)
+        .order('appointment_date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching client appointments:', error);
+        toast({
+          title: "Erro ao buscar agendamentos",
+          description: "Erro ao buscar agendamentos do cliente",
+          variant: "destructive",
+        });
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error in getClientAppointments:', error);
+      toast({
+        title: "Erro ao buscar agendamentos",
+        description: "Erro ao buscar agendamentos do cliente",
+        variant: "destructive",
+      });
+      return [];
+    }
+  };
+
   return {
     appointments,
     loading,
@@ -360,5 +405,6 @@ export const useAppointments = () => {
     deleteAppointment,
     fetchAppointments,
     getAvailableTimeSlots,
+    getClientAppointments,
   };
 };

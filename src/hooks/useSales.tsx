@@ -248,6 +248,60 @@ export const useSales = () => {
     fetchSales();
   }, [profile?.barbershop_id]);
 
+  const getClientSales = async (clientId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('sales')
+        .select(`
+          id,
+          sale_date,
+          sale_time,
+          total_amount,
+          final_amount,
+          payment_method,
+          payment_status,
+          profiles!barber_id (
+            full_name
+          ),
+          sale_items (
+            id,
+            item_type,
+            quantity,
+            unit_price,
+            total_price,
+            services (
+              name
+            ),
+            products (
+              name
+            )
+          )
+        `)
+        .eq('client_id', clientId)
+        .order('sale_date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching client sales:', error);
+        toast({
+          title: "Erro ao buscar vendas",
+          description: "Erro ao buscar vendas do cliente",
+          variant: "destructive",
+        });
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error in getClientSales:', error);
+      toast({
+        title: "Erro ao buscar vendas",
+        description: "Erro ao buscar vendas do cliente",
+        variant: "destructive",
+      });
+      return [];
+    }
+  };
+
   return {
     sales,
     loading,
@@ -255,6 +309,7 @@ export const useSales = () => {
     getSalesByDate,
     getSalesByBarber,
     getTodayStats,
+    getClientSales,
     refetchSales: fetchSales,
   };
 };

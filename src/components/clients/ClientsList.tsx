@@ -35,9 +35,10 @@ interface ClientsListProps {
   clients: Client[];
   loading: boolean;
   onEditClient: (client: Client) => void;
+  onViewClient: (client: Client) => void;
 }
 
-const ClientsList = ({ clients, loading, onEditClient }: ClientsListProps) => {
+const ClientsList = ({ clients, loading, onEditClient, onViewClient }: ClientsListProps) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const { deleteClient } = useClients();

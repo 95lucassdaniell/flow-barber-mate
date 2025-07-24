@@ -1,25 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  User, 
-  Phone, 
-  Mail, 
-  Calendar, 
-  DollarSign, 
-  Scissors, 
-  MessageCircle,
-  Star,
-  TrendingUp,
-  Clock,
-  Heart,
-  Gift,
-  ArrowLeft
-} from "lucide-react";
-import ClientTimeline from "./ClientTimeline";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { CalendarDays, Phone, Mail, MapPin, Clock, DollarSign, TrendingUp, MessageSquare, Star, Edit } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useClientStats } from "@/hooks/useClientStats";
+import { useAppointments } from "@/hooks/useAppointments";
+import { useSales } from "@/hooks/useSales";
 import { Client } from "@/hooks/useClients";
+import ClientModal from "@/components/clients/ClientModal";
 
 interface ClientProfileProps {
   client: Client;
@@ -27,235 +19,222 @@ interface ClientProfileProps {
 }
 
 const ClientProfile = ({ client, onBack }: ClientProfileProps) => {
-  // Mock data para demonstração - em produção, viria de hooks específicos
-  const clientStats = {
-    totalSpent: 850,
-    totalAppointments: 12,
-    avgSpentPerVisit: 71,
-    lastVisit: "2024-01-15",
-    nextPredicted: "2024-02-05",
-    favoriteBarber: "João Silva",
-    favoriteServices: ["Corte Masculino", "Barba"],
-    satisfaction: 4.8,
-    lifetimeValue: 1200,
-    riskScore: "Baixo",
-    frequency: "Regular"
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [sales, setSales] = useState<any[]>([]);
+  const { stats, loading: statsLoading, refreshStats } = useClientStats(client.id);
+  const { getClientAppointments } = useAppointments();
+  const { getClientSales } = useSales();
+  
+  const joinDate = new Date(client.created_at);
+
+  useEffect(() => {
+    const loadClientData = async () => {
+      const [appointmentsData, salesData] = await Promise.all([
+        getClientAppointments(client.id),
+        getClientSales(client.id)
+      ]);
+      setAppointments(appointmentsData);
+      setSales(salesData);
+    };
+
+    loadClientData();
+  }, [client.id]);
+
+  const handleEditClient = () => {
+    setIsEditModalOpen(true);
   };
 
-  const preferences = {
-    preferredTime: "Manhã (09:00-12:00)",
-    preferredDays: ["Terça", "Quinta", "Sábado"],
-    notifications: {
-      whatsapp: true,
-      email: false,
-      sms: false
-    },
-    specialRequests: [
-      "Prefere corte mais conservador",
-      "Alérgico a produtos com álcool",
-      "Gosta de conversar sobre esportes"
-    ]
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    refreshStats();
   };
-
-  const upcomingOpportunities = [
-    {
-      type: "birthday",
-      title: "Aniversário em 15 dias",
-      description: "Oportunidade para campanha especial",
-      action: "Enviar felicitações + desconto"
-    },
-    {
-      type: "service",
-      title: "Devido para corte",
-      description: "Última visita há 18 dias",
-      action: "Enviar lembrete de agendamento"
-    },
-    {
-      type: "upsell",
-      title: "Oportunidade de upsell",
-      description: "Nunca experimentou tratamento de barba",
-      action: "Sugerir serviço adicional"
-    }
-  ];
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center space-x-4">
-        <Button variant="outline" size="sm" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">{client.name}</h1>
-          <p className="text-muted-foreground">
-            Cliente desde {new Date(client.created_at).toLocaleDateString('pt-BR')}
-          </p>
-        </div>
-        <Button>
-          <MessageCircle className="h-4 w-4 mr-2" />
-          Enviar Mensagem
-        </Button>
-      </div>
-
-      {/* Dados Pessoais e Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <User className="h-4 w-4" />
-              <span>Informações Pessoais</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center space-x-2">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <div className="flex items-center space-x-4">
+            <Avatar className="h-16 w-16">
+              <AvatarFallback className="text-lg font-semibold">
+                {client.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="text-2xl font-bold">{client.name}</h2>
+              <p className="text-muted-foreground">Cliente desde {format(joinDate, "MMMM 'de' yyyy", { locale: ptBR })}</p>
+            </div>
+          </div>
+          <Button variant="outline" onClick={handleEditClient} className="flex items-center gap-2">
+            <Edit className="h-4 w-4" />
+            Editar Cliente
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="flex items-center space-x-3">
               <Phone className="h-4 w-4 text-muted-foreground" />
-              <span>{client.phone}</span>
+              <div>
+                <p className="text-sm font-medium">Telefone</p>
+                <p className="text-sm text-muted-foreground">{client.phone}</p>
+              </div>
             </div>
             {client.email && (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3">
                 <Mail className="h-4 w-4 text-muted-foreground" />
-                <span>{client.email}</span>
+                <div>
+                  <p className="text-sm font-medium">Email</p>
+                  <p className="text-sm text-muted-foreground">{client.email}</p>
+                </div>
               </div>
             )}
             {client.birth_date && (
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>{new Date(client.birth_date).toLocaleDateString('pt-BR')}</span>
+              <div className="flex items-center space-x-3">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Aniversário</p>
+                  <p className="text-sm text-muted-foreground">{format(new Date(client.birth_date), "dd/MM", { locale: ptBR })}</p>
+                </div>
               </div>
             )}
-            <div className="pt-2">
-              <Badge variant="secondary" className="bg-green-100 text-green-800">
-                Cliente {clientStats.frequency}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <DollarSign className="h-4 w-4" />
-              <span>Métricas Financeiras</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center space-x-3">
+              <Clock className="h-4 w-4 text-muted-foreground" />
               <div>
-                <div className="text-2xl font-bold text-green-600">
-                  R$ {clientStats.totalSpent}
-                </div>
-                <p className="text-xs text-muted-foreground">Total Gasto</p>
-              </div>
-              <div>
-                <div className="text-2xl font-bold">
-                  R$ {clientStats.avgSpentPerVisit}
-                </div>
-                <p className="text-xs text-muted-foreground">Ticket Médio</p>
+                <p className="text-sm font-medium">Última Visita</p>
+                <p className="text-sm text-muted-foreground">
+                  {statsLoading ? "..." : (stats?.lastVisit ? format(stats.lastVisit, "dd/MM/yyyy", { locale: ptBR }) : "Nunca")}
+                </p>
               </div>
             </div>
-            <div>
-              <div className="text-lg font-semibold text-blue-600">
-                R$ {clientStats.lifetimeValue}
-              </div>
-              <p className="text-xs text-muted-foreground">Lifetime Value Estimado</p>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Star className="h-4 w-4" />
-              <span>Engajamento</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm">Satisfação</span>
-              <div className="flex items-center space-x-1">
-                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                <span className="font-semibold">{clientStats.satisfaction}</span>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Total Gasto</p>
+              <p className="text-2xl font-bold text-green-600">
+                {statsLoading ? "..." : (stats?.totalSpent || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </p>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm">Visitas Totais</span>
-              <span className="font-semibold">{clientStats.totalAppointments}</span>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Agendamentos</p>
+              <p className="text-2xl font-bold">{statsLoading ? "..." : stats?.totalAppointments || 0}</p>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm">Risco de Churn</span>
-              <Badge variant="secondary" className="bg-green-100 text-green-800">
-                {clientStats.riskScore}
-              </Badge>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Ticket Médio</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {statsLoading ? "..." : (stats?.averageTicket || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
 
-      {/* Tabs com informações detalhadas */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Última Visita</p>
+              <p className="text-lg font-semibold">
+                {statsLoading ? "..." : (stats?.lastVisit ? format(stats.lastVisit, "dd 'de' MMMM", { locale: ptBR }) : "Nunca")}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Serviços Favoritos</p>
+              <p className="text-lg font-semibold">
+                {statsLoading ? "..." : (stats?.favoriteServices?.join(", ") || "Nenhum")}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Frequência</p>
+              <p className="text-lg font-semibold">
+                {statsLoading ? "..." : (stats?.visitFrequency ? `${Math.round(stats.visitFrequency)} dias` : "N/A")}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Tabs defaultValue="timeline" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsTrigger value="timeline">Histórico</TabsTrigger>
           <TabsTrigger value="preferences">Preferências</TabsTrigger>
           <TabsTrigger value="opportunities">Oportunidades</TabsTrigger>
           <TabsTrigger value="analytics">Análises</TabsTrigger>
         </TabsList>
 
         <TabsContent value="timeline" className="space-y-4">
-          <ClientTimeline clientId={client.id} />
-        </TabsContent>
-
-        <TabsContent value="preferences" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid gap-4">
             <Card>
               <CardHeader>
-                <CardTitle>Preferências de Agendamento</CardTitle>
+                <CardTitle>Histórico de Agendamentos</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-medium mb-2">Horário Preferido</h4>
-                  <p className="text-sm text-muted-foreground">{preferences.preferredTime}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-2">Dias da Semana</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {preferences.preferredDays.map((day) => (
-                      <Badge key={day} variant="secondary">{day}</Badge>
+              <CardContent>
+                {appointments.length === 0 ? (
+                  <p className="text-muted-foreground">Nenhum agendamento encontrado</p>
+                ) : (
+                  <div className="space-y-3">
+                    {appointments.slice(0, 10).map((appointment) => (
+                      <div key={appointment.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="space-y-1">
+                          <p className="font-medium">{appointment.services?.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(appointment.appointment_date), "dd/MM/yyyy")} às {appointment.start_time}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Barbeiro: {appointment.profiles?.full_name}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">
+                            {appointment.total_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </p>
+                          <Badge variant={appointment.status === 'completed' ? 'default' : appointment.status === 'cancelled' ? 'destructive' : 'secondary'}>
+                            {appointment.status === 'completed' ? 'Concluído' : appointment.status === 'cancelled' ? 'Cancelado' : 'Agendado'}
+                          </Badge>
+                        </div>
+                      </div>
                     ))}
                   </div>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-2">Barbeiro Preferido</h4>
-                  <p className="text-sm text-muted-foreground">{clientStats.favoriteBarber}</p>
-                </div>
+                )}
               </CardContent>
             </Card>
-
+            
             <Card>
               <CardHeader>
-                <CardTitle>Serviços e Observações</CardTitle>
+                <CardTitle>Histórico de Compras</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-medium mb-2">Serviços Favoritos</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {clientStats.favoriteServices.map((service) => (
-                      <Badge key={service} variant="outline">{service}</Badge>
+              <CardContent>
+                {sales.length === 0 ? (
+                  <p className="text-muted-foreground">Nenhuma compra encontrada</p>
+                ) : (
+                  <div className="space-y-3">
+                    {sales.slice(0, 10).map((sale) => (
+                      <div key={sale.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="space-y-1">
+                          <p className="font-medium">
+                            Venda #{sale.id.slice(0, 8)}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(sale.sale_date), "dd/MM/yyyy")} às {sale.sale_time}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Barbeiro: {sale.profiles?.full_name}
+                          </p>
+                          <div className="text-xs text-muted-foreground">
+                            {sale.sale_items?.map((item: any, index: number) => (
+                              <span key={index}>
+                                {item.services?.name || item.products?.name} ({item.quantity}x)
+                                {index < sale.sale_items.length - 1 ? ", " : ""}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">
+                            {sale.final_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </p>
+                          <p className="text-sm text-muted-foreground capitalize">
+                            {sale.payment_method}
+                          </p>
+                        </div>
+                      </div>
                     ))}
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-2">Observações Especiais</h4>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    {preferences.specialRequests.map((request, index) => (
-                      <li key={index}>• {request}</li>
-                    ))}
-                  </ul>
-                </div>
-                {client.notes && (
-                  <div>
-                    <h4 className="font-medium mb-2">Notas do Cliente</h4>
-                    <p className="text-sm text-muted-foreground">{client.notes}</p>
                   </div>
                 )}
               </CardContent>
@@ -263,84 +242,105 @@ const ClientProfile = ({ client, onBack }: ClientProfileProps) => {
           </div>
         </TabsContent>
 
-        <TabsContent value="opportunities" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-1 gap-4">
-            {upcomingOpportunities.map((opportunity, index) => (
-              <Card key={index} className="border-l-4 border-l-blue-500">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
-                        {opportunity.type === "birthday" && <Gift className="h-4 w-4 text-purple-600" />}
-                        {opportunity.type === "service" && <Clock className="h-4 w-4 text-orange-600" />}
-                        {opportunity.type === "upsell" && <TrendingUp className="h-4 w-4 text-green-600" />}
-                        <h4 className="font-medium">{opportunity.title}</h4>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">{opportunity.description}</p>
-                      <p className="text-sm font-medium text-blue-600">{opportunity.action}</p>
-                    </div>
-                    <Button size="sm" variant="outline">
-                      Executar
-                    </Button>
+        <TabsContent value="preferences" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Preferências do Cliente</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium mb-2">Serviços Favoritos</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {statsLoading ? (
+                      <p className="text-sm text-muted-foreground">Carregando...</p>
+                    ) : (
+                      stats?.favoriteServices?.map((service, index) => (
+                        <Badge key={index} variant="outline">{service}</Badge>
+                      )) || <p className="text-sm text-muted-foreground">Nenhum serviço favorito ainda</p>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                </div>
+                {client.notes && (
+                  <div>
+                    <h4 className="font-medium mb-2">Observações</h4>
+                    <p className="text-sm text-muted-foreground">{client.notes}</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="opportunities" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Oportunidades de Negócio</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">Funcionalidade em desenvolvimento</p>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Padrões de Comportamento</CardTitle>
+                <CardTitle>Estatísticas de Gastos</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm">Frequência de Visitas</span>
-                  <span className="font-semibold">A cada 21 dias</span>
+                  <span className="text-sm">Total Gasto</span>
+                  <span className="font-semibold">
+                    {statsLoading ? "..." : (stats?.totalSpent || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm">Sazonalidade</span>
-                  <span className="font-semibold">Menos ativo no verão</span>
+                  <span className="text-sm">Número de Compras</span>
+                  <span className="font-semibold">{statsLoading ? "..." : stats?.totalPurchases || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm">Melhor Dia</span>
-                  <span className="font-semibold">Sábado</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Horário Preferido</span>
-                  <span className="font-semibold">10:00 - 11:00</span>
+                  <span className="text-sm">Ticket Médio</span>
+                  <span className="font-semibold">
+                    {statsLoading ? "..." : (stats?.averageTicket || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </span>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Comunicação</CardTitle>
+                <CardTitle>Estatísticas de Agendamentos</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm">Mensagens Enviadas</span>
-                  <span className="font-semibold">24</span>
+                  <span className="text-sm">Total de Agendamentos</span>
+                  <span className="font-semibold">{statsLoading ? "..." : stats?.totalAppointments || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm">Taxa de Resposta</span>
-                  <span className="font-semibold">87%</span>
+                  <span className="text-sm">Agendamentos Concluídos</span>
+                  <span className="font-semibold">{statsLoading ? "..." : stats?.completedAppointments || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm">Canal Preferido</span>
-                  <span className="font-semibold">WhatsApp</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Última Interação</span>
-                  <span className="font-semibold">3 dias atrás</span>
+                  <span className="text-sm">Frequência Média</span>
+                  <span className="font-semibold">
+                    {statsLoading ? "..." : (stats?.visitFrequency ? `${Math.round(stats.visitFrequency)} dias` : "N/A")}
+                  </span>
                 </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
       </Tabs>
+
+      {isEditModalOpen && (
+        <ClientModal
+          client={client}
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
+        />
+      )}
     </div>
   );
 };
