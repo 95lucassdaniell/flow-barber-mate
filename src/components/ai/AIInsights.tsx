@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAIAnalytics } from '@/hooks/useAIAnalytics';
 import { useClients } from '@/hooks/useClients';
 import { AutomationsManager } from './AutomationsManager';
+import { SalesAnalyticsDashboard } from './SalesAnalyticsDashboard';
 import { 
   Brain, 
   TrendingUp, 
@@ -124,6 +125,10 @@ export const AIInsights: React.FC = () => {
           <TabsTrigger value="insights">
             <Brain className="h-4 w-4 mr-2" />
             Insights
+          </TabsTrigger>
+          <TabsTrigger value="sales">
+            <TrendingUp className="h-4 w-4 mr-2" />
+            Análise de Vendas
           </TabsTrigger>
           <TabsTrigger value="automations">
             <Zap className="h-4 w-4 mr-2" />
@@ -345,6 +350,10 @@ export const AIInsights: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="sales">
+          <SalesAnalyticsDashboard />
         </TabsContent>
 
         <TabsContent value="automations">

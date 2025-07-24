@@ -27,6 +27,7 @@ import { CashRegisterStatus } from '@/components/pdv/CashRegisterStatus';
 import { SalesHistory } from '@/components/pdv/SalesHistory';
 import { CloseCashModal } from '@/components/pdv/CloseCashModal';
 import { OpenCashModal } from '@/components/pdv/OpenCashModal';
+import { UpsellSuggestions } from '@/components/pdv/UpsellSuggestions';
 
 interface CartItem {
   id: string;
@@ -144,6 +145,19 @@ const PDVPage = () => {
         barber_id: selectedBarber || undefined,
       });
     }
+  };
+
+  const addSuggestedItem = async (item: { id: string; type: 'service' | 'product'; name: string; price: number; commission_rate: number }) => {
+    await addToCart({
+      id: item.type === 'service' ? `service-${item.id}` : `product-${item.id}`,
+      type: item.type,
+      name: item.name,
+      price: item.price,
+      quantity: 1,
+      commission_rate: item.commission_rate,
+      service_id: item.type === 'service' ? item.id : undefined,
+      product_id: item.type === 'product' ? item.id : undefined,
+    });
   };
 
   const removeFromCart = async (itemId: string) => {
@@ -450,6 +464,20 @@ const PDVPage = () => {
                 </Tabs>
               </CardContent>
               </Card>
+            </div>
+          )}
+
+          {/* Sugestões de Upsell */}
+          {isCashRegisterActive && cart.length > 0 && (
+            <div className="lg:col-span-3">
+              <UpsellSuggestions 
+                currentItems={cart.map(item => ({
+                  name: item.name,
+                  type: item.type,
+                  id: item.service_id || item.product_id || item.id
+                }))}
+                onAddItem={addSuggestedItem}
+              />
             </div>
           )}
 
