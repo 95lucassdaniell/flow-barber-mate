@@ -406,15 +406,23 @@ export const AppointmentModal = ({
                       <SelectValue placeholder={
                         !isOpenOnDate(selectedDate) 
                           ? "Barbearia fechada neste dia" 
+                          : timeSlots.length === 0
+                          ? "Nenhum horário disponível"
                           : "Selecione o horário"
                       } />
                     </SelectTrigger>
                     <SelectContent>
-                      {timeSlots.map((time) => (
-                        <SelectItem key={time} value={time}>
-                          {time}
-                        </SelectItem>
-                      ))}
+                      {timeSlots.length === 0 ? (
+                        <div className="p-3 text-sm text-muted-foreground text-center">
+                          Todos os horários já passaram
+                        </div>
+                      ) : (
+                        timeSlots.map((time) => (
+                          <SelectItem key={time} value={time}>
+                            {time}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

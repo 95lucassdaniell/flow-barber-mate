@@ -50,6 +50,19 @@ export const useBarbershopSettings = () => {
     }
   };
 
+  // Check if a time slot is in the past
+  const isTimeSlotInPast = (date: Date, timeSlot: string, safetyMarginMinutes: number = 30): boolean => {
+    const now = new Date();
+    const appointmentDateTime = new Date(date);
+    const [hours, minutes] = timeSlot.split(':').map(Number);
+    appointmentDateTime.setHours(hours, minutes, 0, 0);
+    
+    // Add safety margin to current time
+    const safetyTime = new Date(now.getTime() + safetyMarginMinutes * 60000);
+    
+    return appointmentDateTime <= safetyTime;
+  };
+
   // Generate time slots based on opening hours
   const generateTimeSlots = (date: Date, intervalMinutes: number = 30): string[] => {
     if (!settings?.opening_hours) return [];
@@ -71,7 +84,11 @@ export const useBarbershopSettings = () => {
       const hours = Math.floor(time / 60);
       const minutes = time % 60;
       const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-      slots.push(timeString);
+      
+      // Filter out past time slots for current day
+      if (!isTimeSlotInPast(date, timeString)) {
+        slots.push(timeString);
+      }
     }
 
     return slots;
@@ -107,6 +124,7 @@ export const useBarbershopSettings = () => {
     generateTimeSlots,
     isOpenOnDate,
     getOpeningHoursForDate,
+    isTimeSlotInPast,
     refetchSettings: fetchSettings,
   };
 };

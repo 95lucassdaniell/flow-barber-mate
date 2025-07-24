@@ -106,6 +106,20 @@ export const useAppointments = () => {
     if (!profile?.barbershop_id) return false;
 
     try {
+      // Validar se o horário não está no passado
+      const appointmentDateTime = new Date(`${appointmentData.appointment_date}T${appointmentData.start_time}`);
+      const now = new Date();
+      const safetyMargin = 30 * 60000; // 30 minutos em ms
+      
+      if (appointmentDateTime <= new Date(now.getTime() + safetyMargin)) {
+        toast({
+          title: "Horário inválido",
+          description: "Não é possível agendar para um horário que já passou.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
       // Calcular horário de fim baseado na duração do serviço
       const { data: serviceData, error: serviceError } = await supabase
         .from('services')
