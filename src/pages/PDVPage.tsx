@@ -10,7 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { SearchInput } from '@/components/ui/search-input';
-import { Calculator, ShoppingCart, User, CreditCard, Trash2, Plus, Minus, Maximize2, Minimize2 } from 'lucide-react';
+import { Calculator, ShoppingCart, User, CreditCard, Trash2, Plus, Minus, Maximize2, Minimize2, Users, Scissors, Package } from 'lucide-react';
+import { BarberSelector } from '@/components/schedule/BarberSelector';
+import { useAuth } from '@/hooks/useAuth';
 import { useClients } from '@/hooks/useClients';
 import { useProviders } from '@/hooks/useProviders';
 import { useServices } from '@/hooks/useServices';
@@ -24,6 +26,7 @@ import { useFullscreen } from '@/hooks/useFullscreen';
 import { CashRegisterStatus } from '@/components/pdv/CashRegisterStatus';
 import { SalesHistory } from '@/components/pdv/SalesHistory';
 import { CloseCashModal } from '@/components/pdv/CloseCashModal';
+import { OpenCashModal } from '@/components/pdv/OpenCashModal';
 
 interface CartItem {
   id: string;
@@ -46,6 +49,7 @@ const PDVPage = () => {
   const [productSearchTerm, setProductSearchTerm] = useState('');
   const [showSalesHistory, setShowSalesHistory] = useState(false);
   const [showCloseCashModal, setShowCloseCashModal] = useState(false);
+  const [showOpenCashModal, setShowOpenCashModal] = useState(false);
   
   const { isFullscreen, toggleFullscreen } = useFullscreen();
   const debouncedServiceSearch = useDebounce(serviceSearchTerm, 300);
@@ -65,9 +69,18 @@ const PDVPage = () => {
     removeCartItem, 
     updateCartItemQuantity,
     clearCartItems,
-    updateCashRegisterTotals 
+    updateCashRegisterTotals,
+    openCashRegister,
+    closeCashRegister
   } = useCashRegister();
   const { toast } = useToast();
+  const { profile } = useAuth();
+
+  // Check if user has permission to use PDV
+  const canUsePDV = profile?.role === 'admin' || profile?.role === 'receptionist';
+  
+  // Check if cash register is active
+  const isCashRegisterActive = !!currentCashRegister;
 
   const servicesWithPrices = getServicesWithPrices();
 
@@ -251,62 +264,64 @@ const PDVPage = () => {
       </div>
 
       {/* Status do Caixa */}
-      {currentCashRegister && (
-        <CashRegisterStatus
-          onViewHistory={() => setShowSalesHistory(true)}
-          onCloseCash={() => setShowCloseCashModal(true)}
-        />
-      )}
+      <CashRegisterStatus
+        onViewHistory={() => setShowSalesHistory(true)}
+        onCloseCash={() => setShowCloseCashModal(true)}
+        onOpenCash={() => setShowOpenCashModal(true)}
+      />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Seleção de Cliente e Profissional */}
-          <div className="lg:col-span-3">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Informações da Venda
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="client">Cliente</Label>
-                  <Select value={selectedClient} onValueChange={setSelectedClient}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um cliente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clients.map(client => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name} - {client.phone}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          {isCashRegisterActive && (
+            <div className="lg:col-span-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Informações da Venda
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="client">Cliente</Label>
+                    <Select value={selectedClient} onValueChange={setSelectedClient}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um cliente" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clients.map(client => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name} - {client.phone}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="barber">Profissional</Label>
-                  <Select value={selectedBarber} onValueChange={setSelectedBarber}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um profissional" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {providers.map(provider => (
-                        <SelectItem key={provider.id} value={provider.id}>
-                          {provider.full_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="barber">Profissional</Label>
+                    <Select value={selectedBarber} onValueChange={setSelectedBarber}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um profissional" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {providers.map(provider => (
+                          <SelectItem key={provider.id} value={provider.id}>
+                            {provider.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Serviços e Produtos */}
-          <div className="lg:col-span-2">
-            <Card>
+          {isCashRegisterActive && (
+            <div className="lg:col-span-2">
+              <Card>
               <CardHeader>
                 <CardTitle>Serviços e Produtos</CardTitle>
               </CardHeader>
@@ -434,11 +449,13 @@ const PDVPage = () => {
                   </TabsContent>
                 </Tabs>
               </CardContent>
-            </Card>
-          </div>
+              </Card>
+            </div>
+          )}
 
           {/* Carrinho de Vendas */}
-          <div>
+          {isCashRegisterActive && (
+            <div>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -565,8 +582,9 @@ const PDVPage = () => {
                   Finalizar Venda
                 </Button>
               </CardContent>
-            </Card>
-          </div>
+              </Card>
+            </div>
+          )}
         </div>
     </div>
   );
@@ -584,13 +602,20 @@ const PDVPage = () => {
     );
   }
 
-  if (!currentCashRegister) {
+  if (!canUsePDV) {
     return (
       <DashboardLayout activeTab="pdv">
         <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <p className="text-muted-foreground">Nenhum caixa ativo encontrado.</p>
-          </div>
+          <Card className="w-96">
+            <CardHeader>
+              <CardTitle className="text-center text-destructive">Acesso Negado</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-center text-muted-foreground">
+                Você não tem permissão para acessar o PDV. Entre em contato com o administrador.
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </DashboardLayout>
     );
@@ -610,13 +635,20 @@ const PDVPage = () => {
 
       {/* Modais */}
       <SalesHistory
-        isOpen={showSalesHistory}
-        onClose={() => setShowSalesHistory(false)}
+        open={showSalesHistory}
+        onOpenChange={setShowSalesHistory}
       />
       
       <CloseCashModal
-        isOpen={showCloseCashModal}
-        onClose={() => setShowCloseCashModal(false)}
+        open={showCloseCashModal}
+        onOpenChange={setShowCloseCashModal}
+        onConfirm={closeCashRegister}
+      />
+
+      <OpenCashModal
+        open={showOpenCashModal}
+        onOpenChange={setShowOpenCashModal}
+        onConfirm={openCashRegister}
       />
     </>
   );

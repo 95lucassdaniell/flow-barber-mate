@@ -12,11 +12,11 @@ import { ptBR } from "date-fns/locale";
 import { Sale } from "@/hooks/useSales";
 
 interface SalesHistoryProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export const SalesHistory = ({ isOpen, onClose }: SalesHistoryProps) => {
+export const SalesHistory = ({ open, onOpenChange }: SalesHistoryProps) => {
   const { currentCashRegister } = useCashRegister();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,10 +50,10 @@ export const SalesHistory = ({ isOpen, onClose }: SalesHistoryProps) => {
   };
 
   useEffect(() => {
-    if (isOpen && currentCashRegister) {
+    if (open && currentCashRegister) {
       fetchSessionSales();
     }
-  }, [isOpen, currentCashRegister]);
+  }, [open, currentCashRegister]);
 
   const getPaymentMethodBadge = (method: string) => {
     const variants = {
@@ -80,7 +80,7 @@ export const SalesHistory = ({ isOpen, onClose }: SalesHistoryProps) => {
   const totalSessionRevenue = sales.reduce((sum, sale) => sum + sale.final_amount, 0);
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[600px] sm:max-w-[600px]">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">

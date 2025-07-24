@@ -58,7 +58,7 @@ export const useCashRegister = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
 
-  // Verificar e abrir caixa automaticamente
+  // Verificar se existe caixa aberto
   const initializeCashRegister = async () => {
     if (!profile?.id || !profile?.barbershop_id) return;
 
@@ -82,10 +82,8 @@ export const useCashRegister = () => {
       if (existingCash) {
         setCurrentCashRegister(existingCash as CashRegister);
         await loadCartItems(existingCash.id);
-      } else {
-        // Criar novo caixa
-        await openCashRegister();
       }
+      // Não abrir caixa automaticamente - deixar para o usuário fazer manualmente
     } catch (error) {
       console.error('Erro ao inicializar caixa:', error);
     } finally {

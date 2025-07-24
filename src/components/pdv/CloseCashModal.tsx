@@ -12,12 +12,13 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface CloseCashModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (closingBalance: number, notes?: string) => Promise<boolean>;
 }
 
-export const CloseCashModal = ({ isOpen, onClose }: CloseCashModalProps) => {
-  const { currentCashRegister, closeCashRegister, getCashRegisterSummary } = useCashRegister();
+export const CloseCashModal = ({ open, onOpenChange, onConfirm }: CloseCashModalProps) => {
+  const { currentCashRegister, getCashRegisterSummary } = useCashRegister();
   const [closingBalance, setClosingBalance] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,10 +38,10 @@ export const CloseCashModal = ({ isOpen, onClose }: CloseCashModalProps) => {
 
     try {
       setLoading(true);
-      const success = await closeCashRegister(parseFloat(closingBalance), notes);
+      const success = await onConfirm(parseFloat(closingBalance), notes);
       
       if (success) {
-        onClose();
+        onOpenChange(false);
         setClosingBalance("");
         setNotes("");
       }
@@ -52,7 +53,7 @@ export const CloseCashModal = ({ isOpen, onClose }: CloseCashModalProps) => {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
@@ -224,7 +225,7 @@ export const CloseCashModal = ({ isOpen, onClose }: CloseCashModalProps) => {
           <div className="flex justify-end gap-3 pt-4">
             <Button 
               variant="outline" 
-              onClick={onClose}
+              onClick={() => onOpenChange(false)}
               disabled={loading}
             >
               Cancelar
