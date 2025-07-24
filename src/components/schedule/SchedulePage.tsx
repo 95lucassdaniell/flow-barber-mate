@@ -16,6 +16,7 @@ import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
 import { useBarberSelection } from "@/hooks/useBarberSelection";
 import { useAppointments } from "@/hooks/useAppointments";
+import { useBarbershopSettings } from "@/hooks/useBarbershopSettings";
 import { AppointmentModal } from "./AppointmentModal";
 import { BarberSelector } from "./BarberSelector";
 
@@ -23,6 +24,7 @@ const SchedulePage = () => {
   const { profile, loading: authLoading } = useAuth();
   const { selectedBarberId, selectedBarber, loading: barberLoading } = useBarberSelection();
   const { appointments, loading, fetchAppointments } = useAppointments();
+  const { generateTimeSlots, isOpenOnDate, getOpeningHoursForDate } = useBarbershopSettings();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week">("day");
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
@@ -36,11 +38,8 @@ const SchedulePage = () => {
     }
   }, [selectedBarberId, selectedDate]);
 
-  const timeSlots = [
-    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
-    "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"
-  ];
+  // Generate dynamic time slots based on barbershop settings
+  const timeSlots = generateTimeSlots(selectedDate);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -86,9 +85,19 @@ const SchedulePage = () => {
     setShowAppointmentModal(true);
   };
 
-  const renderDayView = () => (
-    <div className="space-y-3">
-      {timeSlots.map((timeSlot) => {
+  const renderDayView = () => {
+    if (!isOpenOnDate(selectedDate)) {
+      return (
+        <div className="text-center py-8 text-muted-foreground">
+          <p>Barbearia fechada neste dia</p>
+          <p className="text-sm mt-2">Verifique os horários de funcionamento nas configurações</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {timeSlots.map((timeSlot) => {
         const appointment = getAppointmentForTimeSlot(timeSlot);
         
         return (
@@ -142,9 +151,10 @@ const SchedulePage = () => {
             </div>
           </div>
         );
-      })}
-    </div>
-  );
+        })}
+      </div>
+    );
+  };
 
   const renderWeekView = () => {
     const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });

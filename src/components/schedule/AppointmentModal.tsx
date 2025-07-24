@@ -24,6 +24,7 @@ import { useClients } from "@/hooks/useClients";
 import { useServices } from "@/hooks/useServices";
 import { useAppointments } from "@/hooks/useAppointments";
 import { useProviderServices } from "@/hooks/useProviderServices";
+import { useBarbershopSettings } from "@/hooks/useBarbershopSettings";
 
 interface AppointmentModalProps {
   isOpen: boolean;
@@ -59,6 +60,7 @@ export const AppointmentModal = ({
   const { clients, addClient } = useClients();
   const { services } = useServices();
   const { createAppointment } = useAppointments();
+  const { generateTimeSlots, isOpenOnDate } = useBarbershopSettings();
   
   const [appointmentData, setAppointmentData] = useState({
     barberId: selectedBarberId || "",
@@ -95,11 +97,8 @@ export const AppointmentModal = ({
     ? servicesWithPrices.filter(s => s.is_active && s.price)
     : services.filter(s => s.is_active);
 
-  const timeSlots = [
-    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
-    "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"
-  ];
+  // Generate dynamic time slots based on barbershop settings
+  const timeSlots = generateTimeSlots(selectedDate);
 
   const handleClientSelect = (client: any) => {
     setSelectedClient(client);
@@ -328,6 +327,14 @@ export const AppointmentModal = ({
                 </div>
               </div>
 
+              {!isOpenOnDate(selectedDate) && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    ⚠️ A barbearia está fechada neste dia. Verifique os horários de funcionamento.
+                  </p>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Profissional */}
                 <div>
@@ -393,9 +400,14 @@ export const AppointmentModal = ({
                   <Select 
                     value={appointmentData.time} 
                     onValueChange={(value) => setAppointmentData(prev => ({ ...prev, time: value }))}
+                    disabled={!isOpenOnDate(selectedDate)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione o horário" />
+                      <SelectValue placeholder={
+                        !isOpenOnDate(selectedDate) 
+                          ? "Barbearia fechada neste dia" 
+                          : "Selecione o horário"
+                      } />
                     </SelectTrigger>
                     <SelectContent>
                       {timeSlots.map((time) => (
