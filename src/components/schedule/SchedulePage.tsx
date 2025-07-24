@@ -30,13 +30,26 @@ const SchedulePage = () => {
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
 
-  // Fetch appointments for selected barber and date
+  // Fetch appointments for selected barber and date/week
   useEffect(() => {
     if (selectedBarberId && selectedDate) {
-      const dateString = format(selectedDate, 'yyyy-MM-dd');
-      fetchAppointments(selectedBarberId, dateString);
+      if (viewMode === "week") {
+        // Fetch appointments for the entire week
+        const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+        const weekEnd = addDays(weekStart, 6);
+        
+        // Fetch for each day of the week
+        for (let i = 0; i < 7; i++) {
+          const currentDay = addDays(weekStart, i);
+          const dateString = format(currentDay, 'yyyy-MM-dd');
+          fetchAppointments(selectedBarberId, dateString);
+        }
+      } else {
+        const dateString = format(selectedDate, 'yyyy-MM-dd');
+        fetchAppointments(selectedBarberId, dateString);
+      }
     }
-  }, [selectedBarberId, selectedDate]);
+  }, [selectedBarberId, selectedDate, viewMode]);
 
   // Generate dynamic time slots based on barbershop settings
   const timeSlots = generateTimeSlots(selectedDate);
@@ -61,8 +74,16 @@ const SchedulePage = () => {
     }
   };
 
-  const getAppointmentForTimeSlot = (timeSlot: string) => {
-    return appointments.find(apt => apt.start_time.slice(0, 5) === timeSlot);
+  const getAppointmentForTimeSlot = (timeSlot: string, date?: Date) => {
+    if (!date) {
+      return appointments.find(apt => apt.start_time.slice(0, 5) === timeSlot);
+    }
+    
+    const dateString = format(date, 'yyyy-MM-dd');
+    return appointments.find(apt => 
+      apt.start_time.slice(0, 5) === timeSlot && 
+      apt.appointment_date === dateString
+    );
   };
 
   if (authLoading || barberLoading) {
@@ -162,39 +183,74 @@ const SchedulePage = () => {
 
     return (
       <div className="grid grid-cols-7 gap-2">
-        {weekDays.map((day) => (
-          <div key={day.toISOString()} className="space-y-2">
-            <div className={`text-center p-2 rounded-lg ${
-              isSameDay(day, selectedDate) 
-                ? "bg-accent text-accent-foreground" 
-                : "bg-card"
-            }`}>
-              <p className="text-xs text-muted-foreground">
-                {format(day, "EEE", { locale: ptBR })}
-              </p>
-              <p className="font-medium">{format(day, "d")}</p>
-            </div>
-            
-            <div className="space-y-1">
-              {timeSlots.slice(0, 6).map((timeSlot) => {
-                const appointment = getAppointmentForTimeSlot(timeSlot);
-                return (
-                  <div 
-                    key={`${day.toISOString()}-${timeSlot}`}
-                    className={`text-xs p-1 rounded cursor-pointer ${
-                      appointment 
-                        ? "bg-accent text-accent-foreground" 
-                        : "bg-gray-100 hover:bg-gray-200"
-                    }`}
-                    onClick={() => handleTimeSlotClick(timeSlot)}
-                  >
-                    {appointment ? appointment.client?.name || 'Cliente' : timeSlot}
+        {weekDays.map((day) => {
+          const dayTimeSlots = generateTimeSlots(day);
+          const isOpen = isOpenOnDate(day);
+          
+          return (
+            <div key={day.toISOString()} className="space-y-2">
+              <div 
+                className={`text-center p-2 rounded-lg cursor-pointer transition-colors ${
+                  isSameDay(day, selectedDate) 
+                    ? "bg-accent text-accent-foreground" 
+                    : "bg-card hover:bg-card/80"
+                }`}
+                onClick={() => setSelectedDate(day)}
+              >
+                <p className="text-xs text-muted-foreground">
+                  {format(day, "EEE", { locale: ptBR })}
+                </p>
+                <p className="font-medium">{format(day, "d")}</p>
+                {!isOpen && (
+                  <p className="text-xs text-red-500">Fechado</p>
+                )}
+              </div>
+              
+              <div className="space-y-1">
+                {!isOpen ? (
+                  <div className="text-xs text-center text-muted-foreground p-2">
+                    Fechado
                   </div>
-                );
-              })}
+                ) : (
+                  dayTimeSlots.slice(0, 6).map((timeSlot) => {
+                    const appointment = getAppointmentForTimeSlot(timeSlot, day);
+                    return (
+                      <div 
+                        key={`${day.toISOString()}-${timeSlot}`}
+                        className={`text-xs p-1 rounded cursor-pointer transition-colors ${
+                          appointment 
+                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                            : "bg-gray-100 hover:bg-gray-200 text-gray-600"
+                        }`}
+                        onClick={() => {
+                          setSelectedDate(day);
+                          handleTimeSlotClick(timeSlot);
+                        }}
+                        title={appointment ? `${appointment.client?.name} - ${appointment.service?.name}` : `Agendar às ${timeSlot}`}
+                      >
+                        {appointment ? (
+                          <div className="truncate">
+                            <div className="font-medium">{timeSlot}</div>
+                            <div className="truncate">{appointment.client?.name}</div>
+                          </div>
+                        ) : (
+                          <div className="text-center">{timeSlot}</div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+                
+                {/* Show count of remaining appointments if there are more than 6 */}
+                {isOpen && dayTimeSlots.length > 6 && (
+                  <div className="text-xs text-center text-muted-foreground p-1">
+                    +{dayTimeSlots.length - 6} mais
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
@@ -322,8 +378,18 @@ const SchedulePage = () => {
           selectedBarberId={selectedBarberId}
           onAppointmentCreated={() => {
             if (selectedBarberId && selectedDate) {
-              const dateString = format(selectedDate, 'yyyy-MM-dd');
-              fetchAppointments(selectedBarberId, dateString);
+              if (viewMode === "week") {
+                // Refetch entire week
+                const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+                for (let i = 0; i < 7; i++) {
+                  const currentDay = addDays(weekStart, i);
+                  const dateString = format(currentDay, 'yyyy-MM-dd');
+                  fetchAppointments(selectedBarberId, dateString);
+                }
+              } else {
+                const dateString = format(selectedDate, 'yyyy-MM-dd');
+                fetchAppointments(selectedBarberId, dateString);
+              }
             }
           }}
         />
