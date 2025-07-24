@@ -55,7 +55,8 @@ export const AppointmentModal = ({
   const [newClientData, setNewClientData] = useState({
     phone: "",
     name: "",
-    email: ""
+    email: "",
+    birth_date: ""
   });
   const [loading, setLoading] = useState(false);
   const [phoneSearching, setPhoneSearching] = useState(false);
@@ -94,15 +95,15 @@ export const AppointmentModal = ({
         const client = await checkClientByPhone(debouncedPhone);
         if (client) {
           setExistingClient(client);
-          setNewClientData(prev => ({ ...prev, name: client.name, email: client.email || "" }));
+          setNewClientData(prev => ({ ...prev, name: client.name, email: client.email || "", birth_date: client.birth_date || "" }));
         } else {
           setExistingClient(null);
-          setNewClientData(prev => ({ ...prev, name: "", email: "" }));
+          setNewClientData(prev => ({ ...prev, name: "", email: "", birth_date: "" }));
         }
         setPhoneSearching(false);
       } else {
         setExistingClient(null);
-        setNewClientData(prev => ({ ...prev, name: "", email: "" }));
+        setNewClientData(prev => ({ ...prev, name: "", email: "", birth_date: "" }));
       }
     };
 
@@ -148,7 +149,11 @@ export const AppointmentModal = ({
   const handleNewClient = async () => {
     if (newClientData.name && newClientData.phone) {
       setLoading(true);
-      const success = await addClient(newClientData);
+      const clientData = {
+        ...newClientData,
+        birth_date: newClientData.birth_date || undefined
+      };
+      const success = await addClient(clientData);
       if (success) {
         // Buscar o cliente recém-criado
         const newClient = clients.find(c => 
@@ -213,7 +218,7 @@ export const AppointmentModal = ({
       // Reset form
       setSelectedClient(null);
       setStep("client");
-      setNewClientData({ phone: "", name: "", email: "" });
+      setNewClientData({ phone: "", name: "", email: "", birth_date: "" });
       setExistingClient(null);
       setUseExistingClient(false);
       setAppointmentData({
@@ -376,7 +381,7 @@ export const AppointmentModal = ({
                     />
                   </div>
                   
-                  <div className="md:col-span-2">
+                  <div>
                     <Label htmlFor="email">Email (opcional)</Label>
                     <Input
                       id="email"
@@ -384,6 +389,18 @@ export const AppointmentModal = ({
                       value={newClientData.email}
                       onChange={(e) => setNewClientData(prev => ({ ...prev, email: e.target.value }))}
                       placeholder="email@exemplo.com"
+                      disabled={!!existingClient}
+                      className={existingClient ? "bg-muted" : ""}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="birth_date">Data de nascimento (opcional)</Label>
+                    <Input
+                      id="birth_date"
+                      type="date"
+                      value={newClientData.birth_date}
+                      onChange={(e) => setNewClientData(prev => ({ ...prev, birth_date: e.target.value }))}
                       disabled={!!existingClient}
                       className={existingClient ? "bg-muted" : ""}
                     />
