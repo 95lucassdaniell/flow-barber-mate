@@ -55,26 +55,25 @@ export const useCashRegister = () => {
   const [currentCashRegister, setCurrentCashRegister] = useState<CashRegister | null>(null);
   const [cartItems, setCartItems] = useState<CashRegisterItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { toast } = useToast();
 
   // Verificar se existe caixa aberto
   const initializeCashRegister = async () => {
-    if (!profile?.id || !profile?.barbershop_id) return;
+    if (!profile?.barbershop_id) return;
 
     try {
       setLoading(true);
       
-      // Verificar se já existe um caixa aberto
+      // Verificar se já existe um caixa aberto para o usuário atual
       const { data: existingCash, error: fetchError } = await supabase
         .from('cash_registers')
         .select('*')
-        .eq('user_id', profile.id)
         .eq('barbershop_id', profile.barbershop_id)
         .eq('status', 'open')
-        .single();
+        .maybeSingle();
 
-      if (fetchError && fetchError.code !== 'PGRST116') {
+      if (fetchError) {
         console.error('Erro ao verificar caixa:', fetchError);
         return;
       }
@@ -93,14 +92,14 @@ export const useCashRegister = () => {
 
   // Abrir novo caixa
   const openCashRegister = async (openingBalance: number = 0): Promise<string | null> => {
-    if (!profile?.id || !profile?.barbershop_id) return null;
+    if (!profile?.barbershop_id || !user?.id) return null;
 
     try {
       const { data, error } = await supabase
         .from('cash_registers')
         .insert([
           {
-            user_id: profile.id,
+            user_id: user.id,
             barbershop_id: profile.barbershop_id,
             opening_balance: openingBalance,
             status: 'open'
