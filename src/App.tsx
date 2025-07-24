@@ -24,6 +24,7 @@ import SuperAdminFinancialPage from "./pages/SuperAdminFinancialPage";
 import SuperAdminAuditPage from "./pages/SuperAdminAuditPage";
 import SuperAdminSettingsPage from "./pages/SuperAdminSettingsPage";
 import FinancialPage from "./pages/FinancialPage";
+import AIPage from "./pages/AIPage";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
           <Route path="/app/:slug/settings" element={<SettingsPage />} />
           <Route path="/app/:slug/whatsapp" element={<WhatsAppPage />} />
           <Route path="/app/:slug/crm" element={<CRMPage />} />
+          <Route path="/app/:slug/ai" element={<AIPage />} />
           <Route path="/app/:slug/financial" element={<FinancialPage />} />
         <Route path="/super-admin" element={<SuperAdminPage />} />
         <Route path="/super-admin/barbershops" element={<SuperAdminBarbershopsPage />} />
