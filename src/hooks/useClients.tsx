@@ -174,6 +174,33 @@ export const useClients = () => {
     fetchClients();
   }, [profile?.barbershop_id]);
 
+  const checkClientByPhone = async (phone: string): Promise<Client | null> => {
+    if (!profile?.barbershop_id || !phone.trim()) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('barbershop_id', profile.barbershop_id)
+        .eq('phone', phone.trim())
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // Nenhum cliente encontrado - isso não é um erro
+          return null;
+        }
+        console.error('Erro ao buscar cliente por telefone:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Erro ao buscar cliente por telefone:', error);
+      return null;
+    }
+  };
+
   return {
     clients,
     loading,
@@ -181,5 +208,6 @@ export const useClients = () => {
     updateClient,
     deleteClient,
     refetchClients: fetchClients,
+    checkClientByPhone,
   };
 };

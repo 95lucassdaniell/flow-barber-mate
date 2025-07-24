@@ -14,8 +14,12 @@ import {
   DollarSign,
   Calendar,
   Plus,
-  Search
+  Search,
+  CheckCircle,
+  AlertCircle,
+  Loader2
 } from "lucide-react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
@@ -49,18 +53,24 @@ export const AppointmentModal = ({
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [clientSearch, setClientSearch] = useState("");
   const [newClientData, setNewClientData] = useState({
-    name: "",
     phone: "",
+    name: "",
     email: ""
   });
   const [loading, setLoading] = useState(false);
+  const [phoneSearching, setPhoneSearching] = useState(false);
+  const [existingClient, setExistingClient] = useState<any>(null);
+  const [useExistingClient, setUseExistingClient] = useState(false);
   
   const { canManageAll } = useAuth();
   const { barbers } = useBarberSelection();
-  const { clients, addClient } = useClients();
+  const { clients, addClient, checkClientByPhone } = useClients();
   const { services } = useServices();
   const { createAppointment } = useAppointments();
   const { generateTimeSlots, isOpenOnDate } = useBarbershopSettings();
+  
+  // Debounce phone input para busca
+  const debouncedPhone = useDebounce(newClientData.phone, 500);
   
   const [appointmentData, setAppointmentData] = useState({
     barberId: selectedBarberId || "",
@@ -75,6 +85,29 @@ export const AppointmentModal = ({
       setAppointmentData(prev => ({ ...prev, barberId: selectedBarberId }));
     }
   }, [selectedBarberId, canManageAll]);
+
+  // Buscar cliente existente por telefone
+  useEffect(() => {
+    const searchClientByPhone = async () => {
+      if (debouncedPhone && debouncedPhone.length >= 10) {
+        setPhoneSearching(true);
+        const client = await checkClientByPhone(debouncedPhone);
+        if (client) {
+          setExistingClient(client);
+          setNewClientData(prev => ({ ...prev, name: client.name, email: client.email || "" }));
+        } else {
+          setExistingClient(null);
+          setNewClientData(prev => ({ ...prev, name: "", email: "" }));
+        }
+        setPhoneSearching(false);
+      } else {
+        setExistingClient(null);
+        setNewClientData(prev => ({ ...prev, name: "", email: "" }));
+      }
+    };
+
+    searchClientByPhone();
+  }, [debouncedPhone, checkClientByPhone]);
 
   // Filtrar clientes por busca
   const filteredClients = clients.filter(client => 
@@ -105,6 +138,13 @@ export const AppointmentModal = ({
     setStep("details");
   };
 
+  const handleUseExistingClient = () => {
+    if (existingClient) {
+      setSelectedClient(existingClient);
+      setStep("details");
+    }
+  };
+
   const handleNewClient = async () => {
     if (newClientData.name && newClientData.phone) {
       setLoading(true);
@@ -121,6 +161,27 @@ export const AppointmentModal = ({
       }
       setLoading(false);
     }
+  };
+
+  const formatPhone = (value: string) => {
+    // Remove tudo que não é número
+    const numbers = value.replace(/\D/g, '');
+    
+    // Aplica a máscara (11) 99999-9999
+    if (numbers.length <= 2) {
+      return numbers;
+    } else if (numbers.length <= 7) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    } else if (numbers.length <= 11) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
+    } else {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+    }
+  };
+
+  const handlePhoneChange = (value: string) => {
+    const formatted = formatPhone(value);
+    setNewClientData(prev => ({ ...prev, phone: formatted }));
   };
 
   const handleSaveAppointment = async () => {
@@ -152,7 +213,9 @@ export const AppointmentModal = ({
       // Reset form
       setSelectedClient(null);
       setStep("client");
-      setNewClientData({ name: "", phone: "", email: "" });
+      setNewClientData({ phone: "", name: "", email: "" });
+      setExistingClient(null);
+      setUseExistingClient(false);
       setAppointmentData({
         barberId: selectedBarberId || "",
         serviceId: "",
@@ -255,23 +318,64 @@ export const AppointmentModal = ({
                 <Label>Ou Cadastrar Novo Cliente</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                   <div>
+                    <Label htmlFor="phone">WhatsApp*</Label>
+                    <div className="relative">
+                      <Input
+                        id="phone"
+                        value={newClientData.phone}
+                        onChange={(e) => handlePhoneChange(e.target.value)}
+                        placeholder="(11) 99999-9999"
+                        className={existingClient ? "border-yellow-300 bg-yellow-50" : ""}
+                      />
+                      {phoneSearching && (
+                        <div className="absolute right-3 top-3">
+                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                        </div>
+                      )}
+                      {existingClient && !phoneSearching && (
+                        <div className="absolute right-3 top-3">
+                          <AlertCircle className="w-4 h-4 text-yellow-600" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    {existingClient && (
+                      <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-yellow-800">
+                              Cliente já cadastrado: {existingClient.name}
+                            </p>
+                            <p className="text-xs text-yellow-600">
+                              {existingClient.email && `Email: ${existingClient.email}`}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleUseExistingClient}
+                            className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+                          >
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Usar Cliente
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div>
                     <Label htmlFor="name">Nome Completo*</Label>
                     <Input
                       id="name"
                       value={newClientData.name}
                       onChange={(e) => setNewClientData(prev => ({ ...prev, name: e.target.value }))}
                       placeholder="Nome do cliente"
+                      disabled={!!existingClient}
+                      className={existingClient ? "bg-muted" : ""}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="phone">WhatsApp*</Label>
-                    <Input
-                      id="phone"
-                      value={newClientData.phone}
-                      onChange={(e) => setNewClientData(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="(11) 99999-9999"
-                    />
-                  </div>
+                  
                   <div className="md:col-span-2">
                     <Label htmlFor="email">Email (opcional)</Label>
                     <Input
@@ -280,23 +384,31 @@ export const AppointmentModal = ({
                       value={newClientData.email}
                       onChange={(e) => setNewClientData(prev => ({ ...prev, email: e.target.value }))}
                       placeholder="email@exemplo.com"
+                      disabled={!!existingClient}
+                      className={existingClient ? "bg-muted" : ""}
                     />
                   </div>
                 </div>
-                <Button 
-                  onClick={handleNewClient}
-                  disabled={!newClientData.name || !newClientData.phone || loading}
-                  className="w-full mt-4"
-                >
-                  {loading ? (
-                    "Criando..."
-                  ) : (
-                    <>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Criar e Continuar
-                    </>
-                  )}
-                </Button>
+                
+                {!existingClient && (
+                  <Button 
+                    onClick={handleNewClient}
+                    disabled={!newClientData.name || !newClientData.phone || loading}
+                    className="w-full mt-4"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Criando...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Criar e Continuar
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             </div>
           )}
