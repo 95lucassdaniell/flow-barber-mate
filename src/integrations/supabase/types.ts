@@ -129,6 +129,104 @@ export type Database = {
           },
         ]
       }
+      automation_executions: {
+        Row: {
+          client_id: string
+          created_at: string
+          error_message: string | null
+          execution_date: string
+          id: string
+          message_content: string
+          rule_id: string
+          status: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          error_message?: string | null
+          execution_date?: string
+          id?: string
+          message_content: string
+          rule_id: string
+          status?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          error_message?: string | null
+          execution_date?: string
+          id?: string
+          message_content?: string
+          rule_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_executions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_executions_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_rules: {
+        Row: {
+          actions: Json
+          barbershop_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          message_template: string
+          name: string
+          trigger_conditions: Json
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          actions?: Json
+          barbershop_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          message_template: string
+          name: string
+          trigger_conditions?: Json
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          actions?: Json
+          barbershop_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          message_template?: string
+          name?: string
+          trigger_conditions?: Json
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_rules_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       barbershops: {
         Row: {
           address: string | null

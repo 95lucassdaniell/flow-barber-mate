@@ -6,20 +6,11 @@ import { toast } from 'sonner';
 export interface AutomationRule {
   id: string;
   barbershop_id: string;
-  type: 'reminder' | 'follow_up' | 'churn_alert' | 'promotion';
+  type: string;
   name: string;
-  description: string;
-  trigger_conditions: {
-    days_before_appointment?: number;
-    days_after_last_visit?: number;
-    churn_risk_level?: 'high' | 'medium' | 'low';
-    hour_occupancy_below?: number;
-  };
-  actions: {
-    send_whatsapp?: boolean;
-    notify_staff?: boolean;
-    create_promotion?: boolean;
-  };
+  description?: string;
+  trigger_conditions: any;
+  actions: any;
   message_template: string;
   is_active: boolean;
   created_at: string;
@@ -31,9 +22,10 @@ export interface AutomationExecution {
   rule_id: string;
   client_id: string;
   execution_date: string;
-  status: 'pending' | 'sent' | 'failed';
+  status: string;
   message_content: string;
   error_message?: string;
+  created_at: string;
 }
 
 export const useAutomations = () => {
