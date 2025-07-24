@@ -63,8 +63,8 @@ export const useBarbershopSettings = () => {
     return appointmentDateTime <= safetyTime;
   };
 
-  // Generate time slots based on opening hours
-  const generateTimeSlots = (date: Date, intervalMinutes: number = 30): string[] => {
+  // Generate ALL time slots based on opening hours (including past ones)
+  const generateAllTimeSlots = (date: Date, intervalMinutes: number = 30): string[] => {
     if (!settings?.opening_hours) return [];
 
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -84,14 +84,24 @@ export const useBarbershopSettings = () => {
       const hours = Math.floor(time / 60);
       const minutes = time % 60;
       const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-      
-      // Filter out past time slots for current day
-      if (!isTimeSlotInPast(date, timeString)) {
-        slots.push(timeString);
-      }
+      slots.push(timeString);
     }
 
     return slots;
+  };
+
+  // Generate time slots based on opening hours (only available ones)
+  const generateTimeSlots = (date: Date, intervalMinutes: number = 30): string[] => {
+    return generateAllTimeSlots(date, intervalMinutes).filter(timeString => 
+      !isTimeSlotInPast(date, timeString)
+    );
+  };
+
+  // Check if a time slot is available for booking
+  const isTimeSlotAvailable = (date: Date, timeSlot: string): boolean => {
+    if (!isOpenOnDate(date)) return false;
+    if (isTimeSlotInPast(date, timeSlot)) return false;
+    return true;
   };
 
   // Check if barbershop is open on a specific date
@@ -122,9 +132,11 @@ export const useBarbershopSettings = () => {
     settings,
     loading,
     generateTimeSlots,
+    generateAllTimeSlots,
     isOpenOnDate,
     getOpeningHoursForDate,
     isTimeSlotInPast,
+    isTimeSlotAvailable,
     refetchSettings: fetchSettings,
   };
 };

@@ -24,7 +24,14 @@ const SchedulePage = () => {
   const { profile, loading: authLoading } = useAuth();
   const { selectedBarberId, selectedBarber, loading: barberLoading } = useBarberSelection();
   const { appointments, loading, fetchAppointments } = useAppointments();
-  const { generateTimeSlots, isOpenOnDate, getOpeningHoursForDate } = useBarbershopSettings();
+  const { 
+    generateTimeSlots, 
+    generateAllTimeSlots,
+    isOpenOnDate, 
+    getOpeningHoursForDate,
+    isTimeSlotInPast,
+    isTimeSlotAvailable 
+  } = useBarbershopSettings();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week">("day");
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
@@ -51,8 +58,8 @@ const SchedulePage = () => {
     }
   }, [selectedBarberId, selectedDate, viewMode]);
 
-  // Generate dynamic time slots based on barbershop settings
-  const timeSlots = generateTimeSlots(selectedDate);
+  // Generate all time slots for display
+  const timeSlots = generateAllTimeSlots(selectedDate);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -107,71 +114,119 @@ const SchedulePage = () => {
   };
 
   const renderDayView = () => {
-    if (!isOpenOnDate(selectedDate)) {
-      return (
-        <div className="text-center py-8 text-muted-foreground">
-          <p>Barbearia fechada neste dia</p>
-          <p className="text-sm mt-2">Verifique os horários de funcionamento nas configurações</p>
-        </div>
-      );
-    }
+    const isBarbershopOpen = isOpenOnDate(selectedDate);
+    
+    // Se não há horários definidos, usar horários padrão para visualização
+    const displaySlots = timeSlots.length > 0 ? timeSlots : 
+      ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', 
+       '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', 
+       '17:00', '17:30'];
 
     return (
       <div className="space-y-3">
-        {timeSlots.map((timeSlot) => {
-        const appointment = getAppointmentForTimeSlot(timeSlot);
+        {displaySlots.map((timeSlot) => {
+          const appointment = getAppointmentForTimeSlot(timeSlot);
+          const isAvailable = isBarbershopOpen && isTimeSlotAvailable(selectedDate, timeSlot);
+          const isPast = isTimeSlotInPast(selectedDate, timeSlot);
+          
+          // Determinar o estado do slot
+          let slotState: 'available' | 'occupied' | 'past' | 'closed' = 'available';
+          let slotLabel = 'Horário disponível';
+          let canClick = false;
+          
+          if (appointment) {
+            slotState = 'occupied';
+            canClick = true; // Pode clicar para editar
+          } else if (!isBarbershopOpen) {
+            slotState = 'closed';
+            slotLabel = 'Fechado';
+          } else if (isPast) {
+            slotState = 'past';
+            slotLabel = 'Horário passado';
+          } else if (isAvailable) {
+            slotState = 'available';
+            slotLabel = 'Horário disponível';
+            canClick = true;
+          }
         
-        return (
-          <div 
-            key={timeSlot}
-            className={`flex items-center p-3 rounded-lg border transition-colors cursor-pointer ${
-              appointment 
-                ? "bg-card hover:bg-card/80" 
-                : "bg-gray-50 hover:bg-gray-100 border-dashed"
-            }`}
-            onClick={() => handleTimeSlotClick(timeSlot)}
-          >
-            <div className="flex items-center space-x-3 flex-1">
-              <div className="flex items-center space-x-2 w-20">
-                <Clock className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-medium">{timeSlot}</span>
-              </div>
-              
-              <div className="flex-1">
-                {appointment ? (
-                  <>
+          return (
+            <div 
+              key={timeSlot}
+              className={`flex items-center p-3 rounded-lg border transition-colors ${
+                slotState === 'occupied' 
+                  ? "bg-card hover:bg-card/80 cursor-pointer" 
+                  : slotState === 'available'
+                  ? "bg-gray-50 hover:bg-gray-100 border-dashed cursor-pointer"
+                  : slotState === 'past'
+                  ? "bg-muted/30 border-muted cursor-not-allowed opacity-60"
+                  : "bg-destructive/10 border-destructive/20 cursor-not-allowed opacity-60"
+              }`}
+              onClick={() => {
+                if (canClick) {
+                  if (appointment) {
+                    // TODO: Implementar edição de agendamento
+                    console.log('Editar agendamento:', appointment);
+                  } else {
+                    handleTimeSlotClick(timeSlot);
+                  }
+                }
+              }}
+            >
+              <div className="flex items-center space-x-3 flex-1">
+                <div className="flex items-center space-x-2 w-20">
+                  <Clock className={`w-4 h-4 ${
+                    slotState === 'past' || slotState === 'closed' 
+                      ? 'text-muted-foreground/50' 
+                      : 'text-muted-foreground'
+                  }`} />
+                  <span className={`text-sm font-medium ${
+                    slotState === 'past' || slotState === 'closed' 
+                      ? 'text-muted-foreground' 
+                      : ''
+                  }`}>{timeSlot}</span>
+                </div>
+                
+                <div className="flex-1">
+                  {appointment ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{appointment.client?.name || 'Cliente'}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {appointment.service?.name || 'Serviço'} • {appointment.barber?.full_name || 'Barbeiro'}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {appointment.client?.phone || ''}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-green-600">
+                            R$ {Number(appointment.total_price).toFixed(2)}
+                          </p>
+                          <Badge variant="secondary" className={getStatusColor(appointment.status)}>
+                            {getStatusText(appointment.status)}
+                          </Badge>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{appointment.client?.name || 'Cliente'}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {appointment.service?.name || 'Serviço'} • {appointment.barber?.full_name || 'Barbeiro'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {appointment.client?.phone || ''}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-green-600">
-                          R$ {Number(appointment.total_price).toFixed(2)}
-                        </p>
-                        <Badge variant="secondary" className={getStatusColor(appointment.status)}>
-                          {getStatusText(appointment.status)}
-                        </Badge>
-                      </div>
+                      <p className={`italic ${
+                        slotState === 'past' || slotState === 'closed' 
+                          ? 'text-muted-foreground' 
+                          : 'text-muted-foreground'
+                      }`}>{slotLabel}</p>
+                      {slotState === 'available' && (
+                        <Button variant="ghost" size="sm">
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
-                  </>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <p className="text-muted-foreground italic">Horário disponível</p>
-                    <Button variant="ghost" size="sm">
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        );
+          );
         })}
       </div>
     );
@@ -184,7 +239,7 @@ const SchedulePage = () => {
     return (
       <div className="grid grid-cols-7 gap-2">
         {weekDays.map((day) => {
-          const dayTimeSlots = generateTimeSlots(day);
+          const dayTimeSlots = generateAllTimeSlots(day);
           const isOpen = isOpenOnDate(day);
           
           return (
