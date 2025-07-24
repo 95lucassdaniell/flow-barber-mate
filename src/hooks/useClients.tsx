@@ -183,13 +183,9 @@ export const useClients = () => {
         .select('*')
         .eq('barbershop_id', profile.barbershop_id)
         .eq('phone', phone.trim())
-        .single();
+        .maybeSingle();
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          // Nenhum cliente encontrado - isso não é um erro
-          return null;
-        }
         console.error('Erro ao buscar cliente por telefone:', error);
         return null;
       }
