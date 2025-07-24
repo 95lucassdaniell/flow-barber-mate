@@ -202,7 +202,7 @@ export const useAIAnalytics = () => {
         body: {
           clientPatterns,
           scheduleInsights,
-          barbershopId: profile.barbershop_id
+          barbershopId: profile?.barbershop_id
         }
       });
 
@@ -270,10 +270,10 @@ export const useAIAnalytics = () => {
 
   // Atualizar insights automaticamente
   useEffect(() => {
-    if (clients && appointments && sales && profile.barbershop_id) {
+    if (clients && appointments && sales && profile?.barbershop_id) {
       processAIInsights();
     }
-  }, [clients, appointments, sales, profile.barbershop_id]);
+  }, [clients, appointments, sales, profile?.barbershop_id]);
 
   return {
     insights,
