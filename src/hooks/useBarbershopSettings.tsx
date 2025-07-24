@@ -67,7 +67,7 @@ export const useBarbershopSettings = () => {
     const startTime = openHour * 60 + openMinute; // Convert to minutes
     const endTime = closeHour * 60 + closeMinute; // Convert to minutes
 
-    for (let time = startTime; time < endTime; time += intervalMinutes) {
+    for (let time = startTime; time <= endTime - intervalMinutes; time += intervalMinutes) {
       const hours = Math.floor(time / 60);
       const minutes = time % 60;
       const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
