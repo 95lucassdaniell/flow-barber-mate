@@ -9,7 +9,8 @@ import {
   Phone, 
   Mail, 
   Calendar,
-  MoreVertical
+  MoreVertical,
+  Eye
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -173,6 +174,10 @@ const ClientsList = ({ clients, loading, onEditClient, onViewClient }: ClientsLi
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => onViewClient(client)}>
+                        <Eye className="w-4 h-4 mr-2" />
+                        Ver Perfil
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => onEditClient(client)}>
                         <Edit className="w-4 h-4 mr-2" />
                         Editar
