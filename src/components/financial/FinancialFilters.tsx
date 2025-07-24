@@ -64,12 +64,12 @@ export default function FinancialFilters({
           {showBarberFilter && (
             <div className="grid gap-2">
               <Label>Barbeiro</Label>
-              <Select value={selectedBarber} onValueChange={onBarberChange}>
+              <Select value={selectedBarber || "all"} onValueChange={(value) => onBarberChange?.(value === "all" ? "" : value)}>
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Todos os barbeiros" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os barbeiros</SelectItem>
+                  <SelectItem value="all">Todos os barbeiros</SelectItem>
                   {providers.map((provider) => (
                     <SelectItem key={provider.id} value={provider.id}>
                       {provider.full_name}
