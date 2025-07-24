@@ -13,62 +13,28 @@ import {
 } from "lucide-react";
 import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useBarberSelection } from "@/hooks/useBarberSelection";
+import { useAppointments } from "@/hooks/useAppointments";
 import { AppointmentModal } from "./AppointmentModal";
 import { BarberSelector } from "./BarberSelector";
 
 const SchedulePage = () => {
   const { profile, loading: authLoading } = useAuth();
   const { selectedBarberId, selectedBarber, loading: barberLoading } = useBarberSelection();
+  const { appointments, loading, fetchAppointments } = useAppointments();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week">("day");
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
 
   // Fetch appointments for selected barber and date
   useEffect(() => {
-    if (!selectedBarberId || !profile) return;
-
-    const fetchAppointments = async () => {
-      setLoading(true);
-      try {
-        const { data } = await supabase
-          .from('appointments')
-          .select(`
-            *,
-            clients(name, phone),
-            services(name),
-            profiles!appointments_barber_id_fkey(full_name)
-          `)
-          .eq('barber_id', selectedBarberId)
-          .eq('appointment_date', format(selectedDate, 'yyyy-MM-dd'))
-          .order('start_time');
-
-        const formattedAppointments = data?.map(apt => ({
-          id: apt.id,
-          time: apt.start_time.slice(0, 5), // HH:MM format
-          client: apt.clients?.name || 'Cliente',
-          service: apt.services?.name || 'Serviço',
-          barber: apt.profiles?.full_name || 'Barbeiro',
-          status: apt.status,
-          price: Number(apt.total_price),
-          phone: apt.clients?.phone || ''
-        })) || [];
-
-        setAppointments(formattedAppointments);
-      } catch (error) {
-        console.error('Error fetching appointments:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAppointments();
-  }, [selectedBarberId, selectedDate, profile]);
+    if (selectedBarberId && selectedDate) {
+      const dateString = format(selectedDate, 'yyyy-MM-dd');
+      fetchAppointments(selectedBarberId, dateString);
+    }
+  }, [selectedBarberId, selectedDate]);
 
   const timeSlots = [
     "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -97,7 +63,7 @@ const SchedulePage = () => {
   };
 
   const getAppointmentForTimeSlot = (timeSlot: string) => {
-    return appointments.find(apt => apt.time === timeSlot);
+    return appointments.find(apt => apt.start_time.slice(0, 5) === timeSlot);
   };
 
   if (authLoading || barberLoading) {
@@ -146,17 +112,17 @@ const SchedulePage = () => {
                   <>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium">{appointment.client}</p>
+                        <p className="font-medium">{appointment.client?.name || 'Cliente'}</p>
                         <p className="text-sm text-muted-foreground">
-                          {appointment.service} • {appointment.barber}
+                          {appointment.service?.name || 'Serviço'} • {appointment.barber?.full_name || 'Barbeiro'}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {appointment.phone}
+                          {appointment.client?.phone || ''}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-green-600">
-                          R$ {appointment.price.toFixed(2)}
+                          R$ {Number(appointment.total_price).toFixed(2)}
                         </p>
                         <Badge variant="secondary" className={getStatusColor(appointment.status)}>
                           {getStatusText(appointment.status)}
@@ -212,7 +178,7 @@ const SchedulePage = () => {
                     }`}
                     onClick={() => handleTimeSlotClick(timeSlot)}
                   >
-                    {appointment ? appointment.client : timeSlot}
+                    {appointment ? appointment.client?.name || 'Cliente' : timeSlot}
                   </div>
                 );
               })}
@@ -344,6 +310,12 @@ const SchedulePage = () => {
           selectedDate={selectedDate}
           selectedTime={selectedTimeSlot}
           selectedBarberId={selectedBarberId}
+          onAppointmentCreated={() => {
+            if (selectedBarberId && selectedDate) {
+              const dateString = format(selectedDate, 'yyyy-MM-dd');
+              fetchAppointments(selectedBarberId, dateString);
+            }
+          }}
         />
       )}
     </div>

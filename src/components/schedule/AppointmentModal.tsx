@@ -20,6 +20,10 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
 import { useBarberSelection } from "@/hooks/useBarberSelection";
+import { useClients } from "@/hooks/useClients";
+import { useServices } from "@/hooks/useServices";
+import { useAppointments } from "@/hooks/useAppointments";
+import { useProviderServices } from "@/hooks/useProviderServices";
 
 interface AppointmentModalProps {
   isOpen: boolean;
@@ -28,6 +32,7 @@ interface AppointmentModalProps {
   selectedTime?: string | null;
   selectedBarberId?: string;
   appointment?: any; // Para edição
+  onAppointmentCreated?: () => void;
 }
 
 export const AppointmentModal = ({ 
@@ -36,17 +41,25 @@ export const AppointmentModal = ({
   selectedDate, 
   selectedTime,
   selectedBarberId,
-  appointment 
+  appointment,
+  onAppointmentCreated
 }: AppointmentModalProps) => {
   const [step, setStep] = useState<"client" | "details">("client");
   const [selectedClient, setSelectedClient] = useState<any>(null);
+  const [clientSearch, setClientSearch] = useState("");
   const [newClientData, setNewClientData] = useState({
     name: "",
     phone: "",
     email: ""
   });
+  const [loading, setLoading] = useState(false);
+  
   const { canManageAll } = useAuth();
   const { barbers } = useBarberSelection();
+  const { clients, addClient } = useClients();
+  const { services } = useServices();
+  const { createAppointment } = useAppointments();
+  
   const [appointmentData, setAppointmentData] = useState({
     barberId: selectedBarberId || "",
     serviceId: "",
@@ -61,12 +74,11 @@ export const AppointmentModal = ({
     }
   }, [selectedBarberId, canManageAll]);
 
-  // Mock data - virá da API
-  const mockClients = [
-    { id: "1", name: "João Silva", phone: "(11) 99999-9999", email: "joao@email.com" },
-    { id: "2", name: "Pedro Santos", phone: "(11) 88888-8888", email: "pedro@email.com" },
-    { id: "3", name: "Marcos Lima", phone: "(11) 77777-7777", email: "marcos@email.com" }
-  ];
+  // Filtrar clientes por busca
+  const filteredClients = clients.filter(client => 
+    client.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+    client.phone.includes(clientSearch)
+  );
 
   // Use real barbers from the hook
   const availableBarbers = barbers.map(b => ({
@@ -74,12 +86,14 @@ export const AppointmentModal = ({
     name: b.full_name
   }));
 
-  const mockServices = [
-    { id: "1", name: "Corte Masculino", duration: 30, price: 25.00 },
-    { id: "2", name: "Corte + Barba", duration: 45, price: 45.00 },
-    { id: "3", name: "Sobrancelha", duration: 15, price: 15.00 },
-    { id: "4", name: "Bigode", duration: 15, price: 10.00 }
-  ];
+  // Buscar serviços com preços do barbeiro selecionado
+  const { getServicesWithPrices } = useProviderServices(appointmentData.barberId);
+  const servicesWithPrices = getServicesWithPrices();
+  
+  // Se não há preços específicos do barbeiro, usar os serviços gerais
+  const availableServices = servicesWithPrices.filter(s => s.is_active && s.price).length > 0 
+    ? servicesWithPrices.filter(s => s.is_active && s.price)
+    : services.filter(s => s.is_active);
 
   const timeSlots = [
     "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -92,34 +106,66 @@ export const AppointmentModal = ({
     setStep("details");
   };
 
-  const handleNewClient = () => {
+  const handleNewClient = async () => {
     if (newClientData.name && newClientData.phone) {
-      const newClient = {
-        id: Date.now().toString(),
-        ...newClientData
-      };
-      setSelectedClient(newClient);
-      setStep("details");
+      setLoading(true);
+      const success = await addClient(newClientData);
+      if (success) {
+        // Buscar o cliente recém-criado
+        const newClient = clients.find(c => 
+          c.name === newClientData.name && c.phone === newClientData.phone
+        );
+        if (newClient) {
+          setSelectedClient(newClient);
+          setStep("details");
+        }
+      }
+      setLoading(false);
     }
   };
 
-  const handleSaveAppointment = () => {
-    const selectedService = mockServices.find(s => s.id === appointmentData.serviceId);
+  const handleSaveAppointment = async () => {
+    if (!selectedClient || !appointmentData.barberId || !appointmentData.serviceId || !appointmentData.time) {
+      return;
+    }
+
+    const selectedService = availableServices.find(s => s.id === appointmentData.serviceId);
+    if (!selectedService) return;
+
+    setLoading(true);
     
-    console.log("Saving appointment:", {
-      client: selectedClient,
-      date: selectedDate,
-      time: appointmentData.time,
-      barber: appointmentData.barberId,
-      service: selectedService,
-      notes: appointmentData.notes
+    const appointmentDate = format(selectedDate, 'yyyy-MM-dd');
+    const totalPrice = ('price' in selectedService ? selectedService.price : 0) || 0;
+    
+    const success = await createAppointment({
+      client_id: selectedClient.id,
+      barber_id: appointmentData.barberId,
+      service_id: appointmentData.serviceId,
+      appointment_date: appointmentDate,
+      start_time: appointmentData.time,
+      total_price: totalPrice,
+      notes: appointmentData.notes || undefined
     });
+
+    if (success) {
+      onAppointmentCreated?.();
+      onClose();
+      // Reset form
+      setSelectedClient(null);
+      setStep("client");
+      setNewClientData({ name: "", phone: "", email: "" });
+      setAppointmentData({
+        barberId: selectedBarberId || "",
+        serviceId: "",
+        time: selectedTime || "",
+        notes: ""
+      });
+    }
     
-    // Aqui faria a chamada para a API
-    onClose();
+    setLoading(false);
   };
 
-  const selectedService = mockServices.find(s => s.id === appointmentData.serviceId);
+  const selectedService = availableServices.find(s => s.id === appointmentData.serviceId);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -174,14 +220,16 @@ export const AppointmentModal = ({
                   <Input 
                     placeholder="Digite o nome ou telefone do cliente..." 
                     className="pl-10"
+                    value={clientSearch}
+                    onChange={(e) => setClientSearch(e.target.value)}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Clientes Recentes</Label>
+                <Label>{clientSearch ? "Resultados da Busca" : "Clientes Recentes"}</Label>
                 <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {mockClients.map((client) => (
+                  {(clientSearch ? filteredClients : filteredClients.slice(0, 5)).map((client) => (
                     <div
                       key={client.id}
                       className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-accent/50"
@@ -238,11 +286,17 @@ export const AppointmentModal = ({
                 </div>
                 <Button 
                   onClick={handleNewClient}
-                  disabled={!newClientData.name || !newClientData.phone}
+                  disabled={!newClientData.name || !newClientData.phone || loading}
                   className="w-full mt-4"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Criar e Continuar
+                  {loading ? (
+                    "Criando..."
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Criar e Continuar
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -312,15 +366,19 @@ export const AppointmentModal = ({
                       <SelectValue placeholder="Selecione o serviço" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockServices.map((service) => (
+                      {availableServices.map((service) => (
                         <SelectItem key={service.id} value={service.id}>
                           <div className="flex items-center justify-between w-full">
                             <span>{service.name}</span>
                             <div className="flex items-center space-x-2 text-xs text-muted-foreground ml-4">
                               <Clock className="w-3 h-3" />
-                              <span>{service.duration}min</span>
-                              <DollarSign className="w-3 h-3" />
-                              <span>R${service.price.toFixed(2)}</span>
+                              <span>{service.duration_minutes}min</span>
+                              {('price' in service && service.price) && (
+                                <>
+                                  <DollarSign className="w-3 h-3" />
+                                  <span>R${service.price.toFixed(2)}</span>
+                                </>
+                              )}
                             </div>
                           </div>
                         </SelectItem>
@@ -352,21 +410,23 @@ export const AppointmentModal = ({
                 {/* Resumo do Serviço */}
                 {selectedService && (
                   <div className="bg-card p-4 rounded-lg border">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{selectedService.name}</span>
-                        <Badge variant="secondary">
-                          <Scissors className="w-3 h-3 mr-1" />
-                          {selectedService.duration}min
-                        </Badge>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{selectedService.name}</span>
+                          <Badge variant="secondary">
+                            <Scissors className="w-3 h-3 mr-1" />
+                            {selectedService.duration_minutes}min
+                          </Badge>
+                        </div>
+                        {('price' in selectedService && selectedService.price) && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Valor:</span>
+                            <span className="font-semibold text-green-600">
+                              R$ {selectedService.price.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Valor:</span>
-                        <span className="font-semibold text-green-600">
-                          R$ {selectedService.price.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
                   </div>
                 )}
               </div>
@@ -393,10 +453,10 @@ export const AppointmentModal = ({
             {step === "details" && (
               <Button 
                 onClick={handleSaveAppointment}
-                disabled={!appointmentData.barberId || !appointmentData.serviceId || !appointmentData.time}
+                disabled={!appointmentData.barberId || !appointmentData.serviceId || !appointmentData.time || loading}
                 variant="hero"
               >
-                {appointment ? "Salvar Alterações" : "Confirmar Agendamento"}
+                {loading ? "Salvando..." : (appointment ? "Salvar Alterações" : "Confirmar Agendamento")}
               </Button>
             )}
           </div>
