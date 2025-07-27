@@ -66,7 +66,7 @@ export const useCommands = () => {
   const { toast } = useToast();
   const { profile } = useAuth();
 
-  const fetchCommands = async (status?: string) => {
+  const fetchCommands = async (status?: string, date?: Date) => {
     if (!profile?.barbershop_id) return;
 
     try {
@@ -90,6 +90,18 @@ export const useCommands = () => {
 
       if (status) {
         query = query.eq('status', status);
+      }
+
+      if (date) {
+        const startOfDay = new Date(date);
+        startOfDay.setHours(0, 0, 0, 0);
+        
+        const endOfDay = new Date(date);
+        endOfDay.setHours(23, 59, 59, 999);
+        
+        query = query
+          .gte('created_at', startOfDay.toISOString())
+          .lte('created_at', endOfDay.toISOString());
       }
 
       const { data, error } = await query;
