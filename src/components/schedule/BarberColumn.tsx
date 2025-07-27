@@ -60,8 +60,12 @@ export const BarberColumn = ({
   };
 
   const isAppointmentInSlot = (appointment: Appointment, timeSlot: string): boolean => {
-    const [startHour, startMinute] = appointment.start_time.split(':').map(Number);
-    const [endHour, endMinute] = appointment.end_time.split(':').map(Number);
+    // Normalizar formato dos horários (HH:MM:SS -> HH:MM)
+    const normalizedStartTime = appointment.start_time.slice(0, 5);
+    const normalizedEndTime = appointment.end_time.slice(0, 5);
+    
+    const [startHour, startMinute] = normalizedStartTime.split(':').map(Number);
+    const [endHour, endMinute] = normalizedEndTime.split(':').map(Number);
     const [slotHour, slotMinute] = timeSlot.split(':').map(Number);
 
     const startTotalMinutes = startHour * 60 + startMinute;
@@ -88,7 +92,9 @@ export const BarberColumn = ({
     const appointment = getAppointmentForSlot(timeSlot);
     if (!appointment) return null;
     
-    return appointment.start_time !== timeSlot ? appointment : null;
+    // Normalizar formato para comparação
+    const normalizedStartTime = appointment.start_time.slice(0, 5);
+    return normalizedStartTime !== timeSlot ? appointment : null;
   };
 
   return (
@@ -109,7 +115,7 @@ export const BarberColumn = ({
 
           console.log(`Slot ${timeSlot} for ${barber.full_name}:`, { 
             hasAppointment: !!appointment, 
-            isStartSlot: appointment?.start_time === timeSlot,
+            isStartSlot: appointment?.start_time.slice(0, 5) === timeSlot,
             isOccupiedByPrevious: !!isOccupiedByPrevious,
             appointmentData: appointment ? {
               id: appointment.id,
@@ -120,7 +126,7 @@ export const BarberColumn = ({
             } : null
           });
 
-          if (appointment && appointment.start_time === timeSlot) {
+          if (appointment && appointment.start_time.slice(0, 5) === timeSlot) {
             // Slot com agendamento (primeiro slot do agendamento)
             const slotsCount = calculateSlotsCount(appointment);
             return (
