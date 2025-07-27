@@ -52,30 +52,27 @@ export const useAppointments = () => {
   const [loading, setLoading] = useState(false);
   const { profile } = useAuth();
   const { toast } = useToast();
-  const [currentFetchContext, setCurrentFetchContext] = useState<{
-    mode: 'day' | 'week';
-    date: string;
-    barberId: string;
-  } | null>(null);
+  const [lastFetchKey, setLastFetchKey] = useState<string>('');
 
   const fetchAppointments = async (barberId?: string, date?: string, mode: 'day' | 'week' = 'day') => {
     if (!profile?.barbershop_id) return;
 
+    // Criar chave única para evitar requests duplicadas
+    const fetchKey = `${barberId || 'all'}-${date || 'all'}-${mode}-${profile.barbershop_id}`;
+    if (fetchKey === lastFetchKey && loading) {
+      console.log('⏭️ Pulando request duplicada:', fetchKey);
+      return;
+    }
+
     try {
       setLoading(true);
+      setLastFetchKey(fetchKey);
       
-      const fetchContext = {
-        mode,
-        date: date || '',
-        barberId: barberId || 'all'
-      };
-      
-      console.log('🔄 Buscando agendamentos:', fetchContext);
+      console.log('🔄 Buscando agendamentos:', { barberId, date, mode, fetchKey });
       
       // Para modo "day", limpar agendamentos antes da busca
       if (mode === 'day') {
         setAppointments([]);
-        setCurrentFetchContext(fetchContext);
       }
       
       let query = supabase

@@ -1,33 +1,32 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { format, isValid, parseISO } from 'date-fns';
+import { format, isValid, parseISO, startOfDay } from 'date-fns';
+import { useMemo } from 'react';
 
 export const useScheduleUrl = () => {
   const { slug, date } = useParams<{ slug: string; date?: string }>();
   const navigate = useNavigate();
 
-  // Validar e processar a data da URL
-  const getValidDate = (): Date => {
+  // Memoizar a data validada para evitar re-renders desnecessários
+  const selectedDate = useMemo(() => {
     if (!date) {
-      return new Date(); // Se não há data na URL, usar hoje
+      return startOfDay(new Date()); // Se não há data na URL, usar hoje
     }
 
     try {
       const parsedDate = parseISO(date);
       if (isValid(parsedDate)) {
-        return parsedDate;
+        return startOfDay(parsedDate);
       }
     } catch (error) {
       console.warn('Data inválida na URL:', date);
     }
 
     // Se a data é inválida, redirecionar para hoje
-    const today = new Date();
+    const today = startOfDay(new Date());
     const todayString = format(today, 'yyyy-MM-dd');
     navigate(`/app/${slug}/agenda/${todayString}`, { replace: true });
     return today;
-  };
-
-  const selectedDate = getValidDate();
+  }, [date, slug, navigate]);
 
   // Função para navegar para uma data específica
   const navigateToDate = (newDate: Date) => {
