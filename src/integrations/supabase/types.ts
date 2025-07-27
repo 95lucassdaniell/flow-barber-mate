@@ -3190,6 +3190,17 @@ export type Database = {
           metric_date: string
         }[]
       }
+      get_connection_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_connections: number
+          active_connections: number
+          idle_connections: number
+          idle_in_transaction: number
+          max_connections: number
+          connection_usage_percent: number
+        }[]
+      }
       get_financial_overview: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -3217,6 +3228,55 @@ export type Database = {
           source_table: string
         }[]
       }
+      get_lock_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          lock_type: string
+          database_name: string
+          relation_name: string
+          mode_lock: string
+          granted: boolean
+          waiting_duration: unknown
+          query_text: string
+        }[]
+      }
+      get_memory_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          shared_buffers_size: string
+          effective_cache_size: string
+          work_mem: string
+          maintenance_work_mem: string
+          buffer_hit_ratio: number
+          index_hit_ratio: number
+          table_hit_ratio: number
+          temp_files_count: number
+          temp_bytes: number
+        }[]
+      }
+      get_optimization_recommendations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          category: string
+          recommendation: string
+          current_value: string
+          recommended_value: string
+          priority: string
+          description: string
+        }[]
+      }
+      get_slow_queries: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          query_text: string
+          calls: number
+          total_time: number
+          mean_time: number
+          max_time: number
+          stddev_time: number
+          rows_affected: number
+        }[]
+      }
       get_super_admin_info: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -3237,6 +3297,24 @@ export type Database = {
       get_user_barbershop_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_vacuum_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          schema_name: string
+          table_name: string
+          last_vacuum: string
+          last_autovacuum: string
+          last_analyze: string
+          last_autoanalyze: string
+          vacuum_count: number
+          autovacuum_count: number
+          analyze_count: number
+          autoanalyze_count: number
+          n_dead_tup: number
+          n_live_tup: number
+          dead_tuple_percent: number
+        }[]
       }
       is_super_admin: {
         Args: Record<PropertyKey, never>
