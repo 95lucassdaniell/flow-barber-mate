@@ -122,12 +122,36 @@ export const AddCashMovementModal = ({ open, onOpenChange }: AddCashMovementModa
 
           <div className="space-y-2">
             <Label htmlFor="description">Descrição <span className="text-red-500">*</span></Label>
+            <Select value={description} onValueChange={setDescription}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione ou digite uma descrição" />
+              </SelectTrigger>
+              <SelectContent>
+                {type === 'exit' && (
+                  <>
+                    <SelectItem value="Sangria">Sangria</SelectItem>
+                    <SelectItem value="Troco">Troco</SelectItem>
+                    <SelectItem value="Vale">Vale</SelectItem>
+                    <SelectItem value="Compra de Material">Compra de Material</SelectItem>
+                    <SelectItem value="Pagamento de Conta">Pagamento de Conta</SelectItem>
+                    <SelectItem value="Retirada">Retirada</SelectItem>
+                  </>
+                )}
+                {type === 'entry' && (
+                  <>
+                    <SelectItem value="Depósito Inicial">Depósito Inicial</SelectItem>
+                    <SelectItem value="Entrada Extra">Entrada Extra</SelectItem>
+                    <SelectItem value="Reembolso">Reembolso</SelectItem>
+                    <SelectItem value="Correção">Correção</SelectItem>
+                  </>
+                )}
+              </SelectContent>
+            </Select>
             <Input
-              id="description"
-              placeholder="Ex: Compra de material, troco, sangria..."
+              placeholder="Ou digite uma descrição personalizada..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              required
+              className="mt-2"
             />
           </div>
 
