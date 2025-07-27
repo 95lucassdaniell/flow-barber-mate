@@ -30,9 +30,13 @@ const SchedulePage = () => {
   useEffect(() => {
     if (!profile?.barbershop_id || barbersLoading || barbers.length === 0) return;
 
-    // Fetch appointments for all barbers for the grid view
-    fetchAppointments(undefined, format(debouncedDate, 'yyyy-MM-dd'), 'day');
-  }, [profile?.barbershop_id, debouncedDate, fetchAppointments, barbersLoading, barbers]);
+    // Evitar múltiplas requests com um timeout
+    const timeoutId = setTimeout(() => {
+      fetchAppointments(undefined, format(debouncedDate, 'yyyy-MM-dd'), 'day');
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [profile?.barbershop_id, debouncedDate, barbersLoading, barbers.length]);
 
   const handleTimeSlotClick = (barberId: string, timeSlot: string) => {
     setSelectedTimeSlot(timeSlot);

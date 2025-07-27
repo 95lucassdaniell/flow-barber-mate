@@ -92,15 +92,21 @@ export const AppointmentModal = ({
     const searchClientByPhone = async () => {
       if (debouncedPhone && debouncedPhone.length >= 10) {
         setPhoneSearching(true);
-        const client = await checkClientByPhone(debouncedPhone);
-        if (client) {
-          setExistingClient(client);
-          setNewClientData(prev => ({ ...prev, name: client.name, email: client.email || "", birth_date: client.birth_date || "" }));
-        } else {
+        try {
+          const client = await checkClientByPhone(debouncedPhone);
+          if (client) {
+            setExistingClient(client);
+            setNewClientData(prev => ({ ...prev, name: client.name, email: client.email || "", birth_date: client.birth_date || "" }));
+          } else {
+            setExistingClient(null);
+            setNewClientData(prev => ({ ...prev, name: "", email: "", birth_date: "" }));
+          }
+        } catch (error) {
+          console.error('Error searching client:', error);
           setExistingClient(null);
-          setNewClientData(prev => ({ ...prev, name: "", email: "", birth_date: "" }));
+        } finally {
+          setPhoneSearching(false);
         }
-        setPhoneSearching(false);
       } else {
         setExistingClient(null);
         setNewClientData(prev => ({ ...prev, name: "", email: "", birth_date: "" }));
@@ -108,7 +114,7 @@ export const AppointmentModal = ({
     };
 
     searchClientByPhone();
-  }, [debouncedPhone, checkClientByPhone]);
+  }, [debouncedPhone]); // Removido checkClientByPhone das dependências
 
   // Filtrar clientes por busca
   const filteredClients = clients.filter(client => 
