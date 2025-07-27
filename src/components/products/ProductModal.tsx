@@ -16,6 +16,7 @@ interface ProductModalProps {
 }
 
 const PRODUCT_CATEGORIES = [
+  'styling',
   'doces',
   'chocolates',
   'cosméticos',
