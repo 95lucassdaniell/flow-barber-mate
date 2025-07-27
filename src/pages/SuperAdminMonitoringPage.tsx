@@ -6,6 +6,7 @@ import SystemOverview from "@/components/super-admin/monitoring/SystemOverview";
 import ArchiveMonitoring from "@/components/super-admin/monitoring/ArchiveMonitoring";
 import PerformanceCharts from "@/components/super-admin/monitoring/PerformanceCharts";
 import PostgreSQLMonitoring from "@/components/super-admin/monitoring/PostgreSQLMonitoring";
+import LoadTestingControls from "@/components/super-admin/monitoring/LoadTestingControls";
 import MaintenanceControls from "@/components/super-admin/monitoring/MaintenanceControls";
 
 export default function SuperAdminMonitoringPage() {
@@ -43,6 +44,7 @@ export default function SuperAdminMonitoringPage() {
         <SystemOverview />
         <PerformanceCharts />
         <PostgreSQLMonitoring />
+        <LoadTestingControls />
         <ArchiveMonitoring />
         <MaintenanceControls />
       </div>
