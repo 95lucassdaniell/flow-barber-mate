@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 
@@ -51,23 +52,31 @@ export const useAppointments = () => {
   const [loading, setLoading] = useState(false);
   const { profile } = useAuth();
   const { toast } = useToast();
-  const [lastFetchKey, setLastFetchKey] = useState<string>('');
+  const [currentFetchContext, setCurrentFetchContext] = useState<{
+    mode: 'day' | 'week';
+    date: string;
+    barberId: string;
+  } | null>(null);
 
-  const fetchAppointments = async (barberId?: string, date?: string) => {
+  const fetchAppointments = async (barberId?: string, date?: string, mode: 'day' | 'week' = 'day') => {
     if (!profile?.barbershop_id) return;
-
-    // Criar chave única para evitar requests duplicadas
-    const fetchKey = `${barberId || 'all'}-${date || 'all'}-${profile.barbershop_id}`;
-    if (fetchKey === lastFetchKey && loading) {
-      console.log('⏭️ Pulando request duplicada:', fetchKey);
-      return;
-    }
 
     try {
       setLoading(true);
-      setLastFetchKey(fetchKey);
       
-      console.log('🔄 Buscando agendamentos:', { barberId, date, fetchKey });
+      const fetchContext = {
+        mode,
+        date: date || '',
+        barberId: barberId || 'all'
+      };
+      
+      console.log('🔄 Buscando agendamentos:', fetchContext);
+      
+      // Para modo "day", limpar agendamentos antes da busca
+      if (mode === 'day') {
+        setAppointments([]);
+        setCurrentFetchContext(fetchContext);
+      }
       
       let query = supabase
         .from('appointments')
@@ -100,8 +109,22 @@ export const useAppointments = () => {
         return;
       }
 
-      console.log('✅ Agendamentos carregados:', data?.length || 0);
-      setAppointments((data || []) as Appointment[]);
+      console.log('✅ Agendamentos carregados:', data?.length || 0, 'para', { barberId, date, mode });
+      
+      if (mode === 'day') {
+        // No modo "day", substituir todos os agendamentos
+        setAppointments((data || []) as Appointment[]);
+      } else {
+        // No modo "week", acumular agendamentos apenas se for do mesmo contexto
+        setAppointments(prev => {
+          const newAppointments = (data || []) as Appointment[];
+          // Filtrar agendamentos existentes que não são da mesma data
+          const filteredPrev = prev.filter(app => 
+            format(new Date(app.appointment_date), 'yyyy-MM-dd') !== date
+          );
+          return [...filteredPrev, ...newAppointments];
+        });
+      }
     } catch (error) {
       console.error('❌ Erro inesperado ao buscar agendamentos:', error);
       toast({
@@ -419,5 +442,6 @@ export const useAppointments = () => {
     fetchAppointments,
     getAvailableTimeSlots,
     getClientAppointments,
+    setAppointments,
   };
 };

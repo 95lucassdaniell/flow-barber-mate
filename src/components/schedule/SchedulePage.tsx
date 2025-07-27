@@ -23,7 +23,7 @@ import { BarberSelector } from "./BarberSelector";
 const SchedulePage = () => {
   const { profile, loading: authLoading } = useAuth();
   const { selectedBarberId, selectedBarber, loading: barberLoading } = useBarberSelection();
-  const { appointments, loading, fetchAppointments } = useAppointments();
+  const { appointments, loading, fetchAppointments, setAppointments } = useAppointments();
   const { 
     generateTimeSlots, 
     generateAllTimeSlots,
@@ -61,15 +61,18 @@ const SchedulePage = () => {
     // Debounce para evitar calls múltiplas
     const timeoutId = setTimeout(() => {
       if (viewMode === "week") {
+        // Limpar agendamentos ao iniciar busca da semana
+        setAppointments([]);
+        
         const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
         
         for (let i = 0; i < 7; i++) {
           const currentDay = addDays(weekStart, i);
           const dayString = format(currentDay, 'yyyy-MM-dd');
-          fetchAppointments(selectedBarberId, dayString);
+          fetchAppointments(selectedBarberId, dayString, 'week');
         }
       } else {
-        fetchAppointments(selectedBarberId, dateString);
+        fetchAppointments(selectedBarberId, dateString, 'day');
       }
     }, 300);
 
