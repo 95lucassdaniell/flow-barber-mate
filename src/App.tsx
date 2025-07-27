@@ -23,6 +23,7 @@ import SuperAdminBarbershopsPage from "./pages/SuperAdminBarbershopsPage";
 import SuperAdminUsersPage from "./pages/SuperAdminUsersPage";
 import SuperAdminFinancialPage from "./pages/SuperAdminFinancialPage";
 import SuperAdminAuditPage from "./pages/SuperAdminAuditPage";
+import SuperAdminMonitoringPage from "./pages/SuperAdminMonitoringPage";
 import SuperAdminSettingsPage from "./pages/SuperAdminSettingsPage";
 import FinancialPage from "./pages/FinancialPage";
 import AIPage from "./pages/AIPage";
@@ -57,6 +58,7 @@ const App = () => (
         <Route path="/super-admin/barbershops" element={<SuperAdminBarbershopsPage />} />
         <Route path="/super-admin/users" element={<SuperAdminUsersPage />} />
         <Route path="/super-admin/financial" element={<SuperAdminFinancialPage />} />
+        <Route path="/super-admin/monitoring" element={<SuperAdminMonitoringPage />} />
         <Route path="/super-admin/audit" element={<SuperAdminAuditPage />} />
         <Route path="/super-admin/settings" element={<SuperAdminSettingsPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
