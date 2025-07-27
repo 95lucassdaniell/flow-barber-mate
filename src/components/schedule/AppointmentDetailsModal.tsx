@@ -4,12 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Calendar, Clock, User, Scissors, Phone, DollarSign, Edit, Trash2, Check, X, RotateCcw } from "lucide-react";
+import { Calendar, Clock, User, Scissors, Phone, DollarSign, Edit, Trash2, X, RotateCcw, Receipt, UserX, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAppointments } from "@/hooks/useAppointments";
+import { useCommands } from "@/hooks/useCommands";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import CommandModal from "@/components/commands/CommandModal";
+import ClientModal from "@/components/clients/ClientModal";
+import AddItemModal from "@/components/commands/AddItemModal";
 
 interface Appointment {
   id: string;
@@ -22,6 +26,7 @@ interface Appointment {
   total_price: number;
   status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
   notes?: string;
+  barbershop_id?: string;
   
   client?: {
     id: string;
@@ -56,8 +61,13 @@ export const AppointmentDetailsModal = ({
   onRefresh 
 }: AppointmentDetailsModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [commandModalOpen, setCommandModalOpen] = useState(false);
+  const [clientModalOpen, setClientModalOpen] = useState(false);
+  const [addItemModalOpen, setAddItemModalOpen] = useState(false);
+  const [currentCommand, setCurrentCommand] = useState<any>(null);
   const { toast } = useToast();
   const { updateAppointment, cancelAppointment, deleteAppointment } = useAppointments();
+  const { getCommandByAppointment, commands, refetchCommands } = useCommands();
 
   if (!appointment) return null;
 
@@ -156,6 +166,126 @@ export const AppointmentDetailsModal = ({
       toast({
         title: "Erro",
         description: "Erro ao excluir o agendamento",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOpenCommand = async () => {
+    try {
+      setIsLoading(true);
+      const command = await getCommandByAppointment(appointment.id);
+      
+      if (command) {
+        setCurrentCommand(command);
+        setCommandModalOpen(true);
+      } else {
+        // Criar nova comanda
+        const { data: nextNumber } = await supabase.rpc('generate_command_number');
+        
+        const { data, error } = await supabase
+          .from('commands')
+          .insert({
+            client_id: appointment.client_id,
+            barber_id: appointment.barber_id,
+            appointment_id: appointment.id,
+            barbershop_id: appointment.barbershop_id,
+            status: 'open',
+            command_number: nextNumber || 1
+          })
+          .select('*')
+          .single();
+
+        if (error) throw error;
+        
+        await refetchCommands();
+        setCurrentCommand(data);
+        setCommandModalOpen(true);
+        
+        toast({
+          title: "Comanda criada",
+          description: "Nova comanda criada para o agendamento",
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao abrir comanda:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao abrir/criar comanda",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMarkAbsence = async () => {
+    try {
+      setIsLoading(true);
+      await handleStatusUpdate('cancelled');
+      
+      // Adicionar observação de ausência
+      const { error } = await supabase
+        .from('appointments')
+        .update({ notes: (appointment.notes || '') + '\nCliente não compareceu' })
+        .eq('id', appointment.id);
+      
+      if (error) throw error;
+      
+      setClientModalOpen(true);
+      
+      toast({
+        title: "Ausência marcada",
+        description: "Agendamento marcado como ausência",
+      });
+    } catch (error) {
+      console.error('Erro ao marcar ausência:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao marcar ausência",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddService = async () => {
+    try {
+      setIsLoading(true);
+      let command = await getCommandByAppointment(appointment.id);
+      
+      if (!command) {
+        // Criar nova comanda
+        const { data: nextNumber } = await supabase.rpc('generate_command_number');
+        
+        const { data, error } = await supabase
+          .from('commands')
+          .insert({
+            client_id: appointment.client_id,
+            barber_id: appointment.barber_id,
+            appointment_id: appointment.id,
+            barbershop_id: appointment.barbershop_id,
+            status: 'open',
+            command_number: nextNumber || 1
+          })
+          .select('*')
+          .single();
+
+        if (error) throw error;
+        command = data;
+        await refetchCommands();
+      }
+      
+      setCurrentCommand(command);
+      setAddItemModalOpen(true);
+    } catch (error) {
+      console.error('Erro ao preparar adição de serviço:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao preparar adição de serviço",
         variant: "destructive"
       });
     } finally {
@@ -272,45 +402,46 @@ export const AppointmentDetailsModal = ({
 
         {/* Ações */}
         <div className="flex flex-col gap-2 pt-4">
-          {appointment.status !== 'completed' && appointment.status !== 'cancelled' && (
+          {/* Botões principais */}
+          {appointment.status !== 'cancelled' && (
             <div className="flex gap-2">
-              {appointment.status === 'scheduled' && (
-                <Button 
-                  onClick={() => handleStatusUpdate('confirmed')} 
-                  disabled={isLoading}
-                  className="flex-1"
-                  size="sm"
-                >
-                  <Check className="h-4 w-4 mr-1" />
-                  Confirmar
-                </Button>
-              )}
+              <Button 
+                onClick={handleOpenCommand}
+                disabled={isLoading}
+                className="flex-1"
+                size="sm"
+              >
+                <Receipt className="h-4 w-4 mr-1" />
+                Comanda
+              </Button>
               
-              {appointment.status === 'confirmed' && (
+              {appointment.status !== 'completed' && (
                 <Button 
-                  onClick={() => handleStatusUpdate('completed')} 
+                  variant="outline"
+                  onClick={handleMarkAbsence}
                   disabled={isLoading}
                   className="flex-1"
                   size="sm"
                 >
-                  <Check className="h-4 w-4 mr-1" />
-                  Concluir
+                  <UserX className="h-4 w-4 mr-1" />
+                  Ausência
                 </Button>
               )}
             </div>
           )}
 
+          {/* Botões secundários */}
           <div className="flex gap-2">
-            {onEdit && appointment.status !== 'completed' && appointment.status !== 'cancelled' && (
+            {appointment.status !== 'cancelled' && appointment.status !== 'completed' && (
               <Button 
-                variant="outline" 
-                onClick={() => onEdit(appointment)}
+                variant="outline"
+                onClick={handleAddService}
                 disabled={isLoading}
                 className="flex-1"
                 size="sm"
               >
-                <Edit className="h-4 w-4 mr-1" />
-                Editar
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar Serviço
               </Button>
             )}
 
@@ -342,6 +473,19 @@ export const AppointmentDetailsModal = ({
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+            )}
+
+            {onEdit && appointment.status !== 'completed' && appointment.status !== 'cancelled' && (
+              <Button 
+                variant="outline" 
+                onClick={() => onEdit(appointment)}
+                disabled={isLoading}
+                className="flex-1"
+                size="sm"
+              >
+                <Edit className="h-4 w-4 mr-1" />
+                Editar
+              </Button>
             )}
           </div>
 
@@ -382,8 +526,51 @@ export const AppointmentDetailsModal = ({
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
-          </AlertDialog>
+            </AlertDialog>
         </div>
+
+        {/* Modais */}
+        {currentCommand && (
+          <CommandModal
+            command={currentCommand}
+            isOpen={commandModalOpen}
+            onClose={() => {
+              setCommandModalOpen(false);
+              setCurrentCommand(null);
+              onRefresh?.();
+            }}
+          />
+        )}
+
+        {appointment.client && (
+          <ClientModal
+            client={{
+              ...appointment.client,
+              barbershop_id: appointment.barbershop_id || '',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              birth_date: null,
+              notes: null
+            }}
+            isOpen={clientModalOpen}
+            onClose={() => {
+              setClientModalOpen(false);
+              onRefresh?.();
+            }}
+          />
+        )}
+
+        {currentCommand && (
+          <AddItemModal
+            command={currentCommand}
+            isOpen={addItemModalOpen}
+            onClose={() => setAddItemModalOpen(false)}
+            onItemAdded={() => {
+              setAddItemModalOpen(false);
+              onRefresh?.();
+            }}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
