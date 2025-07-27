@@ -64,7 +64,7 @@ export const useBarbershopSettings = () => {
   };
 
   // Generate ALL time slots based on opening hours (including past ones)
-  const generateAllTimeSlots = (date: Date, intervalMinutes: number = 30): string[] => {
+  const generateAllTimeSlots = (date: Date, intervalMinutes: number = 15): string[] => {
     if (!settings?.opening_hours) return [];
 
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -91,7 +91,7 @@ export const useBarbershopSettings = () => {
   };
 
   // Generate time slots based on opening hours (only available ones)
-  const generateTimeSlots = (date: Date, intervalMinutes: number = 30): string[] => {
+  const generateTimeSlots = (date: Date, intervalMinutes: number = 15): string[] => {
     return generateAllTimeSlots(date, intervalMinutes).filter(timeString => 
       !isTimeSlotInPast(date, timeString)
     );
