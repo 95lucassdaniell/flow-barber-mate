@@ -91,6 +91,678 @@ export type Database = {
           },
         ]
       }
+      appointments_partitioned: {
+        Row: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          service_id: string
+          start_time: string
+          status: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          service_id: string
+          start_time: string
+          status?: string
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          service_id?: string
+          start_time?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      appointments_partitioned_2025_01: {
+        Row: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          service_id: string
+          start_time: string
+          status: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          service_id: string
+          start_time: string
+          status?: string
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          service_id?: string
+          start_time?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      appointments_partitioned_2025_02: {
+        Row: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          service_id: string
+          start_time: string
+          status: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          service_id: string
+          start_time: string
+          status?: string
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          service_id?: string
+          start_time?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      appointments_partitioned_2025_03: {
+        Row: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          service_id: string
+          start_time: string
+          status: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          service_id: string
+          start_time: string
+          status?: string
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          service_id?: string
+          start_time?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      appointments_partitioned_2025_04: {
+        Row: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          service_id: string
+          start_time: string
+          status: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          service_id: string
+          start_time: string
+          status?: string
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          service_id?: string
+          start_time?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      appointments_partitioned_2025_05: {
+        Row: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          service_id: string
+          start_time: string
+          status: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          service_id: string
+          start_time: string
+          status?: string
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          service_id?: string
+          start_time?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      appointments_partitioned_2025_06: {
+        Row: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          service_id: string
+          start_time: string
+          status: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          service_id: string
+          start_time: string
+          status?: string
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          service_id?: string
+          start_time?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      appointments_partitioned_2025_07: {
+        Row: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          service_id: string
+          start_time: string
+          status: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          service_id: string
+          start_time: string
+          status?: string
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          service_id?: string
+          start_time?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      appointments_partitioned_2025_08: {
+        Row: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          service_id: string
+          start_time: string
+          status: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          service_id: string
+          start_time: string
+          status?: string
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          service_id?: string
+          start_time?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      appointments_partitioned_2025_09: {
+        Row: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          service_id: string
+          start_time: string
+          status: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          service_id: string
+          start_time: string
+          status?: string
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          service_id?: string
+          start_time?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      appointments_partitioned_2025_10: {
+        Row: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          service_id: string
+          start_time: string
+          status: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          service_id: string
+          start_time: string
+          status?: string
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          service_id?: string
+          start_time?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      appointments_partitioned_2025_11: {
+        Row: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          service_id: string
+          start_time: string
+          status: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          service_id: string
+          start_time: string
+          status?: string
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          service_id?: string
+          start_time?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      appointments_partitioned_2025_12: {
+        Row: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          service_id: string
+          start_time: string
+          status: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          service_id: string
+          start_time: string
+          status?: string
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          service_id?: string
+          start_time?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      appointments_partitioned_2026_01: {
+        Row: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          service_id: string
+          start_time: string
+          status: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          service_id: string
+          start_time: string
+          status?: string
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          service_id?: string
+          start_time?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -747,6 +1419,720 @@ export type Database = {
           },
         ]
       }
+      commands_partitioned: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at: string | null
+          command_number: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          payment_status: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at?: string | null
+          command_number: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          closed_at?: string | null
+          command_number?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      commands_partitioned_2025_01: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at: string | null
+          command_number: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          payment_status: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at?: string | null
+          command_number: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          closed_at?: string | null
+          command_number?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      commands_partitioned_2025_02: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at: string | null
+          command_number: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          payment_status: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at?: string | null
+          command_number: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          closed_at?: string | null
+          command_number?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      commands_partitioned_2025_03: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at: string | null
+          command_number: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          payment_status: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at?: string | null
+          command_number: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          closed_at?: string | null
+          command_number?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      commands_partitioned_2025_04: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at: string | null
+          command_number: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          payment_status: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at?: string | null
+          command_number: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          closed_at?: string | null
+          command_number?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      commands_partitioned_2025_05: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at: string | null
+          command_number: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          payment_status: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at?: string | null
+          command_number: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          closed_at?: string | null
+          command_number?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      commands_partitioned_2025_06: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at: string | null
+          command_number: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          payment_status: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at?: string | null
+          command_number: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          closed_at?: string | null
+          command_number?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      commands_partitioned_2025_07: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at: string | null
+          command_number: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          payment_status: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at?: string | null
+          command_number: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          closed_at?: string | null
+          command_number?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      commands_partitioned_2025_08: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at: string | null
+          command_number: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          payment_status: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at?: string | null
+          command_number: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          closed_at?: string | null
+          command_number?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      commands_partitioned_2025_09: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at: string | null
+          command_number: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          payment_status: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at?: string | null
+          command_number: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          closed_at?: string | null
+          command_number?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      commands_partitioned_2025_10: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at: string | null
+          command_number: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          payment_status: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at?: string | null
+          command_number: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          closed_at?: string | null
+          command_number?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      commands_partitioned_2025_11: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at: string | null
+          command_number: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          payment_status: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at?: string | null
+          command_number: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          closed_at?: string | null
+          command_number?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      commands_partitioned_2025_12: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at: string | null
+          command_number: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          payment_status: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at?: string | null
+          command_number: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          closed_at?: string | null
+          command_number?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      commands_partitioned_2026_01: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at: string | null
+          command_number: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          payment_status: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at?: string | null
+          command_number: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          closed_at?: string | null
+          command_number?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       commissions: {
         Row: {
           barber_id: string
@@ -1092,6 +2478,804 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sales_partitioned: {
+        Row: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id: string | null
+          client_id: string
+          created_at: string
+          created_by: string
+          discount_amount: number
+          final_amount: number
+          id: string
+          notes: string | null
+          payment_method: string
+          payment_status: string
+          sale_date: string
+          sale_time: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id?: string | null
+          client_id: string
+          created_at?: string
+          created_by: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          barbershop_id?: string
+          cash_register_id?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sales_partitioned_2025_01: {
+        Row: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id: string | null
+          client_id: string
+          created_at: string
+          created_by: string
+          discount_amount: number
+          final_amount: number
+          id: string
+          notes: string | null
+          payment_method: string
+          payment_status: string
+          sale_date: string
+          sale_time: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id?: string | null
+          client_id: string
+          created_at?: string
+          created_by: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          barbershop_id?: string
+          cash_register_id?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sales_partitioned_2025_02: {
+        Row: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id: string | null
+          client_id: string
+          created_at: string
+          created_by: string
+          discount_amount: number
+          final_amount: number
+          id: string
+          notes: string | null
+          payment_method: string
+          payment_status: string
+          sale_date: string
+          sale_time: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id?: string | null
+          client_id: string
+          created_at?: string
+          created_by: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          barbershop_id?: string
+          cash_register_id?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sales_partitioned_2025_03: {
+        Row: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id: string | null
+          client_id: string
+          created_at: string
+          created_by: string
+          discount_amount: number
+          final_amount: number
+          id: string
+          notes: string | null
+          payment_method: string
+          payment_status: string
+          sale_date: string
+          sale_time: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id?: string | null
+          client_id: string
+          created_at?: string
+          created_by: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          barbershop_id?: string
+          cash_register_id?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sales_partitioned_2025_04: {
+        Row: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id: string | null
+          client_id: string
+          created_at: string
+          created_by: string
+          discount_amount: number
+          final_amount: number
+          id: string
+          notes: string | null
+          payment_method: string
+          payment_status: string
+          sale_date: string
+          sale_time: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id?: string | null
+          client_id: string
+          created_at?: string
+          created_by: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          barbershop_id?: string
+          cash_register_id?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sales_partitioned_2025_05: {
+        Row: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id: string | null
+          client_id: string
+          created_at: string
+          created_by: string
+          discount_amount: number
+          final_amount: number
+          id: string
+          notes: string | null
+          payment_method: string
+          payment_status: string
+          sale_date: string
+          sale_time: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id?: string | null
+          client_id: string
+          created_at?: string
+          created_by: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          barbershop_id?: string
+          cash_register_id?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sales_partitioned_2025_06: {
+        Row: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id: string | null
+          client_id: string
+          created_at: string
+          created_by: string
+          discount_amount: number
+          final_amount: number
+          id: string
+          notes: string | null
+          payment_method: string
+          payment_status: string
+          sale_date: string
+          sale_time: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id?: string | null
+          client_id: string
+          created_at?: string
+          created_by: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          barbershop_id?: string
+          cash_register_id?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sales_partitioned_2025_07: {
+        Row: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id: string | null
+          client_id: string
+          created_at: string
+          created_by: string
+          discount_amount: number
+          final_amount: number
+          id: string
+          notes: string | null
+          payment_method: string
+          payment_status: string
+          sale_date: string
+          sale_time: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id?: string | null
+          client_id: string
+          created_at?: string
+          created_by: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          barbershop_id?: string
+          cash_register_id?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sales_partitioned_2025_08: {
+        Row: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id: string | null
+          client_id: string
+          created_at: string
+          created_by: string
+          discount_amount: number
+          final_amount: number
+          id: string
+          notes: string | null
+          payment_method: string
+          payment_status: string
+          sale_date: string
+          sale_time: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id?: string | null
+          client_id: string
+          created_at?: string
+          created_by: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          barbershop_id?: string
+          cash_register_id?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sales_partitioned_2025_09: {
+        Row: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id: string | null
+          client_id: string
+          created_at: string
+          created_by: string
+          discount_amount: number
+          final_amount: number
+          id: string
+          notes: string | null
+          payment_method: string
+          payment_status: string
+          sale_date: string
+          sale_time: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id?: string | null
+          client_id: string
+          created_at?: string
+          created_by: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          barbershop_id?: string
+          cash_register_id?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sales_partitioned_2025_10: {
+        Row: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id: string | null
+          client_id: string
+          created_at: string
+          created_by: string
+          discount_amount: number
+          final_amount: number
+          id: string
+          notes: string | null
+          payment_method: string
+          payment_status: string
+          sale_date: string
+          sale_time: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id?: string | null
+          client_id: string
+          created_at?: string
+          created_by: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          barbershop_id?: string
+          cash_register_id?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sales_partitioned_2025_11: {
+        Row: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id: string | null
+          client_id: string
+          created_at: string
+          created_by: string
+          discount_amount: number
+          final_amount: number
+          id: string
+          notes: string | null
+          payment_method: string
+          payment_status: string
+          sale_date: string
+          sale_time: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id?: string | null
+          client_id: string
+          created_at?: string
+          created_by: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          barbershop_id?: string
+          cash_register_id?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sales_partitioned_2025_12: {
+        Row: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id: string | null
+          client_id: string
+          created_at: string
+          created_by: string
+          discount_amount: number
+          final_amount: number
+          id: string
+          notes: string | null
+          payment_method: string
+          payment_status: string
+          sale_date: string
+          sale_time: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id?: string | null
+          client_id: string
+          created_at?: string
+          created_by: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          barbershop_id?: string
+          cash_register_id?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sales_partitioned_2026_01: {
+        Row: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id: string | null
+          client_id: string
+          created_at: string
+          created_by: string
+          discount_amount: number
+          final_amount: number
+          id: string
+          notes: string | null
+          payment_method: string
+          payment_status: string
+          sale_date: string
+          sale_time: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          barbershop_id: string
+          cash_register_id?: string | null
+          client_id: string
+          created_at?: string
+          created_by: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          barbershop_id?: string
+          cash_register_id?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_status?: string
+          sale_date?: string
+          sale_time?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       services: {
         Row: {
