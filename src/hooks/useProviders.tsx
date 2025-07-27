@@ -184,15 +184,21 @@ export const useProviders = () => {
 
       if (error) {
         console.error('Supabase error updating provider:', error);
-        if (error.code === 'PGRST116') {
+        
+        // Handle specific RLS and authentication errors
+        if (error.code === 'PGRST116' || error.message?.includes('0 rows')) {
           throw new Error('Prestador não encontrado ou você não tem permissão para editá-lo.');
         }
-        if (error.code === '42501') {
+        if (error.code === '42501' || error.message?.includes('permission denied')) {
           throw new Error('Você não tem permissão para editar este prestador.');
         }
         if (error.code === '23505') {
           throw new Error('Este email já está em uso.');
         }
+        if (error.message?.includes('JWT')) {
+          throw new Error('Sua sessão expirou. Por favor, faça login novamente.');
+        }
+        
         throw new Error(`Erro ao atualizar prestador: ${error.message}`);
       }
       

@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
@@ -41,28 +42,89 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/app/:slug" element={<DashboardPage />} />
-          <Route path="/app/:slug/agenda/:date?" element={<SchedulePageWithLayout />} />
-          <Route path="/app/:slug/prestadores" element={<ProvidersPage />} />
-          <Route path="/app/:slug/clients" element={<ClientsPage />} />
-          <Route path="/app/:slug/services" element={<ServicesPage />} />
-          <Route path="/app/:slug/servicos" element={<ServicesPage />} />
-          <Route path="/app/:slug/produtos" element={<ProductsPage />} />
-          <Route path="/app/:slug/comandas" element={<CommandsPage />} />
-          <Route path="/app/:slug/caixa" element={<CaixaPage />} />
-          <Route path="/app/:slug/settings" element={<SettingsPage />} />
-          <Route path="/app/:slug/whatsapp" element={<WhatsAppPage />} />
-          <Route path="/app/:slug/crm" element={<CRMPage />} />
-          <Route path="/app/:slug/ai" element={<AIPage />} />
-          <Route path="/app/:slug/financial" element={<FinancialPage />} />
-        <Route path="/super-admin" element={<SuperAdminPage />} />
-        <Route path="/super-admin/barbershops" element={<SuperAdminBarbershopsPage />} />
-        <Route path="/super-admin/users" element={<SuperAdminUsersPage />} />
-        <Route path="/super-admin/financial" element={<SuperAdminFinancialPage />} />
-        <Route path="/super-admin/monitoring" element={<SuperAdminMonitoringPage />} />
-        <Route path="/super-admin/audit" element={<SuperAdminAuditPage />} />
-        <Route path="/super-admin/settings" element={<SuperAdminSettingsPage />} />
-        <Route path="/super-admin/historical-data" element={<SuperAdminHistoricalDataPage />} />
+          
+          {/* Protected Routes */}
+          <Route path="/app/:slug" element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/app/:slug/agenda/:date?" element={
+            <ProtectedRoute>
+              <SchedulePageWithLayout />
+            </ProtectedRoute>
+          } />
+          <Route path="/app/:slug/prestadores" element={
+            <ProtectedRoute requiresRole="admin">
+              <ProvidersPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/app/:slug/clients" element={
+            <ProtectedRoute>
+              <ClientsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/app/:slug/services" element={
+            <ProtectedRoute requiresRole="admin">
+              <ServicesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/app/:slug/servicos" element={
+            <ProtectedRoute requiresRole="admin">
+              <ServicesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/app/:slug/produtos" element={
+            <ProtectedRoute requiresRole="admin">
+              <ProductsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/app/:slug/comandas" element={
+            <ProtectedRoute>
+              <CommandsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/app/:slug/caixa" element={
+            <ProtectedRoute>
+              <CaixaPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/app/:slug/settings" element={
+            <ProtectedRoute requiresRole="admin">
+              <SettingsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/app/:slug/whatsapp" element={
+            <ProtectedRoute requiresRole="admin">
+              <WhatsAppPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/app/:slug/crm" element={
+            <ProtectedRoute requiresRole="admin">
+              <CRMPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/app/:slug/ai" element={
+            <ProtectedRoute requiresRole="admin">
+              <AIPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/app/:slug/financial" element={
+            <ProtectedRoute requiresRole="admin">
+              <FinancialPage />
+            </ProtectedRoute>
+          } />
+          
+          {/* Super Admin Routes */}
+          <Route path="/super-admin" element={<SuperAdminPage />} />
+          <Route path="/super-admin/barbershops" element={<SuperAdminBarbershopsPage />} />
+          <Route path="/super-admin/users" element={<SuperAdminUsersPage />} />
+          <Route path="/super-admin/financial" element={<SuperAdminFinancialPage />} />
+          <Route path="/super-admin/monitoring" element={<SuperAdminMonitoringPage />} />
+          <Route path="/super-admin/audit" element={<SuperAdminAuditPage />} />
+          <Route path="/super-admin/settings" element={<SuperAdminSettingsPage />} />
+          <Route path="/super-admin/historical-data" element={<SuperAdminHistoricalDataPage />} />
+          
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

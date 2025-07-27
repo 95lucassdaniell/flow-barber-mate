@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/barberflow-logo.png";
 
@@ -17,6 +17,7 @@ const LoginForm = () => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,10 +88,14 @@ const LoginForm = () => {
         description: "Bem-vindo de volta ao BarberFlow!",
       });
 
-      console.log('Redirecionando para:', `/dashboard/${barbershop.slug}`);
+      // Check if there's a redirect location from ProtectedRoute
+      const state = location.state as { from?: string };
+      const redirectTo = state?.from || `/app/${barbershop.slug}`;
       
-      // Redirecionar para o dashboard da barbearia do usuário
-      navigate(`/app/${barbershop.slug}`);
+      console.log('Redirecionando para:', redirectTo);
+      
+      // Redirecionar para o dashboard da barbearia do usuário ou página original
+      navigate(redirectTo, { replace: true });
 
     } catch (error: any) {
       console.error('Erro no login:', error);
