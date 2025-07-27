@@ -379,24 +379,24 @@ const CommandsListContent = () => {
             </SelectContent>
           </Select>
 
-          <Select value={filters.professional} onValueChange={(value) => handleFilterChange('professional', value)}>
+          <Select value={filters.professional || "all"} onValueChange={(value) => handleFilterChange('professional', value === "all" ? "" : value)}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Todos profissionais" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos profissionais</SelectItem>
+              <SelectItem value="all">Todos profissionais</SelectItem>
               {professionals.map(prof => (
                 <SelectItem key={prof} value={prof}>{prof}</SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <Select value={filters.paymentMethod} onValueChange={(value) => handleFilterChange('paymentMethod', value)}>
+          <Select value={filters.paymentMethod || "all"} onValueChange={(value) => handleFilterChange('paymentMethod', value === "all" ? "" : value)}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Todos pagamentos" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos pagamentos</SelectItem>
+              <SelectItem value="all">Todos pagamentos</SelectItem>
               {paymentMethods.map(method => (
                 <SelectItem key={method} value={method}>
                   {method === 'cash' ? 'Dinheiro' : 
