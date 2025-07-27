@@ -20,11 +20,15 @@ import { useBarbershopSettings } from "@/hooks/useBarbershopSettings";
 import { useScheduleUrl } from "@/hooks/useScheduleUrl";
 import { AppointmentModal } from "./AppointmentModal";
 import { BarberSelector } from "./BarberSelector";
+import { GridScheduleView } from "./GridScheduleView";
+import { useProviders } from "@/hooks/useProviders";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const SchedulePage = () => {
   const { profile, loading: authLoading } = useAuth();
   const { selectedBarberId, selectedBarber, loading: barberLoading } = useBarberSelection();
   const { appointments, loading, fetchAppointments, setAppointments } = useAppointments();
+  const { providers: barbers } = useProviders();
   const { 
     generateTimeSlots, 
     generateAllTimeSlots,
@@ -34,7 +38,7 @@ const SchedulePage = () => {
     isTimeSlotAvailable 
   } = useBarbershopSettings();
   const { selectedDate, navigateToDate, navigateToToday } = useScheduleUrl();
-  const [viewMode, setViewMode] = useState<"day" | "week">("day");
+  const [viewMode, setViewMode] = useState<"day" | "week" | "grid">("day");
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
 
@@ -494,12 +498,7 @@ const SchedulePage = () => {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center space-x-2">
                 <Clock className="w-5 h-5" />
-                <span>
-                  {viewMode === "day" 
-                    ? `Agenda ${selectedBarber ? `- ${selectedBarber.full_name}` : ''}` 
-                    : "Visão Semanal"
-                  }
-                </span>
+                <span>Agenda</span>
               </CardTitle>
               
               <div className="flex items-center space-x-2">
@@ -517,24 +516,67 @@ const SchedulePage = () => {
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>
-                <Button variant="outline" size="sm">
-                  <Filter className="w-4 h-4 mr-2" />
-                  Filtros
-                </Button>
               </div>
             </div>
           </CardHeader>
-           <CardContent>
-             {loading ? (
-               <div className="space-y-3">
-                 {Array.from({ length: 8 }).map((_, i) => (
-                   <div key={i} className="h-16 bg-muted rounded-lg animate-pulse" />
-                 ))}
-               </div>
-             ) : (
-               viewMode === "day" ? renderDayView() : renderWeekView()
-             )}
-           </CardContent>
+          <CardContent>
+            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "day" | "week" | "grid")}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="day">Dia Individual</TabsTrigger>
+                <TabsTrigger value="week">Visão Semanal</TabsTrigger>
+                <TabsTrigger value="grid">Grid Múltiplo</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="day" className="mt-4">
+                {loading ? (
+                  <div className="space-y-3">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div key={i} className="h-16 bg-muted rounded-lg animate-pulse" />
+                    ))}
+                  </div>
+                ) : (
+                  renderDayView()
+                )}
+              </TabsContent>
+              
+              <TabsContent value="week" className="mt-4">
+                {loading ? (
+                  <div className="grid grid-cols-7 gap-2">
+                    {Array.from({ length: 7 }).map((_, i) => (
+                      <div key={i} className="h-48 bg-muted rounded-lg animate-pulse" />
+                    ))}
+                  </div>
+                ) : (
+                  renderWeekView()
+                )}
+              </TabsContent>
+              
+              <TabsContent value="grid" className="mt-4">
+                {loading ? (
+                  <div className="h-96 bg-muted rounded-lg animate-pulse" />
+                ) : (
+                  <GridScheduleView
+                    date={selectedDate}
+                    barbers={barbers}
+                    appointments={appointments.filter(apt => 
+                      apt.appointment_date === format(selectedDate, 'yyyy-MM-dd')
+                    )}
+                    timeSlots={timeSlots}
+                    onAppointmentClick={(appointment) => {
+                      console.log('Clicou no agendamento:', appointment);
+                      // TODO: Implementar edição/visualização do agendamento
+                    }}
+                    onTimeSlotClick={(barberId, timeSlot) => {
+                      console.log('Clicou no slot:', barberId, timeSlot);
+                      // TODO: Implementar agendamento para barbeiro específico
+                      setSelectedTimeSlot(timeSlot);
+                      setShowAppointmentModal(true);
+                    }}
+                  />
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
         </Card>
       </div>
 
