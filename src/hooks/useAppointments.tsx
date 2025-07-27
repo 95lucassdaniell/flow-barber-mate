@@ -51,12 +51,23 @@ export const useAppointments = () => {
   const [loading, setLoading] = useState(false);
   const { profile } = useAuth();
   const { toast } = useToast();
+  const [lastFetchKey, setLastFetchKey] = useState<string>('');
 
   const fetchAppointments = async (barberId?: string, date?: string) => {
     if (!profile?.barbershop_id) return;
 
+    // Criar chave única para evitar requests duplicadas
+    const fetchKey = `${barberId || 'all'}-${date || 'all'}-${profile.barbershop_id}`;
+    if (fetchKey === lastFetchKey && loading) {
+      console.log('⏭️ Pulando request duplicada:', fetchKey);
+      return;
+    }
+
     try {
       setLoading(true);
+      setLastFetchKey(fetchKey);
+      
+      console.log('🔄 Buscando agendamentos:', { barberId, date, fetchKey });
       
       let query = supabase
         .from('appointments')
@@ -80,7 +91,7 @@ export const useAppointments = () => {
                                     .order('start_time', { ascending: true });
 
       if (error) {
-        console.error('Erro ao buscar agendamentos:', error);
+        console.error('❌ Erro ao buscar agendamentos:', error);
         toast({
           title: "Erro ao carregar agendamentos",
           description: "Ocorreu um erro ao buscar os agendamentos.",
@@ -89,9 +100,10 @@ export const useAppointments = () => {
         return;
       }
 
+      console.log('✅ Agendamentos carregados:', data?.length || 0);
       setAppointments((data || []) as Appointment[]);
     } catch (error) {
-      console.error('Erro ao buscar agendamentos:', error);
+      console.error('❌ Erro inesperado ao buscar agendamentos:', error);
       toast({
         title: "Erro ao carregar agendamentos",
         description: "Ocorreu um erro inesperado.",

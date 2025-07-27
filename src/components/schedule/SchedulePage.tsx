@@ -51,25 +51,30 @@ const SchedulePage = () => {
     }
     
     const dateString = format(selectedDate, 'yyyy-MM-dd');
-    console.log('🔄 Buscando agendamentos para:', {
+    console.log('🔄 SchedulePage useEffect - Iniciando busca:', {
       barberId: selectedBarberId,
       date: dateString,
       viewMode,
       isToday: isSameDay(selectedDate, new Date())
     });
 
-    if (viewMode === "week") {
-      const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
-      
-      for (let i = 0; i < 7; i++) {
-        const currentDay = addDays(weekStart, i);
-        const dayString = format(currentDay, 'yyyy-MM-dd');
-        fetchAppointments(selectedBarberId, dayString);
+    // Debounce para evitar calls múltiplas
+    const timeoutId = setTimeout(() => {
+      if (viewMode === "week") {
+        const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+        
+        for (let i = 0; i < 7; i++) {
+          const currentDay = addDays(weekStart, i);
+          const dayString = format(currentDay, 'yyyy-MM-dd');
+          fetchAppointments(selectedBarberId, dayString);
+        }
+      } else {
+        fetchAppointments(selectedBarberId, dateString);
       }
-    } else {
-      fetchAppointments(selectedBarberId, dateString);
-    }
-  }, [selectedBarberId, selectedDate, viewMode, fetchAppointments]);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [selectedBarberId, selectedDate, viewMode]);
 
   // Generate all time slots for display
   const timeSlots = generateAllTimeSlots(selectedDate);
