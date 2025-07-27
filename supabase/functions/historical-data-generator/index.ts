@@ -123,15 +123,19 @@ Deno.serve(async (req) => {
       throw new Error('No barbers found for this barbershop');
     }
 
-    // Get existing services
-    const { data: services, error: servicesError } = await supabase
-      .from('services')
-      .select('*')
-      .eq('barbershop_id', config.barbershopId)
+    // Get existing services with prices from provider_services
+    const { data: providerServices, error: providerServicesError } = await supabase
+      .from('provider_services')
+      .select(`
+        *,
+        service:services(*),
+        provider:profiles(*)
+      `)
+      .eq('provider.barbershop_id', config.barbershopId)
       .eq('is_active', true);
 
-    if (servicesError || !services || services.length === 0) {
-      throw new Error('No services found for this barbershop');
+    if (providerServicesError || !providerServices || providerServices.length === 0) {
+      throw new Error('No provider services found for this barbershop');
     }
 
     // Get existing products
@@ -141,7 +145,7 @@ Deno.serve(async (req) => {
       .eq('barbershop_id', config.barbershopId)
       .eq('is_active', true);
 
-    console.log(`Found: ${providers.length} barbers, ${services.length} services, ${products?.length || 0} products`);
+    console.log(`Found: ${providers.length} barbers, ${providerServices.length} provider services, ${products?.length || 0} products`);
 
     const startDate = new Date(config.startDate);
     const endDate = new Date(config.endDate);
@@ -220,15 +224,25 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const randomProvider = providers[Math.floor(Math.random() * providers.length)];
-        const randomService = services[Math.floor(Math.random() * services.length)];
+        const randomProviderService = providerServices[Math.floor(Math.random() * providerServices.length)];
         
         // Determine appointment status
         let status = 'completed';
         if (Math.random() < 0.15) status = 'cancelled'; // 15% cancelled
         
         const startTime = data.randomBusinessTime();
-        const serviceDuration = randomService.duration || 30;
+        
+        // Calculate duration based on service type
+        const serviceDurations: { [key: string]: number } = {
+          'Corte': 30,
+          'Barba': 25,
+          'Corte + Barba': 45,
+          'Platinado': 120,
+          'Lavagem + Corte': 40,
+          'Sobrancelha': 15,
+        };
+        
+        const serviceDuration = serviceDurations[randomProviderService.service.name] || 30;
         const endTimeDate = new Date(`2024-01-01T${startTime}`);
         endTimeDate.setMinutes(endTimeDate.getMinutes() + serviceDuration);
         const endTime = endTimeDate.toTimeString().slice(0, 8);
@@ -236,12 +250,12 @@ Deno.serve(async (req) => {
         const appointment = {
           barbershop_id: config.barbershopId,
           client_id: client.id,
-          barber_id: randomProvider.id,
-          service_id: randomService.id,
+          barber_id: randomProviderService.provider_id,
+          service_id: randomProviderService.service_id,
           appointment_date: nextAppointmentDate.toISOString().split('T')[0],
           start_time: startTime,
           end_time: endTime,
-          total_price: randomService.price,
+          total_price: randomProviderService.price,
           status,
           created_at: nextAppointmentDate.toISOString(),
           updated_at: nextAppointmentDate.toISOString(),
@@ -259,8 +273,7 @@ Deno.serve(async (req) => {
           createdAppointments.push({
             ...newAppointment,
             client,
-            provider: randomProvider,
-            service: randomService
+            providerService: randomProviderService
           });
           appointmentCount++;
         } catch (error) {
@@ -307,11 +320,21 @@ Deno.serve(async (req) => {
         
         if (futureDate > endDate) continue;
 
-        const randomProvider = providers[Math.floor(Math.random() * providers.length)];
-        const randomService = services[Math.floor(Math.random() * services.length)];
+        const randomProviderService = providerServices[Math.floor(Math.random() * providerServices.length)];
         
         const startTime = data.randomBusinessTime();
-        const serviceDuration = randomService.duration || 30;
+        
+        // Calculate duration based on service type
+        const serviceDurations: { [key: string]: number } = {
+          'Corte': 30,
+          'Barba': 25,
+          'Corte + Barba': 45,
+          'Platinado': 120,
+          'Lavagem + Corte': 40,
+          'Sobrancelha': 15,
+        };
+        
+        const serviceDuration = serviceDurations[randomProviderService.service.name] || 30;
         const endTimeDate = new Date(`2024-01-01T${startTime}`);
         endTimeDate.setMinutes(endTimeDate.getMinutes() + serviceDuration);
         const endTime = endTimeDate.toTimeString().slice(0, 8);
@@ -319,12 +342,12 @@ Deno.serve(async (req) => {
         const appointment = {
           barbershop_id: config.barbershopId,
           client_id: client.id,
-          barber_id: randomProvider.id,
-          service_id: randomService.id,
+          barber_id: randomProviderService.provider_id,
+          service_id: randomProviderService.service_id,
           appointment_date: futureDate.toISOString().split('T')[0],
           start_time: startTime,
           end_time: endTime,
-          total_price: randomService.price,
+          total_price: randomProviderService.price,
           status: 'scheduled',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
