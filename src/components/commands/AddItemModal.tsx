@@ -32,15 +32,12 @@ const AddItemModal = ({ command, isOpen, onClose }: AddItemModalProps) => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { services } = useServices();
   const { data: products = [] } = useProducts();
-  const { providerServices } = useProviderServices();
+  const { providerServices, loading: servicesLoading } = useProviderServices(command?.barber_id);
   const { addItemToCommand } = useCommands();
 
-  // Filtrar serviços do barbeiro
-  const barberServices = providerServices.filter(ps => 
-    ps.provider_id === command?.barber_id && ps.is_active
-  );
+  // Serviços do barbeiro com preços configurados
+  const barberServices = providerServices.filter(ps => ps.is_active);
 
   // Filtrar produtos disponíveis
   const availableProducts = products.filter(p => 
@@ -50,8 +47,7 @@ const AddItemModal = ({ command, isOpen, onClose }: AddItemModalProps) => {
 
   // Filtrar serviços disponíveis
   const availableServices = barberServices.filter(ps => {
-    const service = services.find(s => s.id === ps.service_id);
-    return service && (searchTerm === "" || service.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    return ps.service && (searchTerm === "" || ps.service.name.toLowerCase().includes(searchTerm.toLowerCase()));
   });
 
   const handleItemSelect = (item: any) => {
@@ -151,7 +147,7 @@ const AddItemModal = ({ command, isOpen, onClose }: AddItemModalProps) => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {availableServices.map((providerService) => {
-                    const service = services.find(s => s.id === providerService.service_id);
+                    const service = providerService.service;
                     if (!service) return null;
                     
                     const isSelected = selectedItem?.service_id === service.id;
