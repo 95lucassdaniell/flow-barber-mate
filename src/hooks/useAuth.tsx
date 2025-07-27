@@ -55,13 +55,16 @@ export const useAuth = () => {
   };
 
   useEffect(() => {
+    console.log('useAuth: Starting initialization');
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log('Auth state change:', event, session?.user?.id);
         setAuthError(null);
         
         if (event === 'SIGNED_OUT' || !session) {
+          console.log('useAuth: User signed out or no session');
           setSession(null);
           setUser(null);
           setProfile(null);
@@ -70,15 +73,23 @@ export const useAuth = () => {
         }
         
         if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+          console.log('useAuth: Token refreshed or signed in');
           setSession(session);
           setUser(session.user);
           
-          // Validate session and fetch profile
-          const isValid = await checkSessionValidity(session);
-          if (isValid) {
-            const profileData = await fetchProfile(session.user.id);
-            setProfile(profileData);
-          }
+          // Fetch profile after setting user - don't block on this
+          setTimeout(async () => {
+            try {
+              const isValid = await checkSessionValidity(session);
+              if (isValid) {
+                const profileData = await fetchProfile(session.user.id);
+                setProfile(profileData);
+              }
+            } catch (error) {
+              console.error('Profile fetch error in state change:', error);
+            }
+          }, 0);
+          
           setLoading(false);
         }
       }
@@ -87,34 +98,70 @@ export const useAuth = () => {
     // Check for existing session
     const initializeAuth = async () => {
       try {
+        console.log('useAuth: Checking for existing session');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Session error:', error);
           setAuthError('Erro ao verificar sessão');
+          setSession(null);
+          setUser(null);
+          setProfile(null);
           setLoading(false);
           return;
         }
         
         if (session) {
+          console.log('useAuth: Found existing session');
           const isValid = await checkSessionValidity(session);
           if (isValid) {
             setSession(session);
             setUser(session.user);
-            const profileData = await fetchProfile(session.user.id);
-            setProfile(profileData);
+            
+            // Fetch profile but don't block initialization
+            try {
+              const profileData = await fetchProfile(session.user.id);
+              setProfile(profileData);
+            } catch (error) {
+              console.error('Profile fetch error during init:', error);
+              setProfile(null);
+            }
+          } else {
+            console.log('useAuth: Session invalid');
+            setSession(null);
+            setUser(null);
+            setProfile(null);
           }
+        } else {
+          console.log('useAuth: No existing session found');
+          setSession(null);
+          setUser(null);
+          setProfile(null);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
         setAuthError('Erro de conexão');
+        setSession(null);
+        setUser(null);
+        setProfile(null);
       } finally {
+        console.log('useAuth: Initialization complete');
         setLoading(false);
       }
     };
 
     initializeAuth();
-    return () => subscription.unsubscribe();
+    
+    // Add timeout as safety net
+    const timeoutId = setTimeout(() => {
+      console.warn('useAuth: Timeout reached, forcing loading to false');
+      setLoading(false);
+    }, 5000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const signOut = async () => {
