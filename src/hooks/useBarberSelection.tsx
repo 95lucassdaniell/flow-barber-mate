@@ -25,7 +25,7 @@ export const useBarberSelection = () => {
           .select('id, full_name, role, is_active')
           .eq('barbershop_id', profile.barbershop_id)
           .eq('is_active', true)
-          .in('role', ['barber', 'admin'])
+          .eq('role', 'barber')
           .order('full_name');
 
         setBarbers(data || []);

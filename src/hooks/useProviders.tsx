@@ -39,6 +39,7 @@ export const useProviders = () => {
         .from('profiles')
         .select('*')
         .eq('barbershop_id', profile.barbershop_id)
+        .in('role', ['barber', 'receptionist'])
         .order('full_name');
       
       if (error) throw error;
