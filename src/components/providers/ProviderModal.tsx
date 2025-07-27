@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -213,6 +214,12 @@ const ProviderModal = ({ isOpen, onClose, provider }: ProviderModalProps) => {
           <DialogTitle>
             {isEditing ? "Editar Prestador" : "Adicionar Prestador"}
           </DialogTitle>
+          <DialogDescription>
+            {isEditing 
+              ? "Edite as informações do prestador e configure os serviços oferecidos." 
+              : "Adicione um novo prestador à equipe e configure os serviços oferecidos."
+            }
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-6">

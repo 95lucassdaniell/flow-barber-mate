@@ -4,7 +4,7 @@ import { useAuth } from './useAuth';
 
 interface Provider {
   id: string;
-  user_id: string;
+  user_id: string | null;
   barbershop_id: string;
   role: 'admin' | 'receptionist' | 'barber';
   full_name: string;
@@ -12,6 +12,7 @@ interface Provider {
   phone?: string;
   commission_rate?: number;
   is_active: boolean;
+  status?: 'active' | 'pending';
   created_at: string;
   updated_at: string;
 }
@@ -58,17 +59,26 @@ export const useProviders = () => {
     is_active: boolean;
   }) => {
     try {
-      // In a real implementation, you would:
-      // 1. Create a user in auth.users via edge function
-      // 2. Insert into profiles table
-      // For now, we'll simulate with just the profiles table
-      
+      // Check if email already exists
+      const { data: existingProvider } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('email', providerData.email)
+        .eq('barbershop_id', profile!.barbershop_id)
+        .single();
+
+      if (existingProvider) {
+        throw new Error('Este email já está cadastrado para outro prestador.');
+      }
+
+      // Create provider without user_id (pending status)
       const { data, error } = await supabase
         .from('profiles')
         .insert([{
           ...providerData,
           barbershop_id: profile!.barbershop_id,
-          user_id: 'temp-' + Date.now(), // Temporary, should be real user_id from auth
+          user_id: null, // Will be set when user accepts invitation
+          status: 'pending',
         }])
         .select()
         .single();
