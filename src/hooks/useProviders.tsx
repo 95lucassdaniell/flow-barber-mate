@@ -60,31 +60,65 @@ export const useProviders = () => {
     is_active: boolean;
   }) => {
     try {
+      console.log('Creating provider with data:', providerData);
+      
+      if (!profile?.barbershop_id) {
+        throw new Error('Perfil de usuário não encontrado ou barbearia não configurada.');
+      }
+
+      // Validate required fields
+      if (!providerData.full_name?.trim()) {
+        throw new Error('Nome completo é obrigatório.');
+      }
+      
+      if (!providerData.email?.trim()) {
+        throw new Error('Email é obrigatório.');
+      }
+
       // Check if email already exists
-      const { data: existingProvider } = await supabase
+      const { data: existingProvider, error: existingError } = await supabase
         .from('profiles')
         .select('email')
         .eq('email', providerData.email)
-        .eq('barbershop_id', profile!.barbershop_id)
+        .eq('barbershop_id', profile.barbershop_id)
         .single();
+
+      if (existingError && existingError.code !== 'PGRST116') {
+        console.error('Error checking existing provider:', existingError);
+        throw new Error('Erro ao verificar email existente.');
+      }
 
       if (existingProvider) {
         throw new Error('Este email já está cadastrado para outro prestador.');
       }
 
       // Create provider without user_id (pending status)
+      const insertData = {
+        ...providerData,
+        barbershop_id: profile.barbershop_id,
+        user_id: null, // Will be set when user accepts invitation
+        status: 'pending',
+        full_name: providerData.full_name.trim(),
+        email: providerData.email.trim().toLowerCase(),
+      };
+
+      console.log('Inserting provider data:', insertData);
+
       const { data, error } = await supabase
         .from('profiles')
-        .insert([{
-          ...providerData,
-          barbershop_id: profile!.barbershop_id,
-          user_id: null, // Will be set when user accepts invitation
-          status: 'pending',
-        }])
+        .insert([insertData])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error creating provider:', error);
+        if (error.code === '23505') {
+          throw new Error('Este email já está em uso.');
+        }
+        throw new Error(`Erro ao criar prestador: ${error.message}`);
+      }
+      
+      console.log('Provider created successfully:', data);
       
       // Refetch providers to ensure UI is updated
       await fetchProviders();
@@ -98,6 +132,43 @@ export const useProviders = () => {
 
   const updateProvider = async (id: string, updates: Partial<Provider>) => {
     try {
+      console.log('Updating provider:', id, 'with updates:', updates);
+      
+      if (!id) {
+        throw new Error('ID do prestador é obrigatório.');
+      }
+
+      // Validate email if being updated
+      if (updates.email) {
+        updates.email = updates.email.trim().toLowerCase();
+        
+        // Check if email already exists for other providers
+        const { data: existingProvider, error: existingError } = await supabase
+          .from('profiles')
+          .select('id, email')
+          .eq('email', updates.email)
+          .eq('barbershop_id', profile!.barbershop_id)
+          .neq('id', id)
+          .single();
+
+        if (existingError && existingError.code !== 'PGRST116') {
+          console.error('Error checking existing provider email:', existingError);
+          throw new Error('Erro ao verificar email existente.');
+        }
+
+        if (existingProvider) {
+          throw new Error('Este email já está cadastrado para outro prestador.');
+        }
+      }
+
+      // Validate and clean other fields
+      if (updates.full_name) {
+        updates.full_name = updates.full_name.trim();
+        if (!updates.full_name) {
+          throw new Error('Nome completo não pode estar vazio.');
+        }
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .update(updates)
@@ -105,7 +176,15 @@ export const useProviders = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error updating provider:', error);
+        if (error.code === '23505') {
+          throw new Error('Este email já está em uso.');
+        }
+        throw new Error(`Erro ao atualizar prestador: ${error.message}`);
+      }
+      
+      console.log('Provider updated successfully:', data);
       
       // Refetch providers to ensure UI is updated
       await fetchProviders();
@@ -119,12 +198,23 @@ export const useProviders = () => {
 
   const toggleProviderStatus = async (id: string, isActive: boolean) => {
     try {
+      console.log('Toggling provider status:', id, 'to:', isActive);
+      
+      if (!id) {
+        throw new Error('ID do prestador é obrigatório.');
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({ is_active: isActive })
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error toggling provider status:', error);
+        throw new Error(`Erro ao ${isActive ? 'ativar' : 'desativar'} prestador: ${error.message}`);
+      }
+      
+      console.log('Provider status updated successfully');
       
       // Refetch providers to ensure UI is updated
       await fetchProviders();

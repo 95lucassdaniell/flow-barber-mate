@@ -89,13 +89,32 @@ export const useProviderServices = (providerId?: string) => {
 
   // Add or update provider service
   const saveProviderService = async (serviceId: string, price: number, isActive: boolean = true) => {
-    if (!providerId) return false;
+    if (!providerId) {
+      console.error('No provider ID provided');
+      return false;
+    }
+
+    console.log('Saving provider service:', { providerId, serviceId, price, isActive });
 
     try {
+      // Validate inputs
+      if (!serviceId) {
+        throw new Error('ID do serviço é obrigatório.');
+      }
+      
+      if (price < 0) {
+        throw new Error('O preço não pode ser negativo.');
+      }
+
+      if (isActive && price === 0) {
+        throw new Error('Serviços ativos devem ter um preço maior que zero.');
+      }
+
       // Check if already exists
       const existingService = providerServices.find(ps => ps.service_id === serviceId);
 
       if (existingService) {
+        console.log('Updating existing service:', existingService.id);
         // Update existing
         const { data, error } = await supabase
           .from('provider_services')
@@ -107,12 +126,16 @@ export const useProviderServices = (providerId?: string) => {
           `)
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase error updating provider service:', error);
+          throw new Error(`Erro ao atualizar serviço: ${error.message}`);
+        }
 
         setProviderServices(prev => 
           prev.map(ps => ps.id === existingService.id ? data : ps)
         );
       } else {
+        console.log('Creating new service');
         // Create new
         const { data, error } = await supabase
           .from('provider_services')
@@ -128,11 +151,15 @@ export const useProviderServices = (providerId?: string) => {
           `)
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase error creating provider service:', error);
+          throw new Error(`Erro ao criar serviço: ${error.message}`);
+        }
 
         setProviderServices(prev => [...prev, data]);
       }
 
+      console.log('Provider service saved successfully');
       toast({
         title: "Serviço salvo",
         description: "As configurações do serviço foram salvas com sucesso.",
@@ -152,21 +179,37 @@ export const useProviderServices = (providerId?: string) => {
 
   // Remove provider service
   const removeProviderService = async (serviceId: string) => {
-    if (!providerId) return false;
+    if (!providerId) {
+      console.error('No provider ID provided');
+      return false;
+    }
+
+    console.log('Removing provider service:', { providerId, serviceId });
 
     try {
+      if (!serviceId) {
+        throw new Error('ID do serviço é obrigatório.');
+      }
+
       const existingService = providerServices.find(ps => ps.service_id === serviceId);
-      if (!existingService) return false;
+      if (!existingService) {
+        console.log('Service not found in provider services');
+        return false;
+      }
 
       const { error } = await supabase
         .from('provider_services')
         .delete()
         .eq('id', existingService.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error removing provider service:', error);
+        throw new Error(`Erro ao remover serviço: ${error.message}`);
+      }
 
       setProviderServices(prev => prev.filter(ps => ps.id !== existingService.id));
 
+      console.log('Provider service removed successfully');
       toast({
         title: "Serviço removido",
         description: "O serviço foi removido do prestador com sucesso.",

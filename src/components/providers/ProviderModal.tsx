@@ -100,6 +100,7 @@ const ProviderModal = ({ isOpen, onClose, provider, onSuccess }: ProviderModalPr
 
   const onSubmit = async (formData: ProviderFormData) => {
     try {
+      console.log('Submitting provider form:', formData);
       let savedProvider;
       
       if (isEditing) {
@@ -131,10 +132,14 @@ const ProviderModal = ({ isOpen, onClose, provider, onSuccess }: ProviderModalPr
 
       onSuccess?.();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error in form submission:', error);
+      
+      const errorMessage = error?.message || 'Ocorreu um erro inesperado ao salvar o prestador.';
+      
       toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao salvar o prestador.",
+        title: isEditing ? "Erro ao atualizar" : "Erro ao criar",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -168,27 +173,58 @@ const ProviderModal = ({ isOpen, onClose, provider, onSuccess }: ProviderModalPr
   };
 
   const handleSaveAllServices = async (providerId?: string) => {
-    if (!providerId) return;
+    if (!providerId) {
+      console.warn('No provider ID provided for saving services');
+      return;
+    }
     
+    console.log('Saving services for provider:', providerId, 'Changes:', servicesChanges);
     setSavingServices(true);
+    
     try {
+      let successCount = 0;
+      let errorCount = 0;
+      
       for (const [serviceId, changes] of Object.entries(servicesChanges)) {
-        if (changes.isActive && changes.price > 0) {
-          await saveProviderService(serviceId, changes.price, changes.isActive);
-        } else if (!changes.isActive) {
-          await removeProviderService(serviceId);
+        try {
+          if (changes.isActive && changes.price > 0) {
+            await saveProviderService(serviceId, changes.price, changes.isActive);
+            successCount++;
+          } else if (!changes.isActive) {
+            await removeProviderService(serviceId);
+            successCount++;
+          }
+        } catch (serviceError) {
+          console.error(`Error saving service ${serviceId}:`, serviceError);
+          errorCount++;
         }
       }
       
       setServicesChanges({});
-      toast({
-        title: "Serviços salvos",
-        description: "Os preços dos serviços foram atualizados com sucesso.",
-      });
-    } catch (error) {
+      
+      if (errorCount === 0) {
+        toast({
+          title: "Serviços salvos",
+          description: "Os preços dos serviços foram atualizados com sucesso.",
+        });
+      } else if (successCount > 0) {
+        toast({
+          title: "Parcialmente salvo",
+          description: `${successCount} serviços salvos, ${errorCount} com erro.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro ao salvar",
+          description: "Não foi possível salvar nenhum serviço.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error saving services:', error);
       toast({
         title: "Erro",
-        description: "Erro ao salvar os serviços.",
+        description: error?.message || "Erro inesperado ao salvar os serviços.",
         variant: "destructive",
       });
     } finally {

@@ -27,12 +27,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useProviders } from "@/hooks/useProviders";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import ProviderModal from "./ProviderModal";
 import ProviderServicesModal from "./ProviderServicesModalSimple";
 
 const ProvidersManagement = () => {
   const { providers, loading, toggleProviderStatus, fetchProviders } = useProviders();
   const { canManageAll, profile, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -225,7 +227,21 @@ const ProvidersManagement = () => {
                             Gerenciar Serviços
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={() => toggleProviderStatus(provider.id, !provider.is_active)}
+                            onClick={async () => {
+                              try {
+                                await toggleProviderStatus(provider.id, !provider.is_active);
+                                toast({
+                                  title: provider.is_active ? "Prestador desativado" : "Prestador ativado",
+                                  description: `${provider.full_name} foi ${provider.is_active ? 'desativado' : 'ativado'} com sucesso.`,
+                                });
+                              } catch (error: any) {
+                                toast({
+                                  title: "Erro",
+                                  description: error?.message || "Erro ao alterar status do prestador.",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
                           >
                             {provider.is_active ? "Desativar" : "Ativar"}
                           </DropdownMenuItem>
