@@ -1,6 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { 
   DollarSign, 
   Calendar, 
@@ -13,25 +15,7 @@ import {
 } from "lucide-react";
 
 const DashboardHome = () => {
-  // Mock data - depois virá da API
-  const stats = {
-    monthlyRevenue: 8500,
-    monthlyExpenses: 3200,
-    monthlyProfit: 5300,
-    todayAppointments: 12,
-    weekAppointments: 67,
-    totalClients: 234,
-    inactiveClients: 15,
-    messagesThisMonth: 89
-  };
-
-  const todaySchedule = [
-    { time: "09:00", client: "João Silva", service: "Corte + Barba", barber: "Carlos", status: "confirmed" },
-    { time: "09:30", client: "Pedro Santos", service: "Corte Masculino", barber: "Roberto", status: "confirmed" },
-    { time: "10:00", client: "Marcos Lima", service: "Sobrancelha", barber: "Carlos", status: "pending" },
-    { time: "10:30", client: "", service: "", barber: "", status: "available" },
-    { time: "11:00", client: "Rafael Costa", service: "Corte + Barba", barber: "Roberto", status: "confirmed" },
-  ];
+  const { stats, todaySchedule, loading } = useDashboardStats();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -44,12 +28,91 @@ const DashboardHome = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
+      case "scheduled": return "Agendado";
       case "confirmed": return "Confirmado";
-      case "pending": return "Pendente";
-      case "available": return "Disponível";
+      case "in_progress": return "Em Andamento";
+      case "completed": return "Concluído";
+      case "cancelled": return "Cancelado";
+      case "no_show": return "Não Compareceu";
       default: return status;
     }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        {/* Loading skeletons */}
+        <div className="grid md:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="bg-card-gradient shadow-elegant">
+              <CardHeader className="pb-3">
+                <Skeleton className="h-4 w-32" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-24" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        
+        <div className="grid md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="shadow-elegant">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-6 w-12" />
+                  </div>
+                  <Skeleton className="h-8 w-8 rounded" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        
+        <div className="grid lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-2 shadow-elegant">
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-48" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-lg border">
+                    <div className="flex items-center space-x-3">
+                      <Skeleton className="h-4 w-16" />
+                      <div className="flex-1 space-y-1">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-48" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <div className="space-y-6">
+            <Card className="shadow-elegant">
+              <CardHeader>
+                <Skeleton className="h-6 w-24" />
+                <Skeleton className="h-4 w-40" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <Skeleton className="h-20 w-full rounded-lg" />
+                  <Skeleton className="h-20 w-full rounded-lg" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -179,30 +242,40 @@ const DashboardHome = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {todaySchedule.map((appointment, index) => (
-                <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
-                  <div className="flex items-center space-x-3">
-                    <div className="text-sm font-medium w-16">
-                      {appointment.time}
+              {todaySchedule.length > 0 ? (
+                todaySchedule.map((appointment, index) => (
+                  <div key={appointment.appointmentId || index} className="flex items-center justify-between p-3 rounded-lg border">
+                    <div className="flex items-center space-x-3">
+                      <div className="text-sm font-medium w-16">
+                        {appointment.time.slice(0, 5)}
+                      </div>
+                      <div className="flex-1">
+                        {appointment.client ? (
+                          <>
+                            <p className="font-medium">{appointment.client}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {appointment.service} • {appointment.barber}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-muted-foreground italic">Horário disponível</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      {appointment.client ? (
-                        <>
-                          <p className="font-medium">{appointment.client}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {appointment.service} • {appointment.barber}
-                          </p>
-                        </>
-                      ) : (
-                        <p className="text-muted-foreground italic">Horário disponível</p>
-                      )}
-                    </div>
+                    <Badge variant="secondary" className={getStatusColor(appointment.status)}>
+                      {getStatusText(appointment.status)}
+                    </Badge>
                   </div>
-                  <Badge variant="secondary" className={getStatusColor(appointment.status)}>
-                    {getStatusText(appointment.status)}
-                  </Badge>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">Nenhum agendamento para hoje</p>
+                  <Button size="sm" className="mt-2">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Agendar Primeiro Horário
+                  </Button>
                 </div>
-              ))}
+              )}
             </div>
             <div className="mt-4 pt-4 border-t">
               <Button variant="outline" className="w-full">
