@@ -549,6 +549,102 @@ export type Database = {
           },
         ]
       }
+      command_items: {
+        Row: {
+          command_id: string
+          commission_amount: number
+          commission_rate: number
+          created_at: string
+          id: string
+          item_type: string
+          product_id: string | null
+          quantity: number
+          service_id: string | null
+          total_price: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          command_id: string
+          commission_amount?: number
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          item_type: string
+          product_id?: string | null
+          quantity?: number
+          service_id?: string | null
+          total_price?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          command_id?: string
+          commission_amount?: number
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          item_type?: string
+          product_id?: string | null
+          quantity?: number
+          service_id?: string | null
+          total_price?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      commands: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at: string | null
+          command_number: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          payment_status: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id: string
+          barbershop_id: string
+          client_id: string
+          closed_at?: string | null
+          command_number: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string
+          barbershop_id?: string
+          client_id?: string
+          closed_at?: string | null
+          command_number?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       commissions: {
         Row: {
           barber_id: string
@@ -1233,6 +1329,10 @@ export type Database = {
       create_super_admin: {
         Args: { user_email: string; user_full_name: string }
         Returns: string
+      }
+      generate_command_number: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       get_financial_overview: {
         Args: Record<PropertyKey, never>
