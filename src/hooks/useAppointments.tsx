@@ -141,7 +141,8 @@ export const useAppointments = () => {
         .eq('barber_id', appointmentData.barber_id)
         .eq('appointment_date', appointmentData.appointment_date)
         .neq('status', 'cancelled')
-        .or(`start_time.lte.${end_time},end_time.gte.${appointmentData.start_time}`);
+        .lt('start_time', end_time)
+        .gt('end_time', appointmentData.start_time);
 
       if (conflictError) throw conflictError;
       
