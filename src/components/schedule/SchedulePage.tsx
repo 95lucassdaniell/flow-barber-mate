@@ -43,39 +43,33 @@ const SchedulePage = () => {
   console.log('🔍 SchedulePage - Barbeiro selecionado:', selectedBarberId);
   console.log('📊 SchedulePage - Total de agendamentos:', appointments.length);
 
-  // Fetch appointments for selected barber and date/week
+  // Fetch appointments when component mounts and when dependencies change
   useEffect(() => {
-    if (selectedBarberId && selectedDate) {
-      const dateString = format(selectedDate, 'yyyy-MM-dd');
-      console.log('🔄 Buscando agendamentos para:', {
-        barberId: selectedBarberId,
-        date: dateString,
-        viewMode,
-        selectedDate: selectedDate.toISOString()
-      });
+    if (!selectedBarberId) {
+      console.log('⏳ Aguardando seleção do barbeiro...');
+      return;
+    }
+    
+    const dateString = format(selectedDate, 'yyyy-MM-dd');
+    console.log('🔄 Buscando agendamentos para:', {
+      barberId: selectedBarberId,
+      date: dateString,
+      viewMode,
+      isToday: isSameDay(selectedDate, new Date())
+    });
 
-      if (viewMode === "week") {
-        // Fetch appointments for the entire week
-        const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
-        
-        // Fetch for each day of the week
-        for (let i = 0; i < 7; i++) {
-          const currentDay = addDays(weekStart, i);
-          const dayString = format(currentDay, 'yyyy-MM-dd');
-          console.log('📅 Buscando para dia da semana:', dayString);
-          fetchAppointments(selectedBarberId, dayString);
-        }
-      } else {
-        console.log('📅 Buscando para dia específico:', dateString);
-        fetchAppointments(selectedBarberId, dateString);
+    if (viewMode === "week") {
+      const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+      
+      for (let i = 0; i < 7; i++) {
+        const currentDay = addDays(weekStart, i);
+        const dayString = format(currentDay, 'yyyy-MM-dd');
+        fetchAppointments(selectedBarberId, dayString);
       }
     } else {
-      console.log('⚠️ Não foi possível buscar agendamentos:', {
-        hasBarberId: !!selectedBarberId,
-        hasDate: !!selectedDate
-      });
+      fetchAppointments(selectedBarberId, dateString);
     }
-  }, [selectedBarberId, selectedDate, viewMode]);
+  }, [selectedBarberId, selectedDate, viewMode, fetchAppointments]);
 
   // Generate all time slots for display
   const timeSlots = generateAllTimeSlots(selectedDate);
@@ -420,13 +414,7 @@ const SchedulePage = () => {
               size="sm"
               onClick={() => {
                 const today = startOfDay(new Date());
-                console.log('🎯 Clicou em Hoje - Indo para:', format(today, 'yyyy-MM-dd'));
                 setSelectedDate(today);
-                // Forçar refresh dos agendamentos
-                if (selectedBarberId) {
-                  const dateString = format(today, 'yyyy-MM-dd');
-                  fetchAppointments(selectedBarberId, dateString);
-                }
               }}
               className={isSameDay(selectedDate, new Date()) ? "bg-primary text-primary-foreground" : ""}
             >
