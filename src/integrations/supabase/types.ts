@@ -896,8 +896,9 @@ export type Database = {
           is_active: boolean | null
           phone: string | null
           role: string
+          status: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           barbershop_id: string
@@ -909,8 +910,9 @@ export type Database = {
           is_active?: boolean | null
           phone?: string | null
           role?: string
+          status?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           barbershop_id?: string
@@ -922,8 +924,9 @@ export type Database = {
           is_active?: boolean | null
           phone?: string | null
           role?: string
+          status?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
