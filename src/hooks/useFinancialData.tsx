@@ -114,23 +114,37 @@ export function useFinancialData(
     console.log('useFinancialData: Fetching barber rankings for barbershop:', profile.barbershop_id);
     
     try {
-      // Primeiro, buscar os sale_items com suas vendas
-      let saleItemsQuery = supabase
+      // Abordagem simplificada: buscar vendas primeiro
+      let salesQuery = supabase
+        .from('sales')
+        .select('id, barber_id, sale_date')
+        .eq('barbershop_id', profile.barbershop_id);
+
+      if (startDate) salesQuery = salesQuery.gte('sale_date', startDate);
+      if (endDate) salesQuery = salesQuery.lte('sale_date', endDate);
+
+      const { data: salesData, error: salesError } = await salesQuery;
+
+      if (salesError) {
+        console.error('Error fetching sales:', salesError);
+        return;
+      }
+
+      console.log('useFinancialData: Sales data:', salesData);
+
+      if (!salesData || salesData.length === 0) {
+        console.log('useFinancialData: No sales found');
+        setBarberRankings([]);
+        return;
+      }
+
+      // Buscar sale_items para essas vendas
+      const saleIds = salesData.map(sale => sale.id);
+      
+      const { data: saleItemsData, error: saleItemsError } = await supabase
         .from('sale_items')
-        .select(`
-          commission_amount,
-          sales!inner(
-            barbershop_id,
-            barber_id,
-            sale_date
-          )
-        `)
-        .eq('sales.barbershop_id', profile.barbershop_id);
-
-      if (startDate) saleItemsQuery = saleItemsQuery.gte('sales.sale_date', startDate);
-      if (endDate) saleItemsQuery = saleItemsQuery.lte('sales.sale_date', endDate);
-
-      const { data: saleItemsData, error: saleItemsError } = await saleItemsQuery;
+        .select('sale_id, commission_amount')
+        .in('sale_id', saleIds);
 
       if (saleItemsError) {
         console.error('Error fetching sale items:', saleItemsError);
@@ -139,14 +153,8 @@ export function useFinancialData(
 
       console.log('useFinancialData: Sale items data:', saleItemsData);
 
-      if (!saleItemsData || saleItemsData.length === 0) {
-        console.log('useFinancialData: No sale items found');
-        setBarberRankings([]);
-        return;
-      }
-
-      // Buscar os perfis dos barbeiros separadamente
-      const barberIds = [...new Set(saleItemsData.map((item: any) => item.sales.barber_id))];
+      // Buscar perfis dos barbeiros
+      const barberIds = [...new Set(salesData.map(sale => sale.barber_id))];
       console.log('useFinancialData: Barber IDs:', barberIds);
 
       const { data: barbersData, error: barbersError } = await supabase
@@ -161,16 +169,26 @@ export function useFinancialData(
 
       console.log('useFinancialData: Barbers data:', barbersData);
 
-      // Criar um mapa de barbeiros para facilitar o acesso
+      // Criar mapa de barbeiros
       const barbersMap = barbersData?.reduce((acc: any, barber: any) => {
         acc[barber.id] = barber;
         return acc;
       }, {}) || {};
 
+      // Criar mapa de comissões por venda
+      const commissionsMap = saleItemsData?.reduce((acc: any, item: any) => {
+        if (!acc[item.sale_id]) {
+          acc[item.sale_id] = 0;
+        }
+        acc[item.sale_id] += Number(item.commission_amount) || 0;
+        return acc;
+      }, {}) || {};
+
       // Processar os dados para criar o ranking
-      const barberStats = saleItemsData.reduce((acc, item: any) => {
-        const barberId = item.sales.barber_id;
+      const barberStats = salesData.reduce((acc, sale) => {
+        const barberId = sale.barber_id;
         const barber = barbersMap[barberId];
+        const commissionAmount = commissionsMap[sale.id] || 0;
         
         if (!barber) {
           console.warn('useFinancialData: Barber not found for ID:', barberId);
@@ -187,8 +205,9 @@ export function useFinancialData(
           };
         }
         
-        acc[barberId].totalCommissions += Number(item.commission_amount) || 0;
+        acc[barberId].totalCommissions += commissionAmount;
         acc[barberId].salesCount += 1;
+        acc[barberId].totalSales += commissionAmount; // Usando comissão como proxy para vendas
         return acc;
       }, {} as Record<string, BarberRanking>);
 
