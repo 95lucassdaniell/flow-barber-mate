@@ -3147,6 +3147,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      archive_old_data: {
+        Args: { retention_months?: number }
+        Returns: {
+          table_name: string
+          records_archived: number
+          partitions_dropped: number
+        }[]
+      }
+      cleanup_ancient_archives: {
+        Args: { years_to_keep?: number }
+        Returns: number
+      }
       create_monthly_partition: {
         Args: { table_name: string; start_date: string }
         Returns: undefined
@@ -3158,6 +3170,17 @@ export type Database = {
       generate_command_number: {
         Args: Record<PropertyKey, never>
         Returns: number
+      }
+      get_archive_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          table_name: string
+          active_records: number
+          archived_records: number
+          total_active_size: string
+          total_archive_size: string
+          oldest_archive_date: string
+        }[]
       }
       get_barbershop_performance_stats: {
         Args: { barbershop_uuid: string }
@@ -3176,6 +3199,22 @@ export type Database = {
           total_cancelled_accounts: number
           monthly_revenue: number
           annual_revenue: number
+        }[]
+      }
+      get_historical_data: {
+        Args: {
+          p_table_name: string
+          p_barbershop_id: string
+          p_start_date: string
+          p_end_date?: string
+        }
+        Returns: {
+          id: string
+          barbershop_id: string
+          date_field: string
+          amount: number
+          status: string
+          source_table: string
         }[]
       }
       get_super_admin_info: {
