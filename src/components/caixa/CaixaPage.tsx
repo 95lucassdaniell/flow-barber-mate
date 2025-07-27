@@ -10,7 +10,8 @@ import {
   Calculator,
   Clock,
   Receipt,
-  Plus
+  Plus,
+  FileText
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCashRegister } from '@/hooks/useCashRegister';
@@ -21,6 +22,7 @@ import { SalesHistory } from '@/components/pdv/SalesHistory';
 import { CashMovements } from '@/components/caixa/CashMovements';
 import { AddCashMovementModal } from '@/components/caixa/AddCashMovementModal';
 import { CashSummary } from '@/components/caixa/CashSummary';
+import { CommandsList } from '@/components/caixa/CommandsList';
 
 const CaixaPage = () => {
   const [showOpenCashModal, setShowOpenCashModal] = useState(false);
@@ -133,10 +135,14 @@ const CaixaPage = () => {
 
           {/* Abas de Conteúdo */}
           <Tabs defaultValue="movements" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="movements" className="flex items-center gap-2">
                 <ArrowUpRight className="h-4 w-4" />
                 Movimentações
+              </TabsTrigger>
+              <TabsTrigger value="commands" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Comandas
               </TabsTrigger>
               <TabsTrigger value="sales" className="flex items-center gap-2">
                 <Receipt className="h-4 w-4" />
@@ -146,6 +152,10 @@ const CaixaPage = () => {
             
             <TabsContent value="movements" className="space-y-4">
               <CashMovements />
+            </TabsContent>
+            
+            <TabsContent value="commands" className="space-y-4">
+              <CommandsList />
             </TabsContent>
             
             <TabsContent value="sales" className="space-y-4">
