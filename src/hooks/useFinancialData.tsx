@@ -111,7 +111,10 @@ export function useFinancialData(
   const fetchBarberRankings = async () => {
     if (!profile?.barbershop_id) return;
 
+    console.log('useFinancialData: Fetching barber rankings for barbershop:', profile.barbershop_id);
+    
     try {
+      // Primeiro, buscar os sale_items com suas vendas
       let saleItemsQuery = supabase
         .from('sale_items')
         .select(`
@@ -119,8 +122,7 @@ export function useFinancialData(
           sales!inner(
             barbershop_id,
             barber_id,
-            sale_date,
-            profiles!inner(id, full_name)
+            sale_date
           )
         `)
         .eq('sales.barbershop_id', profile.barbershop_id);
@@ -128,29 +130,74 @@ export function useFinancialData(
       if (startDate) saleItemsQuery = saleItemsQuery.gte('sales.sale_date', startDate);
       if (endDate) saleItemsQuery = saleItemsQuery.lte('sales.sale_date', endDate);
 
-      const { data: saleItemsData } = await saleItemsQuery;
+      const { data: saleItemsData, error: saleItemsError } = await saleItemsQuery;
 
-      const barberStats = saleItemsData?.reduce((acc, item: any) => {
+      if (saleItemsError) {
+        console.error('Error fetching sale items:', saleItemsError);
+        return;
+      }
+
+      console.log('useFinancialData: Sale items data:', saleItemsData);
+
+      if (!saleItemsData || saleItemsData.length === 0) {
+        console.log('useFinancialData: No sale items found');
+        setBarberRankings([]);
+        return;
+      }
+
+      // Buscar os perfis dos barbeiros separadamente
+      const barberIds = [...new Set(saleItemsData.map((item: any) => item.sales.barber_id))];
+      console.log('useFinancialData: Barber IDs:', barberIds);
+
+      const { data: barbersData, error: barbersError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', barberIds);
+
+      if (barbersError) {
+        console.error('Error fetching barbers:', barbersError);
+        return;
+      }
+
+      console.log('useFinancialData: Barbers data:', barbersData);
+
+      // Criar um mapa de barbeiros para facilitar o acesso
+      const barbersMap = barbersData?.reduce((acc: any, barber: any) => {
+        acc[barber.id] = barber;
+        return acc;
+      }, {}) || {};
+
+      // Processar os dados para criar o ranking
+      const barberStats = saleItemsData.reduce((acc, item: any) => {
         const barberId = item.sales.barber_id;
-        const barberProfile = item.sales.profiles;
+        const barber = barbersMap[barberId];
+        
+        if (!barber) {
+          console.warn('useFinancialData: Barber not found for ID:', barberId);
+          return acc;
+        }
         
         if (!acc[barberId]) {
           acc[barberId] = {
             id: barberId,
-            full_name: barberProfile.full_name,
+            full_name: barber.full_name,
             totalCommissions: 0,
             totalSales: 0,
             salesCount: 0,
           };
         }
-        acc[barberId].totalCommissions += Number(item.commission_amount);
+        
+        acc[barberId].totalCommissions += Number(item.commission_amount) || 0;
         acc[barberId].salesCount += 1;
         return acc;
-      }, {} as Record<string, BarberRanking>) || {};
+      }, {} as Record<string, BarberRanking>);
+
+      console.log('useFinancialData: Barber stats:', barberStats);
 
       const rankings = Object.values(barberStats)
         .sort((a, b) => b.totalCommissions - a.totalCommissions);
 
+      console.log('useFinancialData: Final rankings:', rankings);
       setBarberRankings(rankings);
     } catch (error) {
       console.error('Error fetching barber rankings:', error);
