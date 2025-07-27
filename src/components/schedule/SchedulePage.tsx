@@ -11,7 +11,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
-import { format, startOfWeek, addDays, isSameDay } from "date-fns";
+import { format, startOfWeek, addDays, isSameDay, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
 import { useBarberSelection } from "@/hooks/useBarberSelection";
@@ -32,10 +32,16 @@ const SchedulePage = () => {
     isTimeSlotInPast,
     isTimeSlotAvailable 
   } = useBarbershopSettings();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
   const [viewMode, setViewMode] = useState<"day" | "week">("day");
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+
+  // Garantir que sempre inicie no dia atual
+  useEffect(() => {
+    const today = startOfDay(new Date());
+    setSelectedDate(today);
+  }, []);
 
   // Fetch appointments for selected barber and date/week
   useEffect(() => {
@@ -388,6 +394,13 @@ const SchedulePage = () => {
           <BarberSelector />
           
           <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedDate(startOfDay(new Date()))}
+            >
+              Hoje
+            </Button>
             <Button
               variant={viewMode === "day" ? "default" : "outline"}
               size="sm"
