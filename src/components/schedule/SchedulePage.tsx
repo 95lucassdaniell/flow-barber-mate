@@ -37,30 +37,43 @@ const SchedulePage = () => {
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
 
-  // Garantir que sempre inicie no dia atual
-  useEffect(() => {
-    const today = startOfDay(new Date());
-    setSelectedDate(today);
-  }, []);
+  // Debug: Log da data atual para verificar
+  console.log('🗓️ SchedulePage - Data atual real:', format(new Date(), 'yyyy-MM-dd HH:mm:ss'));
+  console.log('🗓️ SchedulePage - Data selecionada:', format(selectedDate, 'yyyy-MM-dd HH:mm:ss'));
+  console.log('🔍 SchedulePage - Barbeiro selecionado:', selectedBarberId);
+  console.log('📊 SchedulePage - Total de agendamentos:', appointments.length);
 
   // Fetch appointments for selected barber and date/week
   useEffect(() => {
     if (selectedBarberId && selectedDate) {
+      const dateString = format(selectedDate, 'yyyy-MM-dd');
+      console.log('🔄 Buscando agendamentos para:', {
+        barberId: selectedBarberId,
+        date: dateString,
+        viewMode,
+        selectedDate: selectedDate.toISOString()
+      });
+
       if (viewMode === "week") {
         // Fetch appointments for the entire week
         const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
-        const weekEnd = addDays(weekStart, 6);
         
         // Fetch for each day of the week
         for (let i = 0; i < 7; i++) {
           const currentDay = addDays(weekStart, i);
-          const dateString = format(currentDay, 'yyyy-MM-dd');
-          fetchAppointments(selectedBarberId, dateString);
+          const dayString = format(currentDay, 'yyyy-MM-dd');
+          console.log('📅 Buscando para dia da semana:', dayString);
+          fetchAppointments(selectedBarberId, dayString);
         }
       } else {
-        const dateString = format(selectedDate, 'yyyy-MM-dd');
+        console.log('📅 Buscando para dia específico:', dateString);
         fetchAppointments(selectedBarberId, dateString);
       }
+    } else {
+      console.log('⚠️ Não foi possível buscar agendamentos:', {
+        hasBarberId: !!selectedBarberId,
+        hasDate: !!selectedDate
+      });
     }
   }, [selectedBarberId, selectedDate, viewMode]);
 
@@ -388,6 +401,14 @@ const SchedulePage = () => {
           <p className="text-muted-foreground">
             {format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
           </p>
+          <div className="flex items-center gap-2 mt-1">
+            <Badge variant={isSameDay(selectedDate, new Date()) ? "default" : "secondary"}>
+              {isSameDay(selectedDate, new Date()) ? "🟢 HOJE" : "📅 Data Selecionada"}
+            </Badge>
+            <span className="text-xs text-muted-foreground">
+              {appointments.length} agendamento{appointments.length !== 1 ? 's' : ''} encontrado{appointments.length !== 1 ? 's' : ''}
+            </span>
+          </div>
         </div>
         
         <div className="flex items-center space-x-4">
@@ -397,9 +418,19 @@ const SchedulePage = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setSelectedDate(startOfDay(new Date()))}
+              onClick={() => {
+                const today = startOfDay(new Date());
+                console.log('🎯 Clicou em Hoje - Indo para:', format(today, 'yyyy-MM-dd'));
+                setSelectedDate(today);
+                // Forçar refresh dos agendamentos
+                if (selectedBarberId) {
+                  const dateString = format(today, 'yyyy-MM-dd');
+                  fetchAppointments(selectedBarberId, dateString);
+                }
+              }}
+              className={isSameDay(selectedDate, new Date()) ? "bg-primary text-primary-foreground" : ""}
             >
-              Hoje
+              {isSameDay(selectedDate, new Date()) ? "📍 Hoje" : "Hoje"}
             </Button>
             <Button
               variant={viewMode === "day" ? "default" : "outline"}
@@ -439,9 +470,25 @@ const SchedulePage = () => {
             <Calendar
               mode="single"
               selected={selectedDate}
-              onSelect={(date) => date && setSelectedDate(date)}
+              onSelect={(date) => {
+                if (date) {
+                  const normalizedDate = startOfDay(date);
+                  console.log('📅 Data selecionada no calendário:', format(normalizedDate, 'yyyy-MM-dd'));
+                  setSelectedDate(normalizedDate);
+                }
+              }}
               locale={ptBR}
               className="rounded-md"
+              modifiers={{
+                today: new Date()
+              }}
+              modifiersStyles={{
+                today: {
+                  fontWeight: 'bold',
+                  color: 'hsl(var(--primary))',
+                  backgroundColor: 'hsl(var(--primary) / 0.1)'
+                }
+              }}
             />
           </CardContent>
         </Card>
