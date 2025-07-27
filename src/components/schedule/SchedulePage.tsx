@@ -43,6 +43,9 @@ const SchedulePage = () => {
   console.log('🗓️ SchedulePage - Data selecionada:', format(selectedDate, 'yyyy-MM-dd HH:mm:ss'));
   console.log('🔍 SchedulePage - Barbeiro selecionado:', selectedBarberId);
   console.log('📊 SchedulePage - Total de agendamentos:', appointments.length);
+  console.log('🎯 SchedulePage - Agendamentos da data selecionada:', 
+    appointments.filter(app => app.appointment_date === format(selectedDate, 'yyyy-MM-dd')).length
+  );
 
   // Fetch appointments when component mounts and when dependencies change
   useEffect(() => {
@@ -104,15 +107,11 @@ const SchedulePage = () => {
   };
 
   const getAppointmentForTimeSlot = (timeSlot: string, date?: Date) => {
-    if (!date) {
-      return appointments.find(apt => apt.start_time.slice(0, 5) === timeSlot);
-    }
+    // Filtrar agendamentos apenas para a data selecionada
+    const targetDate = date ? format(date, 'yyyy-MM-dd') : format(selectedDate, 'yyyy-MM-dd');
+    const dayAppointments = appointments.filter(apt => apt.appointment_date === targetDate);
     
-    const dateString = format(date, 'yyyy-MM-dd');
-    return appointments.find(apt => 
-      apt.start_time.slice(0, 5) === timeSlot && 
-      apt.appointment_date === dateString
-    );
+    return dayAppointments.find(apt => apt.start_time.slice(0, 5) === timeSlot);
   };
 
   if (authLoading || barberLoading) {
@@ -409,7 +408,7 @@ const SchedulePage = () => {
               {isSameDay(selectedDate, new Date()) ? "🟢 HOJE" : "📅 Data Selecionada"}
             </Badge>
             <span className="text-xs text-muted-foreground">
-              {appointments.length} agendamento{appointments.length !== 1 ? 's' : ''} encontrado{appointments.length !== 1 ? 's' : ''}
+              {appointments.filter(app => app.appointment_date === format(selectedDate, 'yyyy-MM-dd')).length} de {appointments.length} agendamento{appointments.length !== 1 ? 's' : ''}
             </span>
           </div>
         </div>

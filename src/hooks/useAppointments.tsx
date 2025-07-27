@@ -109,16 +109,22 @@ export const useAppointments = () => {
       console.log('✅ Agendamentos carregados:', data?.length || 0, 'para', { barberId, date, mode });
       
       if (mode === 'day') {
-        // No modo "day", substituir todos os agendamentos
+        // No modo "day", sempre substituir todos os agendamentos
+        console.log('🔄 Modo DAY: Substituindo agendamentos');
         setAppointments((data || []) as Appointment[]);
       } else {
-        // No modo "week", acumular agendamentos apenas se for do mesmo contexto
+        // No modo "week", verificar se já temos agendamentos desta data
         setAppointments(prev => {
           const newAppointments = (data || []) as Appointment[];
-          // Filtrar agendamentos existentes que não são da mesma data
-          const filteredPrev = prev.filter(app => 
-            format(new Date(app.appointment_date), 'yyyy-MM-dd') !== date
-          );
+          console.log('🔄 Modo WEEK: Verificando agendamentos existentes');
+          
+          // Remover agendamentos da mesma data para evitar duplicatas
+          const filteredPrev = prev.filter(app => {
+            const appDate = format(new Date(app.appointment_date), 'yyyy-MM-dd');
+            return appDate !== date;
+          });
+          
+          console.log('📊 Agendamentos filtrados:', filteredPrev.length, 'novos:', newAppointments.length);
           return [...filteredPrev, ...newAppointments];
         });
       }
