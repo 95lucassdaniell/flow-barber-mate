@@ -15,7 +15,8 @@ import {
   DollarSign,
   Plus,
   ShoppingCart,
-  Printer
+  Printer,
+  Trash2
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useCommands } from "@/hooks/useCommands";
@@ -38,9 +39,10 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
   const [loading, setLoading] = useState(false);
   const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [currentCommand, setCurrentCommand] = useState(command);
+  const [removingItems, setRemovingItems] = useState<string[]>([]);
   
   const receiptRef = useRef<HTMLDivElement>(null);
-  const { closeCommand, refetchCommand } = useCommands();
+  const { closeCommand, refetchCommand, removeItemFromCommand } = useCommands();
   const { toast } = useToast();
   const { settings: barbershopSettings } = useBarbershopSettings();
   const [refreshing, setRefreshing] = useState(false);
@@ -80,6 +82,35 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
       });
     } finally {
       setTimeout(() => setRefreshing(false), 500);
+    }
+  };
+
+  // Função para remover item da comanda
+  const handleRemoveItem = async (itemId: string) => {
+    setRemovingItems(prev => [...prev, itemId]);
+    
+    try {
+      await removeItemFromCommand(itemId, command.id);
+      
+      // Recarregar especificamente esta comanda
+      const updatedCommand = await refetchCommand(command.id);
+      if (updatedCommand) {
+        setCurrentCommand(updatedCommand);
+      }
+      
+      toast({
+        title: "Sucesso",
+        description: "Item removido da comanda",
+      });
+    } catch (error) {
+      console.error('Erro ao remover item:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao remover item da comanda",
+        variant: "destructive",
+      });
+    } finally {
+      setRemovingItems(prev => prev.filter(id => id !== itemId));
     }
   };
 
@@ -210,21 +241,40 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
               <CardContent>
                 {currentCommand?.command_items?.length > 0 ? (
                   <div className="space-y-3">
-                    {currentCommand.command_items.map((item: any, index: number) => (
-                      <div key={index} className="flex justify-between items-center p-3 border rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium">
-                            {item.service?.name || item.product?.name}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {item.quantity}x {formatCurrency(item.unit_price)}
-                          </p>
+                    {currentCommand.command_items.map((item: any, index: number) => {
+                      const isRemoving = removingItems.includes(item.id);
+                      
+                      return (
+                        <div key={index} className="flex justify-between items-center p-3 border rounded-lg">
+                          <div className="flex-1">
+                            <p className="font-medium">
+                              {item.service?.name || item.product?.name}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {item.quantity}x {formatCurrency(item.unit_price)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className="font-medium">{formatCurrency(item.total_price)}</p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRemoveItem(item.id)}
+                              disabled={isRemoving || refreshing}
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
+                            >
+                              {isRemoving ? (
+                                <div className="w-4 h-4 border-2 border-destructive border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium">{formatCurrency(item.total_price)}</p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-muted-foreground text-center py-4">
