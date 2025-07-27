@@ -22,9 +22,10 @@ interface AddItemModalProps {
   command: any;
   isOpen: boolean;
   onClose: () => void;
+  onItemAdded?: (item: any) => void;
 }
 
-const AddItemModal = ({ command, isOpen, onClose }: AddItemModalProps) => {
+const AddItemModal = ({ command, isOpen, onClose, onItemAdded }: AddItemModalProps) => {
   const [selectedType, setSelectedType] = useState<'service' | 'product'>('service');
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [quantity, setQuantity] = useState(1);
@@ -79,6 +80,8 @@ const AddItemModal = ({ command, isOpen, onClose }: AddItemModalProps) => {
 
       const success = await addItemToCommand(command.id, itemData);
       if (success) {
+        // Notificar que um item foi adicionado
+        onItemAdded?.(itemData);
         onClose();
         // Reset form
         setSelectedItem(null);

@@ -351,6 +351,7 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
           command={currentCommand}
           isOpen={showAddItemModal}
           onClose={() => setShowAddItemModal(false)}
+          onItemAdded={handleItemAdded}
         />
       </DialogContent>
     </Dialog>

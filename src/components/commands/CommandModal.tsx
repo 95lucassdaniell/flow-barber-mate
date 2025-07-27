@@ -9,7 +9,8 @@ import {
   Trash2, 
   Package, 
   Scissors,
-  Receipt
+  Receipt,
+  RefreshCw
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
@@ -25,12 +26,19 @@ interface CommandModalProps {
 
 const CommandModal = ({ command, isOpen, onClose }: CommandModalProps) => {
   const [addItemModalOpen, setAddItemModalOpen] = useState(false);
-  const { removeItemFromCommand } = useCommands();
+  const [refreshing, setRefreshing] = useState(false);
+  const { removeItemFromCommand, refetchCommand } = useCommands();
 
   if (!command) return null;
 
   const handleRemoveItem = async (itemId: string) => {
     await removeItemFromCommand(itemId, command.id);
+  };
+
+  const handleItemAdded = async () => {
+    setRefreshing(true);
+    await refetchCommand(command.id);
+    setTimeout(() => setRefreshing(false), 500);
   };
 
   const totalItems = command.command_items?.length || 0;
@@ -105,8 +113,11 @@ const CommandModal = ({ command, isOpen, onClose }: CommandModalProps) => {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">
+                  <CardTitle className="text-lg flex items-center gap-2">
                     Itens da Comanda ({totalItems})
+                    {refreshing && (
+                      <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />
+                    )}
                   </CardTitle>
                   {command.status === 'open' && (
                     <Button 
@@ -197,6 +208,7 @@ const CommandModal = ({ command, isOpen, onClose }: CommandModalProps) => {
         command={command}
         isOpen={addItemModalOpen}
         onClose={() => setAddItemModalOpen(false)}
+        onItemAdded={handleItemAdded}
       />
     </>
   );

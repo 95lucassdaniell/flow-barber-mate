@@ -405,6 +405,40 @@ export const useCommands = () => {
     };
   }, [profile?.barbershop_id]);
 
+  // Função para recarregar uma comanda específica
+  const refetchCommand = async (commandId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('commands')
+        .select(`
+          *,
+          client:clients(name, phone),
+          barber:profiles!commands_barber_id_fkey(full_name),
+          appointment:appointments(appointment_date, start_time, end_time),
+          command_items(
+            *,
+            service:services(name),
+            product:products(name)
+          )
+        `)
+        .eq('id', commandId)
+        .eq('barbershop_id', profile?.barbershop_id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setCommands(prev => 
+          prev.map(cmd => cmd.id === commandId ? data as Command : cmd)
+        );
+        return data as Command;
+      }
+    } catch (error) {
+      console.error('Erro ao recarregar comanda:', error);
+      return null;
+    }
+  };
+
   return {
     commands,
     loading,
@@ -413,6 +447,7 @@ export const useCommands = () => {
     removeItemFromCommand,
     closeCommand,
     getCommandByAppointment,
+    refetchCommand,
     refetchCommands: fetchCommands,
   };
 };
