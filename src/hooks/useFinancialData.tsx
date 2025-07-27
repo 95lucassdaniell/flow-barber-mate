@@ -62,30 +62,34 @@ export function useFinancialData(
     if (!profile?.barbershop_id) return;
 
     try {
-      let query = supabase
+      let salesQuery = supabase
         .from('sales')
         .select('final_amount, sale_date')
         .eq('barbershop_id', profile.barbershop_id);
 
-      if (startDate) query = query.gte('sale_date', startDate);
-      if (endDate) query = query.lte('sale_date', endDate);
-      if (barberId) query = query.eq('barber_id', barberId);
+      if (startDate) salesQuery = salesQuery.gte('sale_date', startDate);
+      if (endDate) salesQuery = salesQuery.lte('sale_date', endDate);
+      if (barberId) salesQuery = salesQuery.eq('barber_id', barberId);
 
-      const { data: sales } = await query;
+      const { data: sales } = await salesQuery;
 
-      let commissionsQuery = supabase
-        .from('commissions')
-        .select('commission_amount, commission_date')
-        .eq('barbershop_id', profile.barbershop_id);
+      // Buscar comissões dos sale_items
+      let saleItemsQuery = supabase
+        .from('sale_items')
+        .select(`
+          commission_amount,
+          sales!inner(sale_date, barbershop_id, barber_id)
+        `)
+        .eq('sales.barbershop_id', profile.barbershop_id);
 
-      if (startDate) commissionsQuery = commissionsQuery.gte('commission_date', startDate);
-      if (endDate) commissionsQuery = commissionsQuery.lte('commission_date', endDate);
-      if (barberId) commissionsQuery = commissionsQuery.eq('barber_id', barberId);
+      if (startDate) saleItemsQuery = saleItemsQuery.gte('sales.sale_date', startDate);
+      if (endDate) saleItemsQuery = saleItemsQuery.lte('sales.sale_date', endDate);
+      if (barberId) saleItemsQuery = saleItemsQuery.eq('sales.barber_id', barberId);
 
-      const { data: commissionsData } = await commissionsQuery;
+      const { data: saleItems } = await saleItemsQuery;
 
       const totalRevenue = sales?.reduce((sum, sale) => sum + Number(sale.final_amount), 0) || 0;
-      const totalCommissions = commissionsData?.reduce((sum, comm) => sum + Number(comm.commission_amount), 0) || 0;
+      const totalCommissions = saleItems?.reduce((sum, item) => sum + Number(item.commission_amount), 0) || 0;
       const totalSales = sales?.length || 0;
       const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
 
@@ -104,31 +108,38 @@ export function useFinancialData(
     if (!profile?.barbershop_id) return;
 
     try {
-      const { data: commissionsData } = await supabase
-        .from('commissions')
+      let saleItemsQuery = supabase
+        .from('sale_items')
         .select(`
-          barbershop_id,
-          barber_id,
           commission_amount,
-          commission_date,
-          profiles!inner(full_name)
+          sales!inner(
+            barbershop_id,
+            barber_id,
+            sale_date,
+            profiles!inner(id, full_name)
+          )
         `)
-        .eq('barbershop_id', profile.barbershop_id)
-        .gte('commission_date', startDate || '1900-01-01')
-        .lte('commission_date', endDate || '2100-12-31');
+        .eq('sales.barbershop_id', profile.barbershop_id);
 
-      const barberStats = commissionsData?.reduce((acc, comm: any) => {
-        const barberId = comm.barber_id;
+      if (startDate) saleItemsQuery = saleItemsQuery.gte('sales.sale_date', startDate);
+      if (endDate) saleItemsQuery = saleItemsQuery.lte('sales.sale_date', endDate);
+
+      const { data: saleItemsData } = await saleItemsQuery;
+
+      const barberStats = saleItemsData?.reduce((acc, item: any) => {
+        const barberId = item.sales.barber_id;
+        const barberProfile = item.sales.profiles;
+        
         if (!acc[barberId]) {
           acc[barberId] = {
             id: barberId,
-            full_name: comm.profiles.full_name,
+            full_name: barberProfile.full_name,
             totalCommissions: 0,
             totalSales: 0,
             salesCount: 0,
           };
         }
-        acc[barberId].totalCommissions += Number(comm.commission_amount);
+        acc[barberId].totalCommissions += Number(item.commission_amount);
         acc[barberId].salesCount += 1;
         return acc;
       }, {} as Record<string, BarberRanking>) || {};
@@ -147,33 +158,35 @@ export function useFinancialData(
 
     try {
       let query = supabase
-        .from('commissions')
+        .from('sale_items')
         .select(`
           id,
           commission_amount,
-          commission_date,
-          sale_id,
-          profiles!inner(full_name),
           sales!inner(
+            id,
+            sale_date,
             final_amount,
+            barbershop_id,
+            barber_id,
+            profiles!inner(full_name),
             clients!inner(name)
           )
         `)
-        .eq('barbershop_id', profile.barbershop_id)
-        .order('commission_date', { ascending: false });
+        .eq('sales.barbershop_id', profile.barbershop_id)
+        .order('sales.sale_date', { ascending: false });
 
-      if (startDate) query = query.gte('commission_date', startDate);
-      if (endDate) query = query.lte('commission_date', endDate);
-      if (barberId) query = query.eq('barber_id', barberId);
+      if (startDate) query = query.gte('sales.sale_date', startDate);
+      if (endDate) query = query.lte('sales.sale_date', endDate);
+      if (barberId) query = query.eq('sales.barber_id', barberId);
 
       const { data } = await query;
       
       const formattedData = data?.map((item: any) => ({
         id: item.id,
         commission_amount: item.commission_amount,
-        commission_date: item.commission_date,
-        sale_id: item.sale_id,
-        barber: { full_name: item.profiles.full_name },
+        commission_date: item.sales.sale_date,
+        sale_id: item.sales.id,
+        barber: { full_name: item.sales.profiles.full_name },
         sale: {
           final_amount: item.sales.final_amount,
           client: { name: item.sales.clients.name }
