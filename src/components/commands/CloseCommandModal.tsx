@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,11 +12,18 @@ import {
   Banknote, 
   Smartphone,
   Receipt,
-  DollarSign
+  DollarSign,
+  Plus,
+  ShoppingCart,
+  Printer
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useCommands } from "@/hooks/useCommands";
 import { useToast } from "@/hooks/use-toast";
+import { printReceipt } from "@/lib/printUtils";
+import { ReceiptTemplate } from "./ReceiptTemplate";
+import AddItemModal from "./AddItemModal";
+import { useBarbershopSettings } from "@/hooks/useBarbershopSettings";
 
 interface CloseCommandModalProps {
   command: any;
@@ -29,14 +36,53 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
   const [discount, setDiscount] = useState(0);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [currentCommand, setCurrentCommand] = useState(command);
   
-  const { closeCommand } = useCommands();
+  const receiptRef = useRef<HTMLDivElement>(null);
+  const { closeCommand, fetchCommands } = useCommands();
   const { toast } = useToast();
+  const { settings: barbershopSettings } = useBarbershopSettings();
+
+  // Atualizar comando quando props mudarem
+  useEffect(() => {
+    setCurrentCommand(command);
+  }, [command]);
 
   if (!command) return null;
 
-  const subtotal = command.total_amount || 0;
+  const subtotal = currentCommand?.total_amount || 0;
   const finalAmount = subtotal - discount;
+
+  // Função para atualizar a comanda após adicionar itens
+  const handleItemAdded = async () => {
+    setShowAddItemModal(false);
+    // Recarregar dados da comanda
+    await fetchCommands();
+    toast({
+      title: "Sucesso",
+      description: "Item adicionado à comanda",
+    });
+  };
+
+  // Função para imprimir cupom
+  const handlePrintReceipt = () => {
+    if (receiptRef.current) {
+      printReceipt(receiptRef.current);
+    } else {
+      toast({
+        title: "Erro",
+        description: "Não foi possível gerar o cupom para impressão",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Função para obter o label do método de pagamento
+  const getPaymentMethodLabel = (methodId: string) => {
+    const method = paymentMethods.find(m => m.id === methodId);
+    return method ? method.label : methodId;
+  };
 
   const handleClose = async () => {
     if (finalAmount < 0) {
@@ -206,6 +252,44 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
             </CardContent>
           </Card>
 
+          {/* Ações Rápidas */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Ações Rápidas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAddItemModal(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Adicionar Item
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={handlePrintReceipt}
+                  className="flex items-center gap-2"
+                >
+                  <Printer className="w-4 h-4" />
+                  Imprimir Cupom
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => window.open('#', '_blank')}
+                  className="flex items-center gap-2"
+                  disabled
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  Vendas Extras
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Total final */}
           <Card className="bg-primary/5 border-primary/20">
             <CardContent className="p-6">
@@ -248,6 +332,26 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
             </Button>
           </div>
         </div>
+
+        {/* Template do cupom (oculto, apenas para impressão) */}
+        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+          <div ref={receiptRef}>
+            <ReceiptTemplate
+              command={currentCommand}
+              barbershop={barbershopSettings}
+              paymentMethod={getPaymentMethodLabel(paymentMethod)}
+              discount={discount}
+              notes={notes}
+            />
+          </div>
+        </div>
+
+        {/* Modal para adicionar itens */}
+        <AddItemModal
+          command={currentCommand}
+          isOpen={showAddItemModal}
+          onClose={() => setShowAddItemModal(false)}
+        />
       </DialogContent>
     </Dialog>
   );
