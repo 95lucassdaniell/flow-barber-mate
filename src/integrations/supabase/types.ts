@@ -935,6 +935,57 @@ export type Database = {
           },
         ]
       }
+      cash_register_closures: {
+        Row: {
+          barbershop_id: string
+          cash_register_id: string
+          closed_at: string
+          closed_by: string
+          closing_balance: number
+          discrepancy: number
+          id: string
+          notes: string | null
+          opening_balance: number
+          total_card: number
+          total_cash: number
+          total_multiple: number
+          total_pix: number
+          total_sales: number
+        }
+        Insert: {
+          barbershop_id: string
+          cash_register_id: string
+          closed_at?: string
+          closed_by: string
+          closing_balance?: number
+          discrepancy?: number
+          id?: string
+          notes?: string | null
+          opening_balance?: number
+          total_card?: number
+          total_cash?: number
+          total_multiple?: number
+          total_pix?: number
+          total_sales?: number
+        }
+        Update: {
+          barbershop_id?: string
+          cash_register_id?: string
+          closed_at?: string
+          closed_by?: string
+          closing_balance?: number
+          discrepancy?: number
+          id?: string
+          notes?: string | null
+          opening_balance?: number
+          total_card?: number
+          total_cash?: number
+          total_multiple?: number
+          total_pix?: number
+          total_sales?: number
+        }
+        Relationships: []
+      }
       cash_register_items: {
         Row: {
           barber_id: string | null
@@ -1880,6 +1931,48 @@ export type Database = {
           sale_id?: string
           sale_item_id?: string
           status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          barbershop_id: string
+          category: string
+          created_at: string
+          created_by: string
+          description: string
+          due_date: string
+          id: string
+          payment_date: string | null
+          payment_status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          barbershop_id: string
+          category: string
+          created_at?: string
+          created_by: string
+          description: string
+          due_date: string
+          id?: string
+          payment_date?: string | null
+          payment_status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          barbershop_id?: string
+          category?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          due_date?: string
+          id?: string
+          payment_date?: string | null
+          payment_status?: string
           updated_at?: string
         }
         Relationships: []

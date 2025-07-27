@@ -59,8 +59,12 @@ export function useFinancialData(
   const [loading, setLoading] = useState(true);
 
   const fetchFinancialStats = async () => {
-    if (!profile?.barbershop_id) return;
+    if (!profile?.barbershop_id) {
+      console.log('useFinancialData: No barbershop_id found');
+      return;
+    }
 
+    console.log('useFinancialData: Fetching stats for barbershop:', profile.barbershop_id);
     try {
       let salesQuery = supabase
         .from('sales')

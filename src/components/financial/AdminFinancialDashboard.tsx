@@ -6,6 +6,8 @@ import FinancialStats from "./FinancialStats";
 import CommissionHistory from "./CommissionHistory";
 import FinancialFilters from "./FinancialFilters";
 import BarberRankings from "./BarberRankings";
+import ExpenseManagement from "./ExpenseManagement";
+import CashRegisterHistory from "./CashRegisterHistory";
 import { format } from "date-fns";
 
 export default function AdminFinancialDashboard() {
@@ -46,6 +48,8 @@ export default function AdminFinancialDashboard() {
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="rankings">Rankings</TabsTrigger>
           <TabsTrigger value="commissions">Comissões</TabsTrigger>
+          <TabsTrigger value="expenses">Despesas</TabsTrigger>
+          <TabsTrigger value="cash-history">Histórico de Caixa</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -94,6 +98,14 @@ export default function AdminFinancialDashboard() {
               <CommissionHistory commissions={commissions} showBarberColumn={true} />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="expenses" className="space-y-4">
+          <ExpenseManagement />
+        </TabsContent>
+
+        <TabsContent value="cash-history" className="space-y-4">
+          <CashRegisterHistory />
         </TabsContent>
       </Tabs>
     </div>
