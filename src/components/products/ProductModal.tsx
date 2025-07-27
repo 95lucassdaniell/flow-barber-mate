@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,23 +47,29 @@ export const ProductModal = ({ isOpen, onClose, product }: ProductModalProps) =>
   const updateProduct = useUpdateProduct();
 
   useEffect(() => {
+    console.log('ProductModal useEffect - product:', product, 'isOpen:', isOpen);
+    
     if (product) {
-      setFormData({
-        name: product.name,
+      console.log('Setting form data with product:', product);
+      const newFormData = {
+        name: product.name || '',
         description: product.description || '',
-        category: product.category,
+        category: product.category || 'geral',
         barcode: product.barcode || '',
-        cost_price: product.cost_price,
-        selling_price: product.selling_price,
-        stock_quantity: product.stock_quantity,
-        min_stock_alert: product.min_stock_alert,
+        cost_price: Number(product.cost_price) || 0,
+        selling_price: Number(product.selling_price) || 0,
+        stock_quantity: Number(product.stock_quantity) || 0,
+        min_stock_alert: Number(product.min_stock_alert) || 5,
         supplier: product.supplier || '',
         image_url: product.image_url || '',
-        is_active: product.is_active,
-        commission_rate: product.commission_rate,
-        commission_type: product.commission_type,
-      });
+        is_active: Boolean(product.is_active),
+        commission_rate: Number(product.commission_rate) || 0,
+        commission_type: product.commission_type || 'percentage',
+      };
+      console.log('New form data:', newFormData);
+      setFormData(newFormData);
     } else {
+      console.log('Resetting form data for new product');
       setFormData({
         name: '',
         description: '',
@@ -127,6 +133,9 @@ export const ProductModal = ({ isOpen, onClose, product }: ProductModalProps) =>
           <DialogTitle>
             {product ? 'Editar Produto' : 'Novo Produto'}
           </DialogTitle>
+          <DialogDescription>
+            {product ? 'Edite as informações do produto selecionado.' : 'Adicione um novo produto ao seu catálogo.'}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
