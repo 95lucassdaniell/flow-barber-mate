@@ -31,7 +31,7 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { slug } = useParams();
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
   const [barbershopData, setBarbershopData] = useState<{
     name: string;
     logo_url: string;
@@ -83,6 +83,10 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
     }
   };
 
+  const handleLogout = async () => {
+    await signOut();
+  };
+
   return (
     <div className="min-h-screen bg-secondary/20 flex">
       {/* Sidebar */}
@@ -132,7 +136,12 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
         </nav>
 
         <div className="absolute bottom-4 left-4 right-4">
-          <Button variant="ghost" className="w-full justify-start" size="sm">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start h-10" 
+            size="sm"
+            onClick={handleLogout}
+          >
             <LogOut className="w-4 h-4 mr-2" />
             <span className={`${sidebarOpen ? "block" : "hidden md:block"}`}>
               Sair
