@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useBarberSelection } from "@/hooks/useBarberSelection";
 import { useAppointments } from "@/hooks/useAppointments";
 import { useBarbershopSettings } from "@/hooks/useBarbershopSettings";
+import { useScheduleUrl } from "@/hooks/useScheduleUrl";
 import { AppointmentModal } from "./AppointmentModal";
 import { BarberSelector } from "./BarberSelector";
 
@@ -32,7 +33,7 @@ const SchedulePage = () => {
     isTimeSlotInPast,
     isTimeSlotAvailable 
   } = useBarbershopSettings();
-  const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
+  const { selectedDate, navigateToDate, navigateToToday } = useScheduleUrl();
   const [viewMode, setViewMode] = useState<"day" | "week">("day");
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
@@ -334,7 +335,7 @@ const SchedulePage = () => {
                     ? "bg-accent text-accent-foreground" 
                     : "bg-card hover:bg-card/80"
                 }`}
-                onClick={() => setSelectedDate(day)}
+                onClick={() => navigateToDate(day)}
               >
                 <p className="text-xs text-muted-foreground">
                   {format(day, "EEE", { locale: ptBR })}
@@ -362,7 +363,7 @@ const SchedulePage = () => {
                             : "bg-gray-100 hover:bg-gray-200 text-gray-600"
                         }`}
                         onClick={() => {
-                          setSelectedDate(day);
+                          navigateToDate(day);
                           handleTimeSlotClick(timeSlot);
                         }}
                         title={appointment ? `${appointment.client?.name} - ${appointment.service?.name}` : `Agendar às ${timeSlot}`}
@@ -420,10 +421,7 @@ const SchedulePage = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                const today = startOfDay(new Date());
-                setSelectedDate(today);
-              }}
+              onClick={navigateToToday}
               className={isSameDay(selectedDate, new Date()) ? "bg-primary text-primary-foreground" : ""}
             >
               {isSameDay(selectedDate, new Date()) ? "📍 Hoje" : "Hoje"}
@@ -470,7 +468,7 @@ const SchedulePage = () => {
                 if (date) {
                   const normalizedDate = startOfDay(date);
                   console.log('📅 Data selecionada no calendário:', format(normalizedDate, 'yyyy-MM-dd'));
-                  setSelectedDate(normalizedDate);
+                  navigateToDate(normalizedDate);
                 }
               }}
               locale={ptBR}
@@ -507,14 +505,14 @@ const SchedulePage = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setSelectedDate(addDays(selectedDate, -1))}
+                  onClick={() => navigateToDate(addDays(selectedDate, -1))}
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setSelectedDate(addDays(selectedDate, 1))}
+                  onClick={() => navigateToDate(addDays(selectedDate, 1))}
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>

@@ -40,7 +40,7 @@ const App = () => (
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/app/:slug" element={<DashboardPage />} />
-          <Route path="/app/:slug/agenda" element={<SchedulePageWithLayout />} />
+          <Route path="/app/:slug/agenda/:date?" element={<SchedulePageWithLayout />} />
           <Route path="/app/:slug/prestadores" element={<ProvidersPage />} />
           <Route path="/app/:slug/clients" element={<ClientsPage />} />
           <Route path="/app/:slug/services" element={<ServicesPage />} />
