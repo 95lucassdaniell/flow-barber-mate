@@ -90,15 +90,15 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
         sidebarOpen ? "w-64" : "w-16 md:w-64"
       }`}>
         <div className="p-4 border-b border-border">
-          <div className="flex items-center space-x-3">
-            <Avatar className="w-8 h-8">
+          <div className="flex flex-col items-center space-y-2">
+            <Avatar className="w-16 h-16">
               <AvatarImage src={barbershopData.logo_url} alt="Logo da barbearia" />
-              <AvatarFallback>
+              <AvatarFallback className="text-2xl">
                 {barbershopData.name.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div className={`${sidebarOpen ? "block" : "hidden md:block"}`}>
-              <h2 className="font-semibold truncate">{barbershopData.name}</h2>
+            <div className={`text-center ${sidebarOpen ? "block" : "hidden md:block"}`}>
+              <h2 className="font-semibold text-lg">{barbershopData.name}</h2>
               <p className="text-sm text-muted-foreground">
                 {profile?.role === 'admin' ? 'Administrador' : 
                  profile?.role === 'receptionist' ? 'Recepcionista' : 'Barbeiro'}
