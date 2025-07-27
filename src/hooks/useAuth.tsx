@@ -118,6 +118,14 @@ export const useAuth = () => {
             setSession(session);
             setUser(session.user);
             
+            // Validate that auth.uid() works before fetching profile
+            const authValid = await validateAuthConnection();
+            if (!authValid) {
+              console.warn('useAuth: auth.uid() not working, forcing logout');
+              await forceLogout('auth.uid() validation failed');
+              return;
+            }
+            
             // Fetch profile but don't block initialization
             try {
               const profileData = await fetchProfile(session.user.id);
@@ -196,6 +204,35 @@ export const useAuth = () => {
     }
   };
 
+  // Validate if auth.uid() works with current session
+  const validateAuthConnection = async (): Promise<boolean> => {
+    try {
+      console.log('useAuth: Validating auth connection...');
+      const { data, error } = await supabase.rpc('get_user_barbershop_id');
+      
+      if (error) {
+        console.error('Auth validation failed:', error);
+        return false;
+      }
+      
+      console.log('useAuth: Auth validation successful, barbershop_id:', data);
+      return true;
+    } catch (error) {
+      console.error('Auth validation error:', error);
+      return false;
+    }
+  };
+
+  // Force logout when session is invalid
+  const forceLogout = async (reason: string) => {
+    console.warn('useAuth: Forcing logout -', reason);
+    setSession(null);
+    setUser(null);
+    setProfile(null);
+    setLoading(false);
+    await supabase.auth.signOut();
+  };
+
   return {
     user,
     session,
@@ -208,6 +245,8 @@ export const useAuth = () => {
     canManageAll: profile?.role === 'admin' || profile?.role === 'receptionist',
     signOut,
     refreshSession,
+    validateAuthConnection,
+    forceLogout,
     isAuthenticated: !!user && !!session
   };
 };
