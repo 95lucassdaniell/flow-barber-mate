@@ -46,8 +46,8 @@ export default function ExpenseManagement() {
   const filteredExpenses = expenses.filter(expense => {
     const matchesSearch = expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          expense.category.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !selectedCategory || expense.category === selectedCategory;
-    const matchesStatus = !selectedStatus || expense.payment_status === selectedStatus;
+    const matchesCategory = !selectedCategory || selectedCategory === 'all' || expense.category === selectedCategory;
+    const matchesStatus = !selectedStatus || selectedStatus === 'all' || expense.payment_status === selectedStatus;
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
@@ -186,7 +186,7 @@ export default function ExpenseManagement() {
                 <SelectValue placeholder="Categoria" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas</SelectItem>
+                <SelectItem value="all">Todas</SelectItem>
                 {EXPENSE_CATEGORIES.map(category => (
                   <SelectItem key={category} value={category}>{category}</SelectItem>
                 ))}
@@ -198,7 +198,7 @@ export default function ExpenseManagement() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="pending">Pendente</SelectItem>
                 <SelectItem value="paid">Pago</SelectItem>
                 <SelectItem value="overdue">Vencido</SelectItem>
