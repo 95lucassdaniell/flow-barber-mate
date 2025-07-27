@@ -33,7 +33,7 @@ import ProviderServicesModal from "./ProviderServicesModalSimple";
 
 const ProvidersManagement = () => {
   const { providers, loading, toggleProviderStatus, fetchProviders } = useProviders();
-  const { canManageAll, profile, loading: authLoading } = useAuth();
+  const { canManageAll, profile, loading: authLoading, user } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -103,6 +103,27 @@ const ProvidersManagement = () => {
         <Card>
           <CardContent className="p-6">
             <div className="text-center">Carregando...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Check authentication first
+  if (!user) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Prestadores</h1>
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center space-y-4">
+              <div className="text-lg font-medium">Autenticação necessária</div>
+              <p className="text-muted-foreground">
+                Você precisa estar logado para gerenciar prestadores.
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>

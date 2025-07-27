@@ -135,6 +135,25 @@ const ProviderModal = ({ isOpen, onClose, provider, onSuccess }: ProviderModalPr
     } catch (error: any) {
       console.error('Error in form submission:', error);
       
+      // Handle specific authentication errors
+      if (error?.message?.includes('logado')) {
+        toast({
+          title: "Autenticação necessária",
+          description: "Por favor, faça login novamente para continuar.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (error?.message?.includes('permissão')) {
+        toast({
+          title: "Sem permissão",
+          description: "Você não tem permissão para realizar esta ação.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       const errorMessage = error?.message || 'Ocorreu um erro inesperado ao salvar o prestador.';
       
       toast({

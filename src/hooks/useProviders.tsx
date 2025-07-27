@@ -132,6 +132,12 @@ export const useProviders = () => {
 
   const updateProvider = async (id: string, updates: Partial<Provider>) => {
     try {
+      // Check authentication first
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        throw new Error('Você precisa estar logado para editar prestadores.');
+      }
+
       console.log('Updating provider:', id, 'with updates:', updates);
       
       if (!id) {
@@ -178,6 +184,12 @@ export const useProviders = () => {
 
       if (error) {
         console.error('Supabase error updating provider:', error);
+        if (error.code === 'PGRST116') {
+          throw new Error('Prestador não encontrado ou você não tem permissão para editá-lo.');
+        }
+        if (error.code === '42501') {
+          throw new Error('Você não tem permissão para editar este prestador.');
+        }
         if (error.code === '23505') {
           throw new Error('Este email já está em uso.');
         }
