@@ -1,614 +1,141 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Calendar as CalendarIcon, 
-  Clock, 
-  Plus, 
-  Filter,
-  ChevronLeft,
-  ChevronRight
-} from "lucide-react";
-import { format, startOfWeek, addDays, isSameDay, startOfDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { useAuth } from "@/hooks/useAuth";
-import { useBarberSelection } from "@/hooks/useBarberSelection";
-import { useAppointments } from "@/hooks/useAppointments";
-import { useBarbershopSettings } from "@/hooks/useBarbershopSettings";
-import { useScheduleUrl } from "@/hooks/useScheduleUrl";
-import { AppointmentModal } from "./AppointmentModal";
-import { BarberSelector } from "./BarberSelector";
-import { GridScheduleView } from "./GridScheduleView";
-import { useProviders } from "@/hooks/useProviders";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useEffect, useState } from 'react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Loader2, Users } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useBarberSelection } from '@/hooks/useBarberSelection';
+import { useAppointments } from '@/hooks/useAppointments';
+import { AppointmentModal } from './AppointmentModal';
+import { useScheduleUrl } from '@/hooks/useScheduleUrl';
+import { useDebounce } from '@/hooks/useDebounce';
+import { HorizontalGridSchedule } from './HorizontalGridSchedule';
+import { CompactCalendar } from './CompactCalendar';
+import { toast } from "sonner";
 
 const SchedulePage = () => {
-  const { profile, loading: authLoading } = useAuth();
-  const { selectedBarberId, selectedBarber, loading: barberLoading } = useBarberSelection();
-  const { appointments, loading, fetchAppointments, setAppointments } = useAppointments();
-  const { providers: barbers } = useProviders();
-  const { 
-    generateTimeSlots, 
-    generateAllTimeSlots,
-    isOpenOnDate, 
-    getOpeningHoursForDate,
-    isTimeSlotInPast,
-    isTimeSlotAvailable 
-  } = useBarbershopSettings();
-  const { selectedDate, navigateToDate, navigateToToday } = useScheduleUrl();
-  const [viewMode, setViewMode] = useState<"day" | "week" | "grid">("day");
-  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+  const { profile } = useAuth();
+  const { selectedDate, navigateToDate } = useScheduleUrl();
+  const { barbers, loading: barbersLoading } = useBarberSelection();
+  const { appointments, loading: appointmentsLoading, fetchAppointments } = useAppointments();
+  const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
+  const [selectedBarberId_, setSelectedBarberId_] = useState<string>('');
 
-  // Debug: Log da data atual para verificar
-  console.log('🗓️ SchedulePage - Data atual real:', format(new Date(), 'yyyy-MM-dd HH:mm:ss'));
-  console.log('🗓️ SchedulePage - Data selecionada:', format(selectedDate, 'yyyy-MM-dd HH:mm:ss'));
-  console.log('🔍 SchedulePage - Barbeiro selecionado:', selectedBarberId);
-  console.log('📊 SchedulePage - Total de agendamentos:', appointments.length);
-  console.log('🎯 SchedulePage - Agendamentos da data selecionada:', 
-    appointments.filter(app => app.appointment_date === format(selectedDate, 'yyyy-MM-dd')).length
-  );
+  // Debounce the date changes to avoid too many API calls
+  const debouncedDate = useDebounce(selectedDate, 300);
 
-  // Fetch appointments when component mounts and when dependencies change
+  // Fetch appointments when date changes - get all barbers' appointments
   useEffect(() => {
-    if (!selectedBarberId) {
-      console.log('⏳ Aguardando seleção do barbeiro...');
-      return;
-    }
-    
-    const dateString = format(selectedDate, 'yyyy-MM-dd');
-    console.log('🔄 SchedulePage useEffect - Iniciando busca:', {
-      barberId: selectedBarberId,
-      date: dateString,
-      viewMode,
-      isToday: isSameDay(selectedDate, new Date())
-    });
+    if (!profile?.barbershop_id || barbersLoading || barbers.length === 0) return;
 
-    // Debounce para evitar calls múltiplas
-    const timeoutId = setTimeout(() => {
-      if (viewMode === "week") {
-        // Limpar agendamentos ao iniciar busca da semana
-        setAppointments([]);
-        
-        const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
-        
-        for (let i = 0; i < 7; i++) {
-          const currentDay = addDays(weekStart, i);
-          const dayString = format(currentDay, 'yyyy-MM-dd');
-          fetchAppointments(selectedBarberId, dayString, 'week');
-        }
-      } else {
-        fetchAppointments(selectedBarberId, dateString, 'day');
-      }
-    }, 300);
+    // Fetch appointments for all barbers for the grid view
+    fetchAppointments(undefined, format(debouncedDate, 'yyyy-MM-dd'), 'day');
+  }, [profile?.barbershop_id, debouncedDate, fetchAppointments, barbersLoading, barbers]);
 
-    return () => clearTimeout(timeoutId);
-  }, [selectedBarberId, selectedDate, viewMode]);
-
-  // Generate all time slots for display
-  const timeSlots = generateAllTimeSlots(selectedDate);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "confirmed": return "bg-green-100 text-green-800 border-green-200";
-      case "pending": return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "completed": return "bg-blue-100 text-blue-800 border-blue-200";
-      case "cancelled": return "bg-red-100 text-red-800 border-red-200";
-      default: return "bg-gray-100 text-gray-800 border-gray-200";
-    }
+  const handleTimeSlotClick = (barberId: string, timeSlot: string) => {
+    setSelectedTimeSlot(timeSlot);
+    setSelectedBarberId_(barberId);
+    setIsAppointmentModalOpen(true);
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "confirmed": return "Confirmado";
-      case "pending": return "Pendente";
-      case "completed": return "Concluído";
-      case "cancelled": return "Cancelado";
-      default: return status;
+  const handleAppointmentClick = (appointment: any) => {
+    // TODO: Implement appointment details modal
+    console.log('Appointment clicked:', appointment);
+  };
+
+  // Generate time slots for the day
+  const timeSlots = [];
+  for (let hour = 8; hour <= 18; hour++) {
+    for (let minute = 0; minute < 60; minute += 15) {
+      const timeSlot = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+      timeSlots.push(timeSlot);
     }
-  };
+  }
 
-  const getAppointmentForTimeSlot = (timeSlot: string, date?: Date) => {
-    // Filtrar agendamentos apenas para a data selecionada
-    const targetDate = date ? format(date, 'yyyy-MM-dd') : format(selectedDate, 'yyyy-MM-dd');
-    const dayAppointments = appointments.filter(apt => apt.appointment_date === targetDate);
-    
-    return dayAppointments.find(apt => apt.start_time.slice(0, 5) === timeSlot);
-  };
-
-  if (authLoading || barberLoading) {
+  if (!profile) {
     return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-muted rounded w-32 mb-2" />
-          <div className="h-4 bg-muted rounded w-64" />
-        </div>
-        <div className="grid lg:grid-cols-4 gap-6">
-          <div className="h-96 bg-muted rounded-lg animate-pulse" />
-          <div className="lg:col-span-3 h-96 bg-muted rounded-lg animate-pulse" />
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (barbersLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Carregando barbeiros...</p>
         </div>
       </div>
     );
   }
 
-  const handleTimeSlotClick = (timeSlot: string) => {
-    setSelectedTimeSlot(timeSlot);
-    setShowAppointmentModal(true);
-  };
-
-  const renderDayView = () => {
-    const isBarbershopOpen = isOpenOnDate(selectedDate);
-    
-    // Se não há horários definidos, usar horários padrão para visualização
-    const displaySlots = timeSlots.length > 0 ? timeSlots : 
-      ['09:00', '09:15', '09:30', '09:45', '10:00', '10:15', '10:30', '10:45',
-       '11:00', '11:15', '11:30', '11:45', '12:00', '12:15', '12:30', '12:45',
-       '13:00', '13:15', '13:30', '13:45', '14:00', '14:15', '14:30', '14:45',
-       '15:00', '15:15', '15:30', '15:45', '16:00', '16:15', '16:30', '16:45',
-       '17:00', '17:15', '17:30', '17:45', '18:00'];
-
-    return (
-      <div className="space-y-3">
-        {displaySlots.map((timeSlot) => {
-          const appointment = getAppointmentForTimeSlot(timeSlot);
-          const isAvailable = isBarbershopOpen && isTimeSlotAvailable(selectedDate, timeSlot);
-          const isPast = isTimeSlotInPast(selectedDate, timeSlot);
-          
-          // Determinar o estado do slot
-          let slotState: 'available' | 'occupied' | 'past' | 'closed' = 'available';
-          let slotLabel = 'Horário disponível';
-          let canClick = false;
-          
-          if (appointment) {
-            slotState = 'occupied';
-            canClick = true; // Pode clicar para editar
-          } else if (!isBarbershopOpen) {
-            slotState = 'closed';
-            slotLabel = 'Fechado';
-          } else if (isPast) {
-            slotState = 'past';
-            slotLabel = 'Horário passado';
-          } else if (isAvailable) {
-            slotState = 'available';
-            slotLabel = 'Horário disponível';
-            canClick = true;
-          }
-        
-          return (
-            <div 
-              key={timeSlot}
-              className={`flex items-center p-3 rounded-lg border transition-colors ${
-                slotState === 'occupied' 
-                  ? "bg-card hover:bg-card/80 cursor-pointer" 
-                  : slotState === 'available'
-                  ? "bg-gray-50 hover:bg-gray-100 border-dashed cursor-pointer"
-                  : slotState === 'past'
-                  ? "bg-muted/30 border-muted cursor-not-allowed opacity-60"
-                  : "bg-destructive/10 border-destructive/20 cursor-not-allowed opacity-60"
-              }`}
-              onClick={() => {
-                if (canClick) {
-                  if (appointment) {
-                    // TODO: Implementar edição de agendamento
-                    console.log('Editar agendamento:', appointment);
-                  } else {
-                    handleTimeSlotClick(timeSlot);
-                  }
-                }
-              }}
-            >
-              <div className="flex items-center space-x-3 flex-1">
-                <div className="flex items-center space-x-2 w-20">
-                  <Clock className={`w-4 h-4 ${
-                    slotState === 'past' || slotState === 'closed' 
-                      ? 'text-muted-foreground/50' 
-                      : 'text-muted-foreground'
-                  }`} />
-                  <span className={`text-sm font-medium ${
-                    slotState === 'past' || slotState === 'closed' 
-                      ? 'text-muted-foreground' 
-                      : ''
-                  }`}>{timeSlot}</span>
-                </div>
-                
-                <div className="flex-1">
-                  {appointment ? (
-                    <>
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <p className="font-medium">{appointment.client?.name || 'Cliente'}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {appointment.service?.name || 'Serviço'} • {appointment.barber?.full_name || 'Barbeiro'}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {appointment.client?.phone || ''}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-green-600">
-                            R$ {Number(appointment.total_price).toFixed(2)}
-                          </p>
-                          <Badge variant="secondary" className={getStatusColor(appointment.status)}>
-                            {getStatusText(appointment.status)}
-                          </Badge>
-                        </div>
-                      </div>
-                      
-                      {/* Botões de ação */}
-                      <div className="flex gap-2 flex-wrap">
-                        <Button 
-                          size="sm" 
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // TODO: Abrir comanda do agendamento
-                            console.log('Realizado/Comanda para agendamento:', appointment.id);
-                          }}
-                        >
-                          Realizado/Comanda
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="border-red-500 text-red-600 hover:bg-red-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // TODO: Marcar como ausência
-                            console.log('Ausência para agendamento:', appointment.id);
-                          }}
-                        >
-                          Ausência
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="border-red-500 text-red-600 hover:bg-red-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // TODO: Cancelar agendamento
-                            console.log('Cancelar agendamento:', appointment.id);
-                          }}
-                        >
-                          Cancelar
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="border-blue-500 text-blue-600 hover:bg-blue-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // TODO: Adicionar serviço
-                            console.log('Adicionar serviço ao agendamento:', appointment.id);
-                          }}
-                        >
-                          + Serviço
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="border-orange-500 text-orange-600 hover:bg-orange-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // TODO: Adicionar produto
-                            console.log('Adicionar produto ao agendamento:', appointment.id);
-                          }}
-                        >
-                          + Produto
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <p className={`italic ${
-                        slotState === 'past' || slotState === 'closed' 
-                          ? 'text-muted-foreground' 
-                          : 'text-muted-foreground'
-                      }`}>{slotLabel}</p>
-                      {slotState === 'available' && (
-                        <Button variant="ghost" size="sm">
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const renderWeekView = () => {
-    const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
-    const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-
-    return (
-      <div className="grid grid-cols-7 gap-2">
-        {weekDays.map((day) => {
-          const dayTimeSlots = generateAllTimeSlots(day);
-          const isOpen = isOpenOnDate(day);
-          
-          return (
-            <div key={day.toISOString()} className="space-y-2">
-              <div 
-                className={`text-center p-2 rounded-lg cursor-pointer transition-colors ${
-                  isSameDay(day, selectedDate) 
-                    ? "bg-accent text-accent-foreground" 
-                    : "bg-card hover:bg-card/80"
-                }`}
-                onClick={() => navigateToDate(day)}
-              >
-                <p className="text-xs text-muted-foreground">
-                  {format(day, "EEE", { locale: ptBR })}
-                </p>
-                <p className="font-medium">{format(day, "d")}</p>
-                {!isOpen && (
-                  <p className="text-xs text-red-500">Fechado</p>
-                )}
-              </div>
-              
-              <div className="space-y-1">
-                {!isOpen ? (
-                  <div className="text-xs text-center text-muted-foreground p-2">
-                    Fechado
-                  </div>
-                ) : (
-                  dayTimeSlots.slice(0, 6).map((timeSlot) => {
-                    const appointment = getAppointmentForTimeSlot(timeSlot, day);
-                    return (
-                      <div 
-                        key={`${day.toISOString()}-${timeSlot}`}
-                        className={`text-xs p-1 rounded cursor-pointer transition-colors ${
-                          appointment 
-                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                            : "bg-gray-100 hover:bg-gray-200 text-gray-600"
-                        }`}
-                        onClick={() => {
-                          navigateToDate(day);
-                          handleTimeSlotClick(timeSlot);
-                        }}
-                        title={appointment ? `${appointment.client?.name} - ${appointment.service?.name}` : `Agendar às ${timeSlot}`}
-                      >
-                        {appointment ? (
-                          <div className="truncate">
-                            <div className="font-medium">{timeSlot}</div>
-                            <div className="truncate">{appointment.client?.name}</div>
-                          </div>
-                        ) : (
-                          <div className="text-center">{timeSlot}</div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-                
-                {/* Show count of remaining appointments if there are more than 6 */}
-                {isOpen && dayTimeSlots.length > 6 && (
-                  <div className="text-xs text-center text-muted-foreground p-1">
-                    +{dayTimeSlots.length - 6} mais
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Agenda</h1>
-          <p className="text-muted-foreground">
-            {format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
-          </p>
-          <div className="flex items-center gap-2 mt-1">
-            <Badge variant={isSameDay(selectedDate, new Date()) ? "default" : "secondary"}>
-              {isSameDay(selectedDate, new Date()) ? "🟢 HOJE" : "📅 Data Selecionada"}
-            </Badge>
-            <span className="text-xs text-muted-foreground">
-              {appointments.filter(app => app.appointment_date === format(selectedDate, 'yyyy-MM-dd')).length} de {appointments.length} agendamento{appointments.length !== 1 ? 's' : ''}
-            </span>
-          </div>
-        </div>
-        
-        <div className="flex items-center space-x-4">
-          <BarberSelector />
-          
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={navigateToToday}
-              className={isSameDay(selectedDate, new Date()) ? "bg-primary text-primary-foreground" : ""}
-            >
-              {isSameDay(selectedDate, new Date()) ? "📍 Hoje" : "Hoje"}
-            </Button>
-            <Button
-              variant={viewMode === "day" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("day")}
-            >
-              Dia
-            </Button>
-            <Button
-              variant={viewMode === "week" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("week")}
-            >
-              Semana
-            </Button>
-            <Button
-              variant="hero"
-              onClick={() => setShowAppointmentModal(true)}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Agendamento
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid lg:grid-cols-4 gap-6">
-        {/* Calendário */}
-        <Card className="shadow-elegant">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <CalendarIcon className="w-5 h-5" />
-              <span>Calendário</span>
+    <div className="container mx-auto p-6 max-w-7xl space-y-6">
+      {/* Header com calendário e controles */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Agenda - {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
             </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date) => {
-                if (date) {
-                  const normalizedDate = startOfDay(date);
-                  console.log('📅 Data selecionada no calendário:', format(normalizedDate, 'yyyy-MM-dd'));
-                  navigateToDate(normalizedDate);
-                }
-              }}
-              locale={ptBR}
-              className="rounded-md"
-              modifiers={{
-                today: new Date()
-              }}
-              modifiersStyles={{
-                today: {
-                  fontWeight: 'bold',
-                  color: 'hsl(var(--primary))',
-                  backgroundColor: 'hsl(var(--primary) / 0.1)'
-                }
-              }}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Agenda Principal */}
-        <Card className="lg:col-span-3 shadow-elegant">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center space-x-2">
-                <Clock className="w-5 h-5" />
-                <span>Agenda</span>
-              </CardTitle>
+            
+            <div className="flex items-center gap-4">
+              <CompactCalendar
+                selectedDate={selectedDate}
+                onDateSelect={navigateToDate}
+              />
               
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigateToDate(addDays(selectedDate, -1))}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigateToDate(addDays(selectedDate, 1))}
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
+              <Button 
+                onClick={() => setIsAppointmentModalOpen(true)} 
+                className="flex items-center gap-2"
+              >
+                <Users className="h-4 w-4" />
+                Novo Agendamento
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Grid Schedule */}
+      <Card>
+        <CardContent className="pt-6">
+          {appointmentsLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">Carregando agendamentos...</p>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "day" | "week" | "grid")}>
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="day">Dia Individual</TabsTrigger>
-                <TabsTrigger value="week">Visão Semanal</TabsTrigger>
-                <TabsTrigger value="grid">Grid Múltiplo</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="day" className="mt-4">
-                {loading ? (
-                  <div className="space-y-3">
-                    {Array.from({ length: 8 }).map((_, i) => (
-                      <div key={i} className="h-16 bg-muted rounded-lg animate-pulse" />
-                    ))}
-                  </div>
-                ) : (
-                  renderDayView()
-                )}
-              </TabsContent>
-              
-              <TabsContent value="week" className="mt-4">
-                {loading ? (
-                  <div className="grid grid-cols-7 gap-2">
-                    {Array.from({ length: 7 }).map((_, i) => (
-                      <div key={i} className="h-48 bg-muted rounded-lg animate-pulse" />
-                    ))}
-                  </div>
-                ) : (
-                  renderWeekView()
-                )}
-              </TabsContent>
-              
-              <TabsContent value="grid" className="mt-4">
-                {loading ? (
-                  <div className="h-96 bg-muted rounded-lg animate-pulse" />
-                ) : (
-                  <GridScheduleView
-                    date={selectedDate}
-                    barbers={barbers}
-                    appointments={appointments.filter(apt => 
-                      apt.appointment_date === format(selectedDate, 'yyyy-MM-dd')
-                    )}
-                    timeSlots={timeSlots}
-                    onAppointmentClick={(appointment) => {
-                      console.log('Clicou no agendamento:', appointment);
-                      // TODO: Implementar edição/visualização do agendamento
-                    }}
-                    onTimeSlotClick={(barberId, timeSlot) => {
-                      console.log('Clicou no slot:', barberId, timeSlot);
-                      // TODO: Implementar agendamento para barbeiro específico
-                      setSelectedTimeSlot(timeSlot);
-                      setShowAppointmentModal(true);
-                    }}
-                  />
-                )}
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      </div>
+          ) : (
+            <HorizontalGridSchedule
+              date={selectedDate}
+              barbers={barbers}
+              appointments={appointments}
+              timeSlots={timeSlots}
+              onTimeSlotClick={handleTimeSlotClick}
+              onAppointmentClick={handleAppointmentClick}
+            />
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Modal de Agendamento */}
-      {showAppointmentModal && (
-        <AppointmentModal
-          isOpen={showAppointmentModal}
-          onClose={() => {
-            setShowAppointmentModal(false);
-            setSelectedTimeSlot(null);
-          }}
-          selectedDate={selectedDate}
-          selectedTime={selectedTimeSlot}
-          selectedBarberId={selectedBarberId}
-          onAppointmentCreated={() => {
-            if (selectedBarberId && selectedDate) {
-              if (viewMode === "week") {
-                // Refetch entire week
-                const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
-                for (let i = 0; i < 7; i++) {
-                  const currentDay = addDays(weekStart, i);
-                  const dateString = format(currentDay, 'yyyy-MM-dd');
-                  fetchAppointments(selectedBarberId, dateString);
-                }
-              } else {
-                const dateString = format(selectedDate, 'yyyy-MM-dd');
-                fetchAppointments(selectedBarberId, dateString);
-              }
-            }
-          }}
-        />
-      )}
+      {/* Appointment Modal */}
+      <AppointmentModal
+        isOpen={isAppointmentModalOpen}
+        onClose={() => setIsAppointmentModalOpen(false)}
+        selectedDate={selectedDate}
+        selectedTime={selectedTimeSlot}
+        selectedBarberId={selectedBarberId_}
+        onAppointmentCreated={() => {
+          fetchAppointments(undefined, format(selectedDate, 'yyyy-MM-dd'), 'day');
+        }}
+      />
     </div>
   );
 };
