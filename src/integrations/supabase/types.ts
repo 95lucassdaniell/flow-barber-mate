@@ -1431,6 +1431,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_monthly_partition: {
+        Args: { table_name: string; start_date: string }
+        Returns: undefined
+      }
       create_super_admin: {
         Args: { user_email: string; user_full_name: string }
         Returns: string
@@ -1438,6 +1442,14 @@ export type Database = {
       generate_command_number: {
         Args: Record<PropertyKey, never>
         Returns: number
+      }
+      get_barbershop_performance_stats: {
+        Args: { barbershop_uuid: string }
+        Returns: {
+          metric_name: string
+          metric_value: number
+          metric_date: string
+        }[]
       }
       get_financial_overview: {
         Args: Record<PropertyKey, never>
@@ -1456,6 +1468,15 @@ export type Database = {
           id: string
           full_name: string
           email: string
+        }[]
+      }
+      get_table_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          table_name: string
+          row_count: number
+          table_size: string
+          index_size: string
         }[]
       }
       get_user_barbershop_id: {
