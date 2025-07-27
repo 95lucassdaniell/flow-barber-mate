@@ -40,9 +40,10 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
   const [currentCommand, setCurrentCommand] = useState(command);
   
   const receiptRef = useRef<HTMLDivElement>(null);
-  const { closeCommand, fetchCommands } = useCommands();
+  const { closeCommand, refetchCommand } = useCommands();
   const { toast } = useToast();
   const { settings: barbershopSettings } = useBarbershopSettings();
+  const [refreshing, setRefreshing] = useState(false);
 
   // Atualizar comando quando props mudarem
   useEffect(() => {
@@ -56,13 +57,30 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
 
   // Função para atualizar a comanda após adicionar itens
   const handleItemAdded = async () => {
+    setRefreshing(true);
     setShowAddItemModal(false);
-    // Recarregar dados da comanda
-    await fetchCommands();
-    toast({
-      title: "Sucesso",
-      description: "Item adicionado à comanda",
-    });
+    
+    try {
+      // Recarregar especificamente esta comanda
+      const updatedCommand = await refetchCommand(command.id);
+      if (updatedCommand) {
+        setCurrentCommand(updatedCommand);
+      }
+      
+      toast({
+        title: "Sucesso",
+        description: "Item adicionado à comanda",
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar comanda:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar a comanda",
+        variant: "destructive",
+      });
+    } finally {
+      setTimeout(() => setRefreshing(false), 500);
+    }
   };
 
   // Função para imprimir cupom
@@ -141,7 +159,7 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <Receipt className="w-6 h-6" />
@@ -152,151 +170,111 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Resumo da comanda */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Resumo da Comanda</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span>Cliente:</span>
-                <span className="font-medium">{command.client?.name}</span>
-              </div>
-              
-              <div className="flex justify-between">
-                <span>Barbeiro:</span>
-                <span className="font-medium">{command.barber?.full_name}</span>
-              </div>
-              
-              <div className="flex justify-between">
-                <span>Itens:</span>
-                <span className="font-medium">{command.command_items?.length || 0} item(s)</span>
-              </div>
-              
-              <Separator />
-              
-              <div className="flex justify-between text-lg">
-                <span>Subtotal:</span>
-                <span className="font-bold">{formatCurrency(subtotal)}</span>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Coluna Esquerda - Itens da Comanda */}
+          <div className="space-y-6">
+            {/* Informações da Comanda */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Receipt className="w-5 h-5" />
+                  Comanda #{command.command_number}
+                  {refreshing && (
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between">
+                  <span>Cliente:</span>
+                  <span className="font-medium">{command.client?.name || 'N/A'}</span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span>Barbeiro:</span>
+                  <span className="font-medium">{command.barber?.full_name || 'N/A'}</span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span>Total de Itens:</span>
+                  <span className="font-medium">{currentCommand?.command_items?.length || 0} item(s)</span>
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Desconto */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Desconto</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="discount">Valor do desconto (R$)</Label>
-                <Input
-                  id="discount"
-                  type="number"
-                  min="0"
-                  max={subtotal}
-                  step="0.01"
-                  value={discount}
-                  onChange={(e) => setDiscount(Number(e.target.value))}
-                  placeholder="0,00"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Método de pagamento */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Método de Pagamento</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {paymentMethods.map((method) => {
-                    const Icon = method.icon;
-                    return (
-                      <div key={method.id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-accent">
-                        <RadioGroupItem value={method.id} id={method.id} />
-                        <div className="flex items-center gap-3 flex-1">
-                          <Icon className="w-5 h-5 text-muted-foreground" />
-                          <div>
-                            <Label htmlFor={method.id} className="font-medium cursor-pointer">
-                              {method.label}
-                            </Label>
-                            <p className="text-sm text-muted-foreground">
-                              {method.description}
-                            </p>
-                          </div>
+            {/* Lista de Itens */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Itens da Comanda</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {currentCommand?.command_items?.length > 0 ? (
+                  <div className="space-y-3">
+                    {currentCommand.command_items.map((item: any, index: number) => (
+                      <div key={index} className="flex justify-between items-center p-3 border rounded-lg">
+                        <div className="flex-1">
+                          <p className="font-medium">
+                            {item.service?.name || item.product?.name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {item.quantity}x {formatCurrency(item.unit_price)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">{formatCurrency(item.total_price)}</p>
                         </div>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">
+                    Nenhum item na comanda
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Ações Rápidas */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Ações Rápidas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAddItemModal(true)}
+                    className="flex items-center gap-2"
+                    disabled={refreshing}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Adicionar Item
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    onClick={handlePrintReceipt}
+                    className="flex items-center gap-2"
+                  >
+                    <Printer className="w-4 h-4" />
+                    Imprimir Cupom
+                  </Button>
                 </div>
-              </RadioGroup>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
 
-          {/* Observações */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Observações</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Observações sobre o pagamento (opcional)"
-                rows={3}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Ações Rápidas */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Ações Rápidas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowAddItemModal(true)}
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Adicionar Item
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  onClick={handlePrintReceipt}
-                  className="flex items-center gap-2"
-                >
-                  <Printer className="w-4 h-4" />
-                  Imprimir Cupom
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={() => window.open('#', '_blank')}
-                  className="flex items-center gap-2"
-                  disabled
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                  Vendas Extras
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Total final */}
-          <Card className="bg-primary/5 border-primary/20">
-            <CardContent className="p-6">
-              <div className="space-y-2">
-                <div className="flex justify-between">
+          {/* Coluna Direita - Pagamento */}
+          <div className="space-y-6">
+            {/* Resumo Financeiro */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Resumo Financeiro</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between text-lg">
                   <span>Subtotal:</span>
-                  <span>{formatCurrency(subtotal)}</span>
+                  <span className="font-bold">{formatCurrency(subtotal)}</span>
                 </div>
                 
                 {discount > 0 && (
@@ -314,23 +292,92 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
                     {formatCurrency(finalAmount)}
                   </span>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Botões de ação */}
-          <div className="flex gap-3 pt-4">
-            <Button variant="outline" onClick={onClose} className="flex-1">
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleClose} 
-              disabled={loading || finalAmount < 0}
-              className="flex-1"
-            >
-              {loading ? "Finalizando..." : "Finalizar Comanda"}
-            </Button>
+            {/* Desconto */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Desconto</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label htmlFor="discount">Valor do desconto (R$)</Label>
+                  <Input
+                    id="discount"
+                    type="number"
+                    min="0"
+                    max={subtotal}
+                    step="0.01"
+                    value={discount}
+                    onChange={(e) => setDiscount(Number(e.target.value))}
+                    placeholder="0,00"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Método de pagamento */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Método de Pagamento</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <div className="grid grid-cols-1 gap-3">
+                    {paymentMethods.map((method) => {
+                      const Icon = method.icon;
+                      return (
+                        <div key={method.id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-accent">
+                          <RadioGroupItem value={method.id} id={method.id} />
+                          <div className="flex items-center gap-3 flex-1">
+                            <Icon className="w-5 h-5 text-muted-foreground" />
+                            <div>
+                              <Label htmlFor={method.id} className="font-medium cursor-pointer">
+                                {method.label}
+                              </Label>
+                              <p className="text-sm text-muted-foreground">
+                                {method.description}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </RadioGroup>
+              </CardContent>
+            </Card>
+
+            {/* Observações */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Observações</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Observações sobre o pagamento (opcional)"
+                  rows={3}
+                />
+              </CardContent>
+            </Card>
           </div>
+        </div>
+
+        {/* Botões de ação */}
+        <div className="flex gap-3 pt-6 border-t">
+          <Button variant="outline" onClick={onClose} className="flex-1">
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleClose} 
+            disabled={loading || finalAmount < 0 || refreshing}
+            className="flex-1"
+          >
+            {loading ? "Finalizando..." : refreshing ? "Atualizando..." : "Finalizar Comanda"}
+          </Button>
         </div>
 
         {/* Template do cupom (oculto, apenas para impressão) */}

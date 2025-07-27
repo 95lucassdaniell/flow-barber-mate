@@ -15,8 +15,13 @@ export const ReceiptTemplate = ({
   discount = 0, 
   notes 
 }: ReceiptTemplateProps) => {
+  // Proteção contra dados null/undefined
+  if (!command) {
+    return <div>Erro: Dados da comanda não encontrados</div>;
+  }
+
   const total = command.total_amount || 0;
-  const discountAmount = (total * discount) / 100;
+  const discountAmount = discount || 0; // Desconto já é em valor, não porcentagem
   const finalAmount = total - discountAmount;
 
   return (
@@ -56,8 +61,8 @@ export const ReceiptTemplate = ({
       </div>
 
       <div className="mb-4">
-        <p><strong>Comanda:</strong> #{command.command_number}</p>
-        <p><strong>Data:</strong> {new Date(command.created_at).toLocaleString('pt-BR')}</p>
+        <p><strong>Comanda:</strong> #{command.command_number || 'N/A'}</p>
+        <p><strong>Data:</strong> {command.created_at ? new Date(command.created_at).toLocaleString('pt-BR') : 'N/A'}</p>
         {command.client?.name && <p><strong>Cliente:</strong> {command.client.name}</p>}
         {command.barber?.full_name && <p><strong>Profissional:</strong> {command.barber.full_name}</p>}
       </div>
@@ -66,17 +71,21 @@ export const ReceiptTemplate = ({
 
       <div className="mb-4">
         <p className="font-bold mb-2">ITENS:</p>
-        {command.command_items?.map((item: any, index: number) => (
-          <div key={index} className="flex justify-between mb-1">
-            <div className="flex-1">
-              <p className="text-xs">{item.service?.name || item.product?.name}</p>
-              <p className="text-xs text-gray-600">
-                {item.quantity}x {formatCurrency(item.unit_price)}
-              </p>
+        {command.command_items?.length > 0 ? (
+          command.command_items.map((item: any, index: number) => (
+            <div key={index} className="flex justify-between mb-1">
+              <div className="flex-1">
+                <p className="text-xs">{item.service?.name || item.product?.name || 'Item'}</p>
+                <p className="text-xs text-gray-600">
+                  {item.quantity || 1}x {formatCurrency(item.unit_price || 0)}
+                </p>
+              </div>
+              <p className="text-xs">{formatCurrency((item.quantity || 1) * (item.unit_price || 0))}</p>
             </div>
-            <p className="text-xs">{formatCurrency(item.quantity * item.unit_price)}</p>
-          </div>
-        ))}
+          ))
+        ) : (
+          <p className="text-xs text-gray-600">Nenhum item na comanda</p>
+        )}
       </div>
 
       <div className="border-t border-dashed border-gray-400 my-2"></div>
@@ -86,9 +95,9 @@ export const ReceiptTemplate = ({
           <p>Subtotal:</p>
           <p>{formatCurrency(total)}</p>
         </div>
-        {discount > 0 && (
+        {discountAmount > 0 && (
           <div className="flex justify-between">
-            <p>Desconto ({discount}%):</p>
+            <p>Desconto:</p>
             <p>-{formatCurrency(discountAmount)}</p>
           </div>
         )}
