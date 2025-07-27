@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Users, Calendar, DollarSign, Plus, ExternalLink } from "lucide-react";
+import { Building2, Users, Calendar, DollarSign, Plus, ExternalLink, Database } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
@@ -202,6 +202,26 @@ export default function SuperAdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Ações Rápidas</CardTitle>
+          <CardDescription>Ferramentas para gestão do sistema</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-3">
+            <Button 
+              variant="outline"
+              onClick={() => navigate('/super-admin/historical-data')}
+              className="flex items-center gap-2"
+            >
+              <Database className="h-4 w-4" />
+              Gerar Dados Históricos
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Recent Barbershops */}
       <Card>

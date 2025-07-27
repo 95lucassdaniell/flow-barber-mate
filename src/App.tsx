@@ -25,6 +25,7 @@ import SuperAdminFinancialPage from "./pages/SuperAdminFinancialPage";
 import SuperAdminAuditPage from "./pages/SuperAdminAuditPage";
 import SuperAdminMonitoringPage from "./pages/SuperAdminMonitoringPage";
 import SuperAdminSettingsPage from "./pages/SuperAdminSettingsPage";
+import SuperAdminHistoricalDataPage from "./pages/SuperAdminHistoricalDataPage";
 import FinancialPage from "./pages/FinancialPage";
 import AIPage from "./pages/AIPage";
 
@@ -61,6 +62,7 @@ const App = () => (
         <Route path="/super-admin/monitoring" element={<SuperAdminMonitoringPage />} />
         <Route path="/super-admin/audit" element={<SuperAdminAuditPage />} />
         <Route path="/super-admin/settings" element={<SuperAdminSettingsPage />} />
+        <Route path="/super-admin/historical-data" element={<SuperAdminHistoricalDataPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
