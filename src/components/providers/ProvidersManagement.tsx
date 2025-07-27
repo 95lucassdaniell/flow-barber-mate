@@ -31,7 +31,7 @@ import ProviderModal from "./ProviderModal";
 import ProviderServicesModal from "./ProviderServicesModalSimple";
 
 const ProvidersManagement = () => {
-  const { providers, loading, toggleProviderStatus } = useProviders();
+  const { providers, loading, toggleProviderStatus, fetchProviders } = useProviders();
   const { canManageAll, profile, loading: authLoading } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -251,6 +251,7 @@ const ProvidersManagement = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         provider={selectedProvider}
+        onSuccess={() => fetchProviders()}
       />
 
       <ProviderServicesModal

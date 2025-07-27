@@ -19,9 +19,10 @@ interface ServiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   service?: Service | null;
+  onSuccess?: () => void;
 }
 
-const ServiceModal = ({ isOpen, onClose, service }: ServiceModalProps) => {
+const ServiceModal = ({ isOpen, onClose, service, onSuccess }: ServiceModalProps) => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -107,6 +108,7 @@ const ServiceModal = ({ isOpen, onClose, service }: ServiceModalProps) => {
       }
 
       if (success) {
+        onSuccess?.();
         onClose();
       }
     } catch (error) {

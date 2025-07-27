@@ -11,7 +11,7 @@ const ServicesManagement = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const { services, loading } = useServices();
+  const { services, loading, refetchServices } = useServices();
 
   const handleAddService = () => {
     setSelectedService(null);
@@ -131,6 +131,7 @@ const ServicesManagement = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         service={selectedService}
+        onSuccess={() => refetchServices()}
       />
     </div>
   );

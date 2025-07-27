@@ -79,7 +79,9 @@ export const useServices = () => {
         return false;
       }
 
-      setServices(prev => [...prev, data]);
+      // Refetch services to ensure UI is updated
+      await fetchServices();
+      
       toast({
         title: "Serviço adicionado",
         description: `${serviceData.name} foi adicionado com sucesso.`,
@@ -115,9 +117,8 @@ export const useServices = () => {
         return false;
       }
 
-      setServices(prev => prev.map(service => 
-        service.id === serviceId ? data : service
-      ));
+      // Refetch services to ensure UI is updated
+      await fetchServices();
       
       toast({
         title: "Serviço atualizado",
@@ -152,7 +153,9 @@ export const useServices = () => {
         return false;
       }
 
-      setServices(prev => prev.filter(service => service.id !== serviceId));
+      // Refetch services to ensure UI is updated
+      await fetchServices();
+      
       toast({
         title: "Serviço removido",
         description: "O serviço foi removido com sucesso.",

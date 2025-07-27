@@ -43,9 +43,10 @@ interface ProviderModalProps {
   isOpen: boolean;
   onClose: () => void;
   provider?: any;
+  onSuccess?: () => void;
 }
 
-const ProviderModal = ({ isOpen, onClose, provider }: ProviderModalProps) => {
+const ProviderModal = ({ isOpen, onClose, provider, onSuccess }: ProviderModalProps) => {
   const { createProvider, updateProvider, loading } = useProviders();
   const { 
     allServices, 
@@ -128,6 +129,7 @@ const ProviderModal = ({ isOpen, onClose, provider }: ProviderModalProps) => {
         await handleSaveAllServices(savedProvider?.id || provider.id);
       }
 
+      onSuccess?.();
       onClose();
     } catch (error) {
       toast({

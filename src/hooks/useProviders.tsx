@@ -85,7 +85,9 @@ export const useProviders = () => {
 
       if (error) throw error;
       
-      setProviders(prev => [...prev, data as Provider]);
+      // Refetch providers to ensure UI is updated
+      await fetchProviders();
+      
       return data;
     } catch (error) {
       console.error('Error creating provider:', error);
@@ -104,7 +106,9 @@ export const useProviders = () => {
 
       if (error) throw error;
       
-      setProviders(prev => prev.map(p => p.id === id ? data as Provider : p));
+      // Refetch providers to ensure UI is updated
+      await fetchProviders();
+      
       return data;
     } catch (error) {
       console.error('Error updating provider:', error);
@@ -121,9 +125,8 @@ export const useProviders = () => {
 
       if (error) throw error;
       
-      setProviders(prev => prev.map(p => 
-        p.id === id ? { ...p, is_active: isActive } : p
-      ));
+      // Refetch providers to ensure UI is updated
+      await fetchProviders();
     } catch (error) {
       console.error('Error toggling provider status:', error);
       throw error;
