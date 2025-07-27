@@ -50,6 +50,7 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
     { id: "services", name: "Serviços", icon: Scissors, href: `/app/${slug}/services` },
     { id: "produtos", name: "Produtos", icon: Package, href: `/app/${slug}/produtos` },
     { id: "comandas", name: "Comandas", icon: Receipt, href: `/app/${slug}/comandas` },
+    { id: "caixa", name: "Caixa", icon: DollarSign, href: `/app/${slug}/caixa` },
     { id: "whatsapp", name: "WhatsApp", icon: MessageCircle, href: `/app/${slug}/whatsapp` },
     { id: "financial", name: "Financeiro", icon: DollarSign, href: `/app/${slug}/financial` },
     { id: "settings", name: "Configurações", icon: Settings, href: `/app/${slug}/settings` },

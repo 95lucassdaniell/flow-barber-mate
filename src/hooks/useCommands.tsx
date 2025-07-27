@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useCashRegister } from "@/hooks/useCashRegister";
 
 export interface CommandItem {
   id: string;
@@ -65,6 +66,7 @@ export const useCommands = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { profile } = useAuth();
+  const { currentCashRegister, updateCashRegisterTotals } = useCashRegister();
 
   const fetchCommands = async (status?: string, date?: Date) => {
     if (!profile?.barbershop_id) return;
@@ -266,6 +268,7 @@ export const useCommands = () => {
           payment_method: paymentMethod,
           payment_status: 'paid',
           notes: notes,
+          cash_register_id: currentCashRegister?.id, // Associar ao caixa aberto
         })
         .select()
         .single();
@@ -304,6 +307,11 @@ export const useCommands = () => {
               status: 'pending',
             });
         }
+      }
+
+      // Atualizar totais do caixa se estiver aberto
+      if (currentCashRegister) {
+        await updateCashRegisterTotals(finalAmount, paymentMethod);
       }
 
       toast({

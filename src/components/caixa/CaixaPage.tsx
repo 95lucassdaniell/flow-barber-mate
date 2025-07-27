@@ -157,7 +157,10 @@ const CaixaPage = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <SalesHistory cashRegisterId={currentCashRegister.id} />
+                  <SalesHistory 
+                    open={showSalesHistory}
+                    onOpenChange={setShowSalesHistory}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
