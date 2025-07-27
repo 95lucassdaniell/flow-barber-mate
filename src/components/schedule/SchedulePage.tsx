@@ -189,7 +189,7 @@ const SchedulePage = () => {
                 <div className="flex-1">
                   {appointment ? (
                     <>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mb-3">
                         <div>
                           <p className="font-medium">{appointment.client?.name || 'Cliente'}</p>
                           <p className="text-sm text-muted-foreground">
@@ -207,6 +207,69 @@ const SchedulePage = () => {
                             {getStatusText(appointment.status)}
                           </Badge>
                         </div>
+                      </div>
+                      
+                      {/* Botões de ação */}
+                      <div className="flex gap-2 flex-wrap">
+                        <Button 
+                          size="sm" 
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // TODO: Abrir comanda do agendamento
+                            console.log('Realizado/Comanda para agendamento:', appointment.id);
+                          }}
+                        >
+                          Realizado/Comanda
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="border-red-500 text-red-600 hover:bg-red-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // TODO: Marcar como ausência
+                            console.log('Ausência para agendamento:', appointment.id);
+                          }}
+                        >
+                          Ausência
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="border-red-500 text-red-600 hover:bg-red-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // TODO: Cancelar agendamento
+                            console.log('Cancelar agendamento:', appointment.id);
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // TODO: Adicionar serviço
+                            console.log('Adicionar serviço ao agendamento:', appointment.id);
+                          }}
+                        >
+                          + Serviço
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // TODO: Adicionar produto
+                            console.log('Adicionar produto ao agendamento:', appointment.id);
+                          }}
+                        >
+                          + Produto
+                        </Button>
                       </div>
                     </>
                   ) : (

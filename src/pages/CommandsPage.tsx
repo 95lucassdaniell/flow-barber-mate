@@ -1,3 +1,3 @@
-import CommandsPage from "@/components/commands/CommandsPage";
+import CommandsPageWithLayout from "./CommandsPageWithLayout";
 
-export default CommandsPage;
+export default CommandsPageWithLayout;

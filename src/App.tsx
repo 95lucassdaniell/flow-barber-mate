@@ -16,7 +16,7 @@ import SettingsPage from "./pages/SettingsPage";
 import WhatsAppPage from "./pages/WhatsAppPage";
 import CRMPage from "./pages/CRMPage";
 import ProductsPage from "./pages/ProductsPage";
-import PDVPage from "./pages/PDVPage";
+import CommandsPage from "./pages/CommandsPage";
 import SuperAdminPage from "./pages/SuperAdminPage";
 import SuperAdminBarbershopsPage from "./pages/SuperAdminBarbershopsPage";
 import SuperAdminUsersPage from "./pages/SuperAdminUsersPage";
@@ -45,7 +45,7 @@ const App = () => (
           <Route path="/app/:slug/services" element={<ServicesPage />} />
           <Route path="/app/:slug/servicos" element={<ServicesPage />} />
           <Route path="/app/:slug/produtos" element={<ProductsPage />} />
-          <Route path="/app/:slug/pdv" element={<PDVPage />} />
+          <Route path="/app/:slug/comandas" element={<CommandsPage />} />
           <Route path="/app/:slug/settings" element={<SettingsPage />} />
           <Route path="/app/:slug/whatsapp" element={<WhatsAppPage />} />
           <Route path="/app/:slug/crm" element={<CRMPage />} />
