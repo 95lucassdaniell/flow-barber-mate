@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useBarberSelection } from '@/hooks/useBarberSelection';
 import { useAppointments } from '@/hooks/useAppointments';
 import { AppointmentModal } from './AppointmentModal';
+import { AppointmentDetailsModal } from './AppointmentDetailsModal';
 import { useScheduleUrl } from '@/hooks/useScheduleUrl';
 import { useDebounce } from '@/hooks/useDebounce';
 import { HorizontalGridSchedule } from './HorizontalGridSchedule';
@@ -20,8 +21,10 @@ const SchedulePage = () => {
   const { barbers, loading: barbersLoading } = useBarberSelection();
   const { appointments, loading: appointmentsLoading, fetchAppointments } = useAppointments();
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
   const [selectedBarberId_, setSelectedBarberId_] = useState<string>('');
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
 
   // Debounce the date changes to avoid too many API calls
   const debouncedDate = useDebounce(selectedDate, 300);
@@ -45,8 +48,15 @@ const SchedulePage = () => {
   };
 
   const handleAppointmentClick = (appointment: any) => {
-    // TODO: Implement appointment details modal
     console.log('Appointment clicked:', appointment);
+    setSelectedAppointment(appointment);
+    setIsDetailsModalOpen(true);
+  };
+
+  const handleEditAppointment = (appointment: any) => {
+    setSelectedAppointment(appointment);
+    setIsDetailsModalOpen(false);
+    setIsAppointmentModalOpen(true);
   };
 
   // Generate time slots for the day
@@ -132,13 +142,30 @@ const SchedulePage = () => {
       {/* Appointment Modal */}
       <AppointmentModal
         isOpen={isAppointmentModalOpen}
-        onClose={() => setIsAppointmentModalOpen(false)}
+        onClose={() => {
+          setIsAppointmentModalOpen(false);
+          setSelectedAppointment(null);
+        }}
         selectedDate={selectedDate}
         selectedTime={selectedTimeSlot}
         selectedBarberId={selectedBarberId_}
+        appointment={selectedAppointment}
         onAppointmentCreated={() => {
           fetchAppointments(undefined, format(selectedDate, 'yyyy-MM-dd'), 'day');
+          setIsAppointmentModalOpen(false);
+          setSelectedAppointment(null);
         }}
+      />
+
+      <AppointmentDetailsModal
+        appointment={selectedAppointment}
+        isOpen={isDetailsModalOpen}
+        onClose={() => {
+          setIsDetailsModalOpen(false);
+          setSelectedAppointment(null);
+        }}
+        onEdit={handleEditAppointment}
+        onRefresh={() => fetchAppointments(undefined, format(selectedDate, 'yyyy-MM-dd'), 'day')}
       />
     </div>
   );

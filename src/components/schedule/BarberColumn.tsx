@@ -72,10 +72,16 @@ export const BarberColumn = ({
   };
 
   const getAppointmentForSlot = (timeSlot: string): Appointment | null => {
-    return appointments.find(appointment => 
+    const appointment = appointments.find(appointment => 
       appointment.barber_id === barber.id && 
       isAppointmentInSlot(appointment, timeSlot)
     ) || null;
+    
+    if (appointment) {
+      console.log(`Found appointment for ${barber.full_name} at ${timeSlot}:`, appointment);
+    }
+    
+    return appointment;
   };
 
   const isSlotOccupiedByPreviousAppointment = (timeSlot: string): Appointment | null => {
@@ -101,7 +107,20 @@ export const BarberColumn = ({
           const appointment = getAppointmentForSlot(timeSlot);
           const isOccupiedByPrevious = isSlotOccupiedByPreviousAppointment(timeSlot);
 
-          if (appointment && !isOccupiedByPrevious) {
+          console.log(`Slot ${timeSlot} for ${barber.full_name}:`, { 
+            hasAppointment: !!appointment, 
+            isStartSlot: appointment?.start_time === timeSlot,
+            isOccupiedByPrevious: !!isOccupiedByPrevious,
+            appointmentData: appointment ? {
+              id: appointment.id,
+              client: appointment.client?.name,
+              service: appointment.service?.name,
+              start_time: appointment.start_time,
+              end_time: appointment.end_time
+            } : null
+          });
+
+          if (appointment && appointment.start_time === timeSlot) {
             // Slot com agendamento (primeiro slot do agendamento)
             const slotsCount = calculateSlotsCount(appointment);
             return (
@@ -118,8 +137,7 @@ export const BarberColumn = ({
             return (
               <div 
                 key={`occupied-${barber.id}-${timeSlot}`} 
-                className="h-10 border-b border-border/50"
-                style={{ backgroundColor: `${barberColor}20` }}
+                className="h-10 border-b border-border/50 bg-muted/20"
               />
             );
           } else {
