@@ -91,7 +91,7 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
       }`}>
         <div className="p-4 border-b border-border">
           <div className="flex flex-col items-center space-y-2">
-            <Avatar className="w-30 h-30">
+            <Avatar className="w-20 h-20">
               <AvatarImage src={barbershopData.logo_url} alt="Logo da barbearia" />
               <AvatarFallback className="text-2xl">
                 {barbershopData.name.charAt(0).toUpperCase()}
