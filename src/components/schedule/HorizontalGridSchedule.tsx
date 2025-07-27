@@ -1,4 +1,5 @@
 import { BarberColumn } from "./BarberColumn";
+import { TimeColumn } from "./TimeColumn";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -147,26 +148,29 @@ export const HorizontalGridSchedule = ({
 
       {/* Grid de agendamentos */}
       {filteredBarbers.length > 0 ? (
-        <div 
-          className="grid gap-4 overflow-x-auto"
-          style={{
-            gridTemplateColumns: `repeat(${filteredBarbers.length}, minmax(200px, 1fr))`
-          }}
-        >
-          {filteredBarbers.map((barber, index) => {
-            const originalIndex = barbers.findIndex(b => b.id === barber.id);
-            return (
-              <BarberColumn
-                key={barber.id}
-                barber={barber}
-                timeSlots={timeSlots}
-                appointments={appointments}
-                barberColor={getBarberColor(barber.id, originalIndex)}
-                onTimeSlotClick={onTimeSlotClick}
-                onAppointmentClick={onAppointmentClick}
-              />
-            );
-          })}
+        <div className="bg-background rounded-lg border border-border overflow-hidden">
+          <div 
+            className="grid"
+            style={{
+              gridTemplateColumns: `120px repeat(${filteredBarbers.length}, minmax(200px, 1fr))`
+            }}
+          >
+            <TimeColumn timeSlots={timeSlots} />
+            {filteredBarbers.map((barber, index) => {
+              const originalIndex = barbers.findIndex(b => b.id === barber.id);
+              return (
+                <BarberColumn
+                  key={barber.id}
+                  barber={barber}
+                  timeSlots={timeSlots}
+                  appointments={appointments.filter(apt => apt.barber_id === barber.id)}
+                  barberColor={getBarberColor(barber.id, originalIndex)}
+                  onTimeSlotClick={onTimeSlotClick}
+                  onAppointmentClick={onAppointmentClick}
+                />
+              );
+            })}
+          </div>
         </div>
       ) : (
         <Card className="p-8 text-center">

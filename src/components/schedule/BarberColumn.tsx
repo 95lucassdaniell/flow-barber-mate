@@ -89,14 +89,14 @@ export const BarberColumn = ({
     <div className="flex flex-col">
       {/* Header do barbeiro */}
       <div 
-        className="p-3 text-center font-semibold text-white rounded-t-lg"
+        className="h-12 p-3 text-center font-semibold text-white border-r border-border flex items-center justify-center"
         style={{ backgroundColor: barberColor }}
       >
         {barber.full_name}
       </div>
 
       {/* Slots de horário */}
-      <div className="flex flex-col border-l border-r border-b rounded-b-lg">
+      <div className="flex flex-col border-r border-border">
         {timeSlots.map((timeSlot) => {
           const appointment = getAppointmentForSlot(timeSlot);
           const isOccupiedByPrevious = isSlotOccupiedByPreviousAppointment(timeSlot);
@@ -105,35 +105,32 @@ export const BarberColumn = ({
             // Slot com agendamento (primeiro slot do agendamento)
             const slotsCount = calculateSlotsCount(appointment);
             return (
-              <div key={`${barber.id}-${timeSlot}`} className="h-10 border-b border-border">
-                <AppointmentCard
-                  appointment={appointment}
-                  onClick={() => onAppointmentClick(appointment)}
-                  slotsCount={slotsCount}
-                  barberColor={barberColor}
-                />
-              </div>
+              <AppointmentCard
+                key={`${appointment.id}-${timeSlot}`}
+                appointment={appointment}
+                onClick={() => onAppointmentClick(appointment)}
+                slotsCount={slotsCount}
+                barberColor={barberColor}
+              />
             );
           } else if (isOccupiedByPrevious) {
-            // Slot ocupado por agendamento anterior (não renderizar nada)
+            // Slot ocupado por agendamento anterior
             return (
-              <div key={`${barber.id}-${timeSlot}`} className="h-10 border-b border-border bg-muted/20">
-                {/* Slot ocupado por agendamento que começou antes */}
-              </div>
+              <div 
+                key={`occupied-${barber.id}-${timeSlot}`} 
+                className="h-10 border-b border-border/50"
+                style={{ backgroundColor: `${barberColor}20` }}
+              />
             );
           } else {
             // Slot disponível
             return (
               <div
-                key={`${barber.id}-${timeSlot}`}
-                className="h-10 border-b border-border bg-background hover:bg-muted/50 cursor-pointer transition-colors flex items-center justify-center group"
+                key={`slot-${barber.id}-${timeSlot}`}
+                className="h-10 border-b border-border/50 bg-background hover:bg-muted/30 cursor-pointer transition-colors flex items-center justify-center group"
                 onClick={() => onTimeSlotClick(barber.id, timeSlot)}
               >
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>{timeSlot}</span>
-                  <Plus className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <span className="opacity-0 group-hover:opacity-100 transition-opacity">Disponível</span>
-                </div>
+                <Plus className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />
               </div>
             );
           }
