@@ -69,7 +69,7 @@ export const ProductsList = () => {
     return matchesSearch && matchesCategory && matchesStock;
   });
 
-  const categories = [...new Set(products.map(p => p.category))];
+  const categories = [...new Set(products.map(p => p.category).filter(cat => cat && cat.trim() !== ''))];
 
   if (isLoading) {
     return <div className="flex justify-center p-8">Carregando produtos...</div>;
