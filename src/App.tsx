@@ -29,6 +29,10 @@ import SuperAdminSettingsPage from "./pages/SuperAdminSettingsPage";
 import SuperAdminHistoricalDataPage from "./pages/SuperAdminHistoricalDataPage";
 import FinancialPage from "./pages/FinancialPage";
 import AIPage from "./pages/AIPage";
+import ProviderLoginPage from "./components/providers/ProviderLoginPage";
+import ProviderChangePasswordPage from "./components/providers/ProviderChangePasswordPage";
+import ProviderProtectedRoute from "./components/providers/ProviderProtectedRoute";
+import ProviderDashboard from "./components/providers/dashboard/ProviderDashboard";
 
 const queryClient = new QueryClient();
 
@@ -113,6 +117,19 @@ const App = () => (
             <ProtectedRoute requiresRole="admin">
               <FinancialPage />
             </ProtectedRoute>
+          } />
+          
+          {/* Provider Routes */}
+          <Route path="/provider/:slug/login" element={<ProviderLoginPage />} />
+          <Route path="/provider/:slug/change-password" element={
+            <ProviderProtectedRoute>
+              <ProviderChangePasswordPage />
+            </ProviderProtectedRoute>
+          } />
+          <Route path="/provider/:slug/dashboard" element={
+            <ProviderProtectedRoute>
+              <ProviderDashboard />
+            </ProviderProtectedRoute>
           } />
           
           {/* Super Admin Routes */}
