@@ -145,114 +145,87 @@ export function useFinancialData(
     console.log(`[${requestId}] fetchBarberRankings: Filters:`, { startDate, endDate, barberId });
     
     try {
-      // Buscar vendas primeiro
-      let salesQuery = supabase
-        .from('sales')
-        .select('id, barber_id, sale_date, final_amount')
-        .eq('barbershop_id', profile.barbershop_id);
-
-      if (startDate) salesQuery = salesQuery.gte('sale_date', startDate);
-      if (endDate) salesQuery = salesQuery.lte('sale_date', endDate);
-      if (barberId) salesQuery = salesQuery.eq('barber_id', barberId);
-
-      const { data: salesData, error: salesError } = await salesQuery;
-
-      if (salesError) {
-        console.error('Error fetching sales:', salesError);
-        return;
-      }
-
-      console.log(`[${requestId}] fetchBarberRankings: Sales data found:`, salesData?.length || 0);
-
-      if (!salesData || salesData.length === 0) {
-        console.log(`[${requestId}] fetchBarberRankings: No sales found for rankings`);
-        setBarberRankings([]);
-        setRankingsLoading(false);
-        return;
-      }
-
-      // Buscar sale_items para essas vendas
-      const saleIds = salesData.map(sale => sale.id);
-      
-      const { data: saleItemsData, error: saleItemsError } = await supabase
+      // Use JOIN para buscar sale_items com dados de vendas diretamente, evitando clausulas IN grandes
+      let saleItemsQuery = supabase
         .from('sale_items')
-        .select('sale_id, commission_amount')
-        .in('sale_id', saleIds);
+        .select(`
+          commission_amount,
+          sales!inner(
+            id,
+            barber_id,
+            final_amount,
+            sale_date,
+            barbershop_id
+          )
+        `)
+        .eq('sales.barbershop_id', profile.barbershop_id);
 
-      if (saleItemsError) {
-        console.error('Error fetching sale items:', saleItemsError);
+      if (startDate) saleItemsQuery = saleItemsQuery.gte('sales.sale_date', startDate);
+      if (endDate) saleItemsQuery = saleItemsQuery.lte('sales.sale_date', endDate);
+      if (barberId) saleItemsQuery = saleItemsQuery.eq('sales.barber_id', barberId);
+
+      const { data: saleItems, error: itemsError } = await saleItemsQuery;
+      
+      if (itemsError) {
+        console.error(`[${requestId}] fetchBarberRankings: Sale items error:`, itemsError);
         return;
       }
 
-      console.log('useFinancialData: Sale items data:', saleItemsData);
+      console.log(`[${requestId}] fetchBarberRankings: Found sale items:`, saleItems?.length || 0);
 
       // Buscar perfis dos barbeiros
-      const barberIds = [...new Set(salesData.map(sale => sale.barber_id))];
-      console.log('useFinancialData: Barber IDs:', barberIds);
-
-      const { data: barbersData, error: barbersError } = await supabase
+      const { data: providers } = await supabase
         .from('profiles')
         .select('id, full_name')
-        .in('id', barberIds);
+        .eq('barbershop_id', profile.barbershop_id)
+        .eq('role', 'barber');
 
-      if (barbersError) {
-        console.error('Error fetching barbers:', barbersError);
-        return;
-      }
+      console.log(`[${requestId}] fetchBarberRankings: Found providers:`, providers?.length || 0);
 
-      console.log('useFinancialData: Barbers data:', barbersData);
+      // Calcular rankings
+      const barberStats = new Map();
 
-      // Criar mapa de barbeiros
-      const barbersMap = barbersData?.reduce((acc: any, barber: any) => {
-        acc[barber.id] = barber;
-        return acc;
-      }, {}) || {};
+      // Inicializar todos os barbeiros com estatísticas zeradas
+      providers?.forEach(provider => {
+        barberStats.set(provider.id, {
+          id: provider.id,
+          full_name: provider.full_name,
+          totalCommissions: 0,
+          totalSales: 0,
+          salesCount: 0
+        });
+      });
 
-      // Criar mapa de comissões por venda
-      const commissionsMap = saleItemsData?.reduce((acc: any, item: any) => {
-        if (!acc[item.sale_id]) {
-          acc[item.sale_id] = 0;
-        }
-        acc[item.sale_id] += Number(item.commission_amount) || 0;
-        return acc;
-      }, {}) || {};
-
-      // Processar os dados para criar o ranking
-      const barberStats = salesData.reduce((acc, sale) => {
+      // Processar dados dos sale_items
+      const processedSales = new Set();
+      
+      saleItems?.forEach((item: any) => {
+        const sale = item.sales;
         const barberId = sale.barber_id;
-        const barber = barbersMap[barberId];
-        const commissionAmount = commissionsMap[sale.id] || 0;
+        const saleId = sale.id;
         
-        if (!barber) {
-          console.warn('useFinancialData: Barber not found for ID:', barberId);
-          return acc;
+        const stats = barberStats.get(barberId);
+        if (stats) {
+          // Adicionar comissão
+          stats.totalCommissions += item.commission_amount || 0;
+          
+          // Adicionar dados de venda apenas uma vez por venda (evitar contagem dupla se múltiplos itens por venda)
+          if (!processedSales.has(saleId)) {
+            stats.totalSales += sale.final_amount || 0;
+            stats.salesCount += 1;
+            processedSales.add(saleId);
+          }
         }
-        
-        if (!acc[barberId]) {
-          acc[barberId] = {
-            id: barberId,
-            full_name: barber.full_name,
-            totalCommissions: 0,
-            totalSales: 0,
-            salesCount: 0,
-          };
-        }
-        
-        acc[barberId].totalCommissions += commissionAmount;
-        acc[barberId].salesCount += 1;
-        acc[barberId].totalSales += Number(sale.final_amount) || 0; // Usar o valor real da venda
-        return acc;
-      }, {} as Record<string, BarberRanking>);
+      });
 
-      console.log('useFinancialData: Barber stats:', barberStats);
-
-      const rankings = Object.values(barberStats)
+      // Converter para array e ordenar por total de comissões
+      const rankings = Array.from(barberStats.values())
         .sort((a, b) => b.totalCommissions - a.totalCommissions);
 
       console.log(`[${requestId}] fetchBarberRankings: Final rankings:`, rankings);
       setBarberRankings(rankings);
     } catch (error) {
-      console.error(`[${requestId}] fetchBarberRankings: Error:`, error);
+      console.error(`[${requestId}] fetchBarberRankings: Unexpected error:`, error);
     } finally {
       setRankingsLoading(false);
     }
