@@ -11,9 +11,10 @@ import CashRegisterHistory from "./CashRegisterHistory";
 import { format } from "date-fns";
 
 export default function AdminFinancialDashboard() {
+  // Definir período padrão mais amplo para mostrar dados históricos
   const [dateRange, setDateRange] = useState({
-    startDate: format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd'),
-    endDate: format(new Date(), 'yyyy-MM-dd'),
+    startDate: "2024-01-01",
+    endDate: "2025-12-31",
   });
   const [selectedBarber, setSelectedBarber] = useState<string>("");
 
@@ -22,6 +23,11 @@ export default function AdminFinancialDashboard() {
     dateRange.endDate,
     selectedBarber || undefined
   );
+
+  // Debug logs para verificar os dados
+  console.log('AdminFinancialDashboard - Date range:', dateRange);
+  console.log('AdminFinancialDashboard - Barber rankings:', barberRankings);
+  console.log('AdminFinancialDashboard - Commissions:', commissions);
 
   if (loading) {
     return (
