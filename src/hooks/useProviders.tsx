@@ -58,6 +58,7 @@ export const useProviders = () => {
     role: 'admin' | 'receptionist' | 'barber';
     commission_rate?: number;
     is_active: boolean;
+    password?: string;
   }) => {
     try {
       console.log('Creating provider with data:', providerData);
@@ -92,12 +93,18 @@ export const useProviders = () => {
         throw new Error('Este email já está cadastrado para outro prestador.');
       }
 
-      // Create provider without user_id (pending status)
+      // Generate user_id and create provider
+      const user_id = crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+
       const insertData = {
         ...providerData,
         barbershop_id: profile.barbershop_id,
-        user_id: null, // Will be set when user accepts invitation
-        status: 'pending',
+        user_id: user_id,
+        status: 'active',
         full_name: providerData.full_name.trim(),
         email: providerData.email.trim().toLowerCase(),
       };
@@ -119,6 +126,20 @@ export const useProviders = () => {
       }
       
       console.log('Provider created successfully:', data);
+      
+      // Create user in auth.users and set password
+      if (data) {
+        try {
+          const password = providerData.password || 'vargas321';
+          await supabase.rpc('set_provider_password', {
+            provider_id: data.id,
+            new_password: password
+          });
+        } catch (passwordError) {
+          console.error('Error setting provider password:', passwordError);
+          // Don't throw error here, provider was created successfully
+        }
+      }
       
       // Refetch providers to ensure UI is updated
       await fetchProviders();

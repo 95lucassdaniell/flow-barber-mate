@@ -9,9 +9,6 @@ interface ProviderProfile {
   email: string;
   role: string;
   barbershop_id: string;
-  temporary_password?: string;
-  password_expires_at?: string;
-  must_change_password?: boolean;
   last_login_at?: string;
   is_active: boolean;
 }
@@ -34,9 +31,6 @@ export const useProviderAuth = () => {
           email,
           role,
           barbershop_id,
-          temporary_password,
-          password_expires_at,
-          must_change_password,
           last_login_at,
           is_active
         `)
@@ -97,31 +91,25 @@ export const useProviderAuth = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const providerLogin = async (email: string, temporaryPassword: string) => {
+  const providerLogin = async (email: string, password: string) => {
     try {
-      // Primeiro, verificar se existe um prestador com essa senha temporária
+      // Verificar se o prestador existe e está ativo
       const { data: providerProfile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('email', email)
-        .eq('temporary_password', temporaryPassword)
         .eq('role', 'barber')
         .eq('is_active', true)
         .single();
 
       if (profileError || !providerProfile) {
-        throw new Error('Credenciais inválidas ou senha temporária expirada');
+        throw new Error('Credenciais inválidas ou prestador não encontrado');
       }
 
-      // Verificar se a senha não expirou
-      if (providerProfile.password_expires_at && new Date(providerProfile.password_expires_at) < new Date()) {
-        throw new Error('Senha temporária expirada. Entre em contato com o administrador.');
-      }
-
-      // Fazer login com Supabase Auth usando email e senha temporária
+      // Fazer login com Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
-        password: temporaryPassword
+        password
       });
 
       if (authError) {
@@ -151,15 +139,8 @@ export const useProviderAuth = () => {
 
       if (authError) throw authError;
 
-      // Limpar senha temporária e marcar como não precisando trocar senha
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          temporary_password: null,
-          password_expires_at: null,
-          must_change_password: false
-        })
-        .eq('user_id', user.id);
+      // Nenhuma atualização no perfil necessária
+      const profileError = null;
 
       if (profileError) throw profileError;
 
@@ -188,7 +169,6 @@ export const useProviderAuth = () => {
     loading,
     isProvider,
     isAuthenticated: !!user && !!profile,
-    mustChangePassword: profile?.must_change_password ?? false,
     providerLogin,
     changePassword,
     signOut

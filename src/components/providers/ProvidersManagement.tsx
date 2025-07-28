@@ -69,10 +69,11 @@ const ProvidersManagement = () => {
     setIsServicesModalOpen(true);
   };
 
-  const handleGenerateTemporaryPassword = async (provider: any) => {
+  const handleResetPassword = async (provider: any) => {
     try {
-      const { data, error } = await supabase.rpc('set_temporary_password', {
-        provider_id: provider.id
+      const { data, error } = await supabase.rpc('set_provider_password', {
+        provider_id: provider.id,
+        new_password: 'vargas321'
       });
 
       if (error) {
@@ -80,7 +81,7 @@ const ProvidersManagement = () => {
       }
 
       toast({
-        title: "Senha temporária gerada",
+        title: "Senha resetada",
         description: `Senha: ${data}. Anote e forneça ao prestador.`,
         duration: 10000,
       });
@@ -277,9 +278,9 @@ const ProvidersManagement = () => {
                             Gerenciar Serviços
                           </DropdownMenuItem>
                           {provider.role === 'barber' && (
-                            <DropdownMenuItem onClick={() => handleGenerateTemporaryPassword(provider)}>
+                            <DropdownMenuItem onClick={() => handleResetPassword(provider)}>
                               <Key className="mr-2 h-4 w-4" />
-                              Gerar Senha Temporária
+                              Resetar Senha
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem 

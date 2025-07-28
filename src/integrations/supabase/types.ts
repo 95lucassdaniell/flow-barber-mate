@@ -2077,12 +2077,9 @@ export type Database = {
           id: string
           is_active: boolean | null
           last_login_at: string | null
-          must_change_password: boolean | null
-          password_expires_at: string | null
           phone: string | null
           role: string
           status: string | null
-          temporary_password: string | null
           updated_at: string
           user_id: string | null
         }
@@ -2095,12 +2092,9 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           last_login_at?: string | null
-          must_change_password?: boolean | null
-          password_expires_at?: string | null
           phone?: string | null
           role?: string
           status?: string | null
-          temporary_password?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -2113,12 +2107,9 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           last_login_at?: string | null
-          must_change_password?: boolean | null
-          password_expires_at?: string | null
           phone?: string | null
           role?: string
           status?: string | null
-          temporary_password?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -3520,9 +3511,9 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
-      set_temporary_password: {
-        Args: { provider_id: string }
-        Returns: string
+      set_provider_password: {
+        Args: { provider_id: string; new_password: string }
+        Returns: boolean
       }
       update_barbershop_stats: {
         Args: Record<PropertyKey, never>

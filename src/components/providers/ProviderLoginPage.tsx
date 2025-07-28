@@ -11,7 +11,7 @@ import { Eye, EyeOff, LogIn } from 'lucide-react';
 
 const ProviderLoginPage = () => {
   const [email, setEmail] = useState('');
-  const [temporaryPassword, setTemporaryPassword] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -27,7 +27,7 @@ const ProviderLoginPage = () => {
     setError('');
 
     try {
-      const { data, error: loginError } = await providerLogin(email, temporaryPassword);
+      const { data, error: loginError } = await providerLogin(email, password);
       
       if (loginError) {
         setError(loginError.message);
@@ -65,7 +65,7 @@ const ProviderLoginPage = () => {
             {barbershop?.name ? `${barbershop.name}` : 'Acesso do Prestador'}
           </CardTitle>
           <CardDescription>
-            Entre com suas credenciais temporárias fornecidas pelo administrador
+            Entre com suas credenciais fornecidas pelo administrador
           </CardDescription>
         </CardHeader>
         
@@ -85,13 +85,13 @@ const ProviderLoginPage = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="temporaryPassword">Senha Temporária</Label>
+              <Label htmlFor="password">Senha</Label>
               <div className="relative">
                 <Input
-                  id="temporaryPassword"
+                  id="password"
                   type={showPassword ? 'text' : 'password'}
-                  value={temporaryPassword}
-                  onChange={(e) => setTemporaryPassword(e.target.value)}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="Senha fornecida pelo administrador"
                   required
                   disabled={loading}

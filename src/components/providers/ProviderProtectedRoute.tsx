@@ -8,7 +8,7 @@ interface ProviderProtectedRouteProps {
 }
 
 const ProviderProtectedRoute = ({ children }: ProviderProtectedRouteProps) => {
-  const { user, profile, loading, isProvider, mustChangePassword } = useProviderAuth();
+  const { user, profile, loading, isProvider } = useProviderAuth();
   const navigate = useNavigate();
   const { slug } = useParams();
 
@@ -18,13 +18,8 @@ const ProviderProtectedRoute = ({ children }: ProviderProtectedRouteProps) => {
         navigate(`/provider/${slug}/login`);
         return;
       }
-
-      if (mustChangePassword) {
-        navigate(`/provider/${slug}/change-password`);
-        return;
-      }
     }
-  }, [loading, user, isProvider, profile, mustChangePassword, navigate, slug]);
+  }, [loading, user, isProvider, profile, navigate, slug]);
 
   if (loading) {
     return (
@@ -38,10 +33,6 @@ const ProviderProtectedRoute = ({ children }: ProviderProtectedRouteProps) => {
   }
 
   if (!user || !isProvider || !profile) {
-    return null;
-  }
-
-  if (mustChangePassword) {
     return null;
   }
 

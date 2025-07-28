@@ -35,6 +35,7 @@ const providerSchema = z.object({
   role: z.enum(["admin", "receptionist", "barber"]),
   commission_rate: z.number().min(0).max(100).optional(),
   is_active: z.boolean().default(true),
+  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres").optional(),
 });
 
 type ProviderFormData = z.infer<typeof providerSchema>;
@@ -69,31 +70,34 @@ const ProviderModal = ({ isOpen, onClose, provider, onSuccess }: ProviderModalPr
       role: "barber",
       commission_rate: 0,
       is_active: true,
+      password: "vargas321",
     },
   });
 
   useEffect(() => {
     if (provider) {
-      form.reset({
-        full_name: provider.full_name || "",
-        email: provider.email || "",
-        phone: provider.phone || "",
-        role: provider.role || "barber",
-        commission_rate: provider.commission_rate || 0,
-        is_active: provider.is_active ?? true,
-      });
+        form.reset({
+          full_name: provider.full_name || "",
+          email: provider.email || "",
+          phone: provider.phone || "",
+          role: provider.role || "barber",
+          commission_rate: provider.commission_rate || 0,
+          is_active: provider.is_active ?? true,
+          password: "",
+        });
       
       // Reset services changes when provider changes
       setServicesChanges({});
     } else {
-      form.reset({
-        full_name: "",
-        email: "",
-        phone: "",
-        role: "barber",
-        commission_rate: 0,
-        is_active: true,
-      });
+        form.reset({
+          full_name: "",
+          email: "",
+          phone: "",
+          role: "barber",
+          commission_rate: 0,
+          is_active: true,
+          password: "vargas321",
+        });
       setServicesChanges({});
     }
   }, [provider, form]);
@@ -354,6 +358,26 @@ const ProviderModal = ({ isOpen, onClose, provider, onSuccess }: ProviderModalPr
                       {...form.register("commission_rate", { valueAsNumber: true })}
                       placeholder="0.00"
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Senha</Label>
+                    <Input
+                      id="password"
+                      type="text"
+                      {...form.register("password")}
+                      placeholder="vargas321"
+                    />
+                    {form.formState.errors.password && (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.password.message}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {isEditing 
+                        ? "Deixe em branco para manter a senha atual" 
+                        : "Senha padrão é 'vargas321'"}
+                    </p>
                   </div>
 
                   <div className="flex items-center justify-between">
