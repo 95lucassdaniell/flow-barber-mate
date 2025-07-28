@@ -71,9 +71,10 @@ export function useFinancialData(
     console.log('useFinancialData: Filters applied - startDate:', startDate, 'endDate:', endDate, 'barberId:', barberId);
     
     try {
+      // Buscar vendas primeiro com filtros aplicados
       let salesQuery = supabase
         .from('sales')
-        .select('final_amount, sale_date')
+        .select('id, final_amount, sale_date, barber_id')
         .eq('barbershop_id', profile.barbershop_id);
 
       if (startDate) salesQuery = salesQuery.gte('sale_date', startDate);
@@ -89,30 +90,25 @@ export function useFinancialData(
       
       console.log('useFinancialData: Sales found for stats:', sales?.length || 0);
 
-      // Buscar comissões dos sale_items
-      let saleItemsQuery = supabase
-        .from('sale_items')
-        .select(`
-          commission_amount,
-          sales!inner(sale_date, barbershop_id, barber_id)
-        `)
-        .eq('sales.barbershop_id', profile.barbershop_id);
-
-      if (startDate) saleItemsQuery = saleItemsQuery.gte('sales.sale_date', startDate);
-      if (endDate) saleItemsQuery = saleItemsQuery.lte('sales.sale_date', endDate);
-      if (barberId) saleItemsQuery = saleItemsQuery.eq('sales.barber_id', barberId);
-
-      const { data: saleItems, error: saleItemsError } = await saleItemsQuery;
-      
-      if (saleItemsError) {
-        console.error('Error fetching sale items for stats:', saleItemsError);
-        return;
+      // Se há vendas, buscar sale_items usando os IDs das vendas
+      let totalCommissions = 0;
+      if (sales && sales.length > 0) {
+        const saleIds = sales.map(sale => sale.id);
+        
+        const { data: saleItems, error: saleItemsError } = await supabase
+          .from('sale_items')
+          .select('commission_amount')
+          .in('sale_id', saleIds);
+        
+        if (saleItemsError) {
+          console.error('Error fetching sale items for stats:', saleItemsError);
+        } else {
+          console.log('useFinancialData: Sale items found for stats:', saleItems?.length || 0);
+          totalCommissions = saleItems?.reduce((sum, item) => sum + Number(item.commission_amount), 0) || 0;
+        }
       }
-      
-      console.log('useFinancialData: Sale items found for stats:', saleItems?.length || 0);
 
       const totalRevenue = sales?.reduce((sum, sale) => sum + Number(sale.final_amount), 0) || 0;
-      const totalCommissions = saleItems?.reduce((sum, item) => sum + Number(item.commission_amount), 0) || 0;
       const totalSales = sales?.length || 0;
       const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
 
