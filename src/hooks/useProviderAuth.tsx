@@ -93,6 +93,8 @@ export const useProviderAuth = () => {
 
   const providerLogin = async (email: string, password: string) => {
     try {
+      console.log('🔍 Tentando login para:', email);
+      
       // Verificar se o prestador existe e está ativo
       const { data: providerProfile, error: profileError } = await supabase
         .from('profiles')
@@ -102,26 +104,37 @@ export const useProviderAuth = () => {
         .eq('is_active', true)
         .maybeSingle();
 
+      console.log('📋 Profile encontrado:', providerProfile);
+      console.log('❌ Profile error:', profileError);
+
       if (profileError || !providerProfile) {
+        console.log('❌ Prestador não encontrado ou erro de profile');
         throw new Error('Credenciais inválidas ou prestador não encontrado');
       }
 
+      console.log('🔐 Tentando autenticação com Supabase...');
       // Fazer login com Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
+      console.log('✅ Auth data:', authData);
+      console.log('❌ Auth error:', authError);
+
       if (authError) {
+        console.log('❌ Erro de autenticação:', authError.message);
         throw authError;
       }
 
+      console.log('🔄 Atualizando last_login_at...');
       // Atualizar last_login_at
       await supabase
         .from('profiles')
         .update({ last_login_at: new Date().toISOString() })
         .eq('id', providerProfile.id);
 
+      console.log('✅ Login realizado com sucesso!');
       return { data: authData, error: null };
     } catch (error: any) {
       return { data: null, error };
