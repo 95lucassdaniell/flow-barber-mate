@@ -11,10 +11,10 @@ import CashRegisterHistory from "./CashRegisterHistory";
 import { format } from "date-fns";
 
 export default function AdminFinancialDashboard() {
-  // Definir período padrão mais amplo para mostrar dados históricos
+  // Definir período padrão para os últimos 30 dias
   const [dateRange, setDateRange] = useState({
-    startDate: "2024-01-01",
-    endDate: "2025-12-31",
+    startDate: format(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    endDate: format(new Date(), 'yyyy-MM-dd'),
   });
   const [selectedBarber, setSelectedBarber] = useState<string>("");
 
@@ -26,8 +26,10 @@ export default function AdminFinancialDashboard() {
 
   // Debug logs para verificar os dados
   console.log('AdminFinancialDashboard - Date range:', dateRange);
+  console.log('AdminFinancialDashboard - Selected barber:', selectedBarber);
+  console.log('AdminFinancialDashboard - Stats:', stats);
   console.log('AdminFinancialDashboard - Barber rankings:', barberRankings);
-  console.log('AdminFinancialDashboard - Commissions:', commissions);
+  console.log('AdminFinancialDashboard - Commissions count:', commissions?.length);
 
   if (loading) {
     return (
@@ -65,7 +67,13 @@ export default function AdminFinancialDashboard() {
                 <CardTitle>Performance dos Barbeiros</CardTitle>
               </CardHeader>
               <CardContent>
-                <BarberRankings rankings={barberRankings.slice(0, 5)} />
+                {barberRankings.length > 0 ? (
+                  <BarberRankings rankings={barberRankings.slice(0, 5)} />
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">
+                    Nenhum dado encontrado para o período selecionado
+                  </p>
+                )}
               </CardContent>
             </Card>
 
@@ -74,11 +82,17 @@ export default function AdminFinancialDashboard() {
                 <CardTitle>Últimas Comissões</CardTitle>
               </CardHeader>
               <CardContent>
-                <CommissionHistory 
-                  commissions={commissions.slice(0, 5)} 
-                  showBarberColumn={true}
-                  compact={true}
-                />
+                {commissions.length > 0 ? (
+                  <CommissionHistory 
+                    commissions={commissions.slice(0, 5)} 
+                    showBarberColumn={true}
+                    compact={true}
+                  />
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">
+                    Nenhuma comissão encontrada para o período selecionado
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -90,7 +104,13 @@ export default function AdminFinancialDashboard() {
               <CardTitle>Ranking Completo dos Barbeiros</CardTitle>
             </CardHeader>
             <CardContent>
-              <BarberRankings rankings={barberRankings} />
+              {barberRankings.length > 0 ? (
+                <BarberRankings rankings={barberRankings} />
+              ) : (
+                <p className="text-muted-foreground text-center py-4">
+                  Nenhum dado encontrado para o período selecionado
+                </p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -101,7 +121,13 @@ export default function AdminFinancialDashboard() {
               <CardTitle>Histórico Completo de Comissões</CardTitle>
             </CardHeader>
             <CardContent>
-              <CommissionHistory commissions={commissions} showBarberColumn={true} />
+              {commissions.length > 0 ? (
+                <CommissionHistory commissions={commissions} showBarberColumn={true} />
+              ) : (
+                <p className="text-muted-foreground text-center py-4">
+                  Nenhuma comissão encontrada para o período selecionado
+                </p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

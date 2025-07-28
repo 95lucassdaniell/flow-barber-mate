@@ -58,6 +58,9 @@ export function useFinancialData(
   const [commissions, setCommissions] = useState<CommissionData[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Debug logs para os filtros
+  console.log('useFinancialData - Filters:', { startDate, endDate, barberId });
+
   const fetchFinancialStats = async () => {
     if (!profile?.barbershop_id) {
       console.log('useFinancialData: No barbershop_id found');
@@ -65,6 +68,8 @@ export function useFinancialData(
     }
 
     console.log('useFinancialData: Fetching stats for barbershop:', profile.barbershop_id);
+    console.log('useFinancialData: Filters applied - startDate:', startDate, 'endDate:', endDate, 'barberId:', barberId);
+    
     try {
       let salesQuery = supabase
         .from('sales')
@@ -75,7 +80,14 @@ export function useFinancialData(
       if (endDate) salesQuery = salesQuery.lte('sale_date', endDate);
       if (barberId) salesQuery = salesQuery.eq('barber_id', barberId);
 
-      const { data: sales } = await salesQuery;
+      const { data: sales, error: salesError } = await salesQuery;
+      
+      if (salesError) {
+        console.error('Error fetching sales for stats:', salesError);
+        return;
+      }
+      
+      console.log('useFinancialData: Sales found for stats:', sales?.length || 0);
 
       // Buscar comissões dos sale_items
       let saleItemsQuery = supabase
@@ -90,12 +102,21 @@ export function useFinancialData(
       if (endDate) saleItemsQuery = saleItemsQuery.lte('sales.sale_date', endDate);
       if (barberId) saleItemsQuery = saleItemsQuery.eq('sales.barber_id', barberId);
 
-      const { data: saleItems } = await saleItemsQuery;
+      const { data: saleItems, error: saleItemsError } = await saleItemsQuery;
+      
+      if (saleItemsError) {
+        console.error('Error fetching sale items for stats:', saleItemsError);
+        return;
+      }
+      
+      console.log('useFinancialData: Sale items found for stats:', saleItems?.length || 0);
 
       const totalRevenue = sales?.reduce((sum, sale) => sum + Number(sale.final_amount), 0) || 0;
       const totalCommissions = saleItems?.reduce((sum, item) => sum + Number(item.commission_amount), 0) || 0;
       const totalSales = sales?.length || 0;
       const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
+
+      console.log('useFinancialData: Calculated stats:', { totalRevenue, totalCommissions, totalSales, averageTicket });
 
       setStats({
         totalRevenue,
@@ -112,16 +133,18 @@ export function useFinancialData(
     if (!profile?.barbershop_id) return;
 
     console.log('useFinancialData: Fetching barber rankings for barbershop:', profile.barbershop_id);
+    console.log('useFinancialData: Rankings filters - startDate:', startDate, 'endDate:', endDate, 'barberId:', barberId);
     
     try {
-      // Abordagem simplificada: buscar vendas primeiro
+      // Buscar vendas primeiro
       let salesQuery = supabase
         .from('sales')
-        .select('id, barber_id, sale_date')
+        .select('id, barber_id, sale_date, final_amount')
         .eq('barbershop_id', profile.barbershop_id);
 
       if (startDate) salesQuery = salesQuery.gte('sale_date', startDate);
       if (endDate) salesQuery = salesQuery.lte('sale_date', endDate);
+      if (barberId) salesQuery = salesQuery.eq('barber_id', barberId);
 
       const { data: salesData, error: salesError } = await salesQuery;
 
@@ -130,10 +153,10 @@ export function useFinancialData(
         return;
       }
 
-      console.log('useFinancialData: Sales data:', salesData);
+      console.log('useFinancialData: Sales data found:', salesData?.length || 0);
 
       if (!salesData || salesData.length === 0) {
-        console.log('useFinancialData: No sales found');
+        console.log('useFinancialData: No sales found for rankings');
         setBarberRankings([]);
         return;
       }
@@ -207,7 +230,7 @@ export function useFinancialData(
         
         acc[barberId].totalCommissions += commissionAmount;
         acc[barberId].salesCount += 1;
-        acc[barberId].totalSales += commissionAmount; // Usando comissão como proxy para vendas
+        acc[barberId].totalSales += Number(sale.final_amount) || 0; // Usar o valor real da venda
         return acc;
       }, {} as Record<string, BarberRanking>);
 
