@@ -1,17 +1,26 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useProviderAuth } from '@/hooks/useProviderAuth';
 import { useFinancialData } from '@/hooks/useFinancialData';
 import { useProviderGoals } from '@/hooks/useProviderGoals';
-import { Calendar, DollarSign, Target, TrendingUp } from 'lucide-react';
+import { Calendar, DollarSign, Target, TrendingUp, CalendarIcon } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 
 const ProviderDashboard = () => {
   const { profile } = useProviderAuth();
-  const currentMonth = new Date();
-  const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
-  const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+  const [dateRange, setDateRange] = useState({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date())
+  });
+  
+  const startDate = format(dateRange.from, 'yyyy-MM-dd');
+  const endDate = format(dateRange.to, 'yyyy-MM-dd');
   
   const { stats, commissions, loading: financialLoading } = useFinancialData(startDate, endDate, profile?.id);
   const { goals, loading: goalsLoading } = useProviderGoals(profile?.id);
@@ -57,13 +66,75 @@ const ProviderDashboard = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Bem-vindo, {profile?.full_name}
-        </h1>
-        <p className="text-muted-foreground">
-          Acompanhe sua performance de {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
-        </p>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-bold tracking-tight">
+            Bem-vindo, {profile?.full_name}
+          </h1>
+          <p className="text-muted-foreground">
+            Acompanhe sua performance de {format(dateRange.from, 'dd/MM/yyyy')} a {format(dateRange.to, 'dd/MM/yyyy')}
+          </p>
+        </div>
+        
+        {/* Filtro de Data */}
+        <div className="flex gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "justify-start text-left font-normal",
+                  !dateRange && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateRange?.from ? (
+                  dateRange.to ? (
+                    <>
+                      {format(dateRange.from, "dd/MM/yyyy")} -{" "}
+                      {format(dateRange.to, "dd/MM/yyyy")}
+                    </>
+                  ) : (
+                    format(dateRange.from, "dd/MM/yyyy")
+                  )
+                ) : (
+                  <span>Selecionar período</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <CalendarComponent
+                initialFocus
+                mode="range"
+                defaultMonth={dateRange?.from}
+                selected={dateRange}
+                onSelect={(range) => {
+                  if (range?.from) {
+                    setDateRange({
+                      from: range.from,
+                      to: range.to || range.from
+                    });
+                  }
+                }}
+                numberOfMonths={2}
+                locale={ptBR}
+              />
+            </PopoverContent>
+          </Popover>
+          
+          <Button
+            variant="outline"
+            onClick={() => {
+              const now = new Date();
+              setDateRange({
+                from: startOfMonth(now),
+                to: endOfMonth(now)
+              });
+            }}
+          >
+            Este mês
+          </Button>
+        </div>
       </div>
 
       {/* Cards de Estatísticas */}

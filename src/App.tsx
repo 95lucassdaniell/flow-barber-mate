@@ -32,6 +32,7 @@ import AIPage from "./pages/AIPage";
 import ProviderLoginPage from "./components/providers/ProviderLoginPage";
 import ProviderProtectedRoute from "./components/providers/ProviderProtectedRoute";
 import ProviderDashboard from "./components/providers/dashboard/ProviderDashboard";
+import ProviderDashboardLayout from "./components/providers/dashboard/ProviderDashboardLayout";
 
 const queryClient = new QueryClient();
 
@@ -122,7 +123,9 @@ const App = () => (
           <Route path="/provider/:slug/login" element={<ProviderLoginPage />} />
           <Route path="/provider/:slug/dashboard" element={
             <ProviderProtectedRoute>
-              <ProviderDashboard />
+              <ProviderDashboardLayout activeTab="dashboard">
+                <ProviderDashboard />
+              </ProviderDashboardLayout>
             </ProviderProtectedRoute>
           } />
           
