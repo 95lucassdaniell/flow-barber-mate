@@ -100,7 +100,7 @@ export const useProviderAuth = () => {
         .eq('email', email)
         .eq('role', 'barber')
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
       if (profileError || !providerProfile) {
         throw new Error('Credenciais inválidas ou prestador não encontrado');
