@@ -2076,9 +2076,13 @@ export type Database = {
           full_name: string
           id: string
           is_active: boolean | null
+          last_login_at: string | null
+          must_change_password: boolean | null
+          password_expires_at: string | null
           phone: string | null
           role: string
           status: string | null
+          temporary_password: string | null
           updated_at: string
           user_id: string | null
         }
@@ -2090,9 +2094,13 @@ export type Database = {
           full_name: string
           id?: string
           is_active?: boolean | null
+          last_login_at?: string | null
+          must_change_password?: boolean | null
+          password_expires_at?: string | null
           phone?: string | null
           role?: string
           status?: string | null
+          temporary_password?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -2104,9 +2112,13 @@ export type Database = {
           full_name?: string
           id?: string
           is_active?: boolean | null
+          last_login_at?: string | null
+          must_change_password?: boolean | null
+          password_expires_at?: string | null
           phone?: string | null
           role?: string
           status?: string | null
+          temporary_password?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -2116,6 +2128,93 @@ export type Database = {
             columns: ["barbershop_id"]
             isOneToOne: false
             referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_goals: {
+        Row: {
+          barbershop_id: string
+          created_at: string
+          created_by: string | null
+          current_value: number
+          goal_type: string
+          id: string
+          is_active: boolean
+          period_end: string
+          period_start: string
+          provider_id: string
+          specific_product_id: string | null
+          specific_service_id: string | null
+          target_value: number
+          updated_at: string
+        }
+        Insert: {
+          barbershop_id: string
+          created_at?: string
+          created_by?: string | null
+          current_value?: number
+          goal_type: string
+          id?: string
+          is_active?: boolean
+          period_end: string
+          period_start: string
+          provider_id: string
+          specific_product_id?: string | null
+          specific_service_id?: string | null
+          target_value?: number
+          updated_at?: string
+        }
+        Update: {
+          barbershop_id?: string
+          created_at?: string
+          created_by?: string | null
+          current_value?: number
+          goal_type?: string
+          id?: string
+          is_active?: boolean
+          period_end?: string
+          period_start?: string
+          provider_id?: string
+          specific_product_id?: string | null
+          specific_service_id?: string | null
+          target_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_goals_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_goals_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_goals_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_goals_specific_product_id_fkey"
+            columns: ["specific_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_goals_specific_service_id_fkey"
+            columns: ["specific_service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
             referencedColumns: ["id"]
           },
         ]
@@ -3264,6 +3363,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      generate_temporary_password: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_archive_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -3416,6 +3519,10 @@ export type Database = {
       is_user_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      set_temporary_password: {
+        Args: { provider_id: string }
+        Returns: string
       }
       update_barbershop_stats: {
         Args: Record<PropertyKey, never>

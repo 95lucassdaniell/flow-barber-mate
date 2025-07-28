@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Edit, MoreVertical, Settings } from "lucide-react";
+import { Plus, Search, Edit, MoreVertical, Settings, Key } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +28,7 @@ import {
 import { useProviders } from "@/hooks/useProviders";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import ProviderModal from "./ProviderModal";
 import ProviderServicesModal from "./ProviderServicesModalSimple";
 
@@ -66,6 +67,34 @@ const ProvidersManagement = () => {
   const handleManageServices = (provider: any) => {
     setSelectedProviderForServices(provider);
     setIsServicesModalOpen(true);
+  };
+
+  const handleGenerateTemporaryPassword = async (provider: any) => {
+    try {
+      const { data, error } = await supabase.rpc('set_temporary_password', {
+        provider_id: provider.id
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Senha temporária gerada",
+        description: `Senha: ${data}. Anote e forneça ao prestador.`,
+        duration: 10000,
+      });
+
+      // Mostrar alerta com a senha
+      alert(`Senha temporária gerada para ${provider.full_name}:\n\n${data}\n\nAnote esta senha e forneça ao prestador. Por segurança, esta mensagem não será exibida novamente.`);
+
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error?.message || "Erro ao gerar senha temporária.",
+        variant: "destructive",
+      });
+    }
   };
 
   const getRoleBadgeColor = (role: string) => {
@@ -247,6 +276,12 @@ const ProvidersManagement = () => {
                             <Settings className="mr-2 h-4 w-4" />
                             Gerenciar Serviços
                           </DropdownMenuItem>
+                          {provider.role === 'barber' && (
+                            <DropdownMenuItem onClick={() => handleGenerateTemporaryPassword(provider)}>
+                              <Key className="mr-2 h-4 w-4" />
+                              Gerar Senha Temporária
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem 
                             onClick={async () => {
                               try {
