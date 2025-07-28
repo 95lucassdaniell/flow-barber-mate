@@ -98,21 +98,31 @@ export function useFinancialData(
       
       console.log('useFinancialData: Commands found for stats:', commands?.length || 0);
 
-      // Se há comandos, buscar command_items usando os IDs dos comandos
+      // Se há comandos, buscar command_items em lotes menores para evitar timeout
       let totalCommissions = 0;
       if (commands && commands.length > 0) {
         const commandIds = commands.map(command => command.id);
         
-        const { data: commandItems, error: commandItemsError } = await supabase
-          .from('command_items')
-          .select('commission_amount')
-          .in('command_id', commandIds);
-        
-        if (commandItemsError) {
-          console.error('Error fetching command items for stats:', commandItemsError);
-        } else {
-          console.log('useFinancialData: Command items found for stats:', commandItems?.length || 0);
-          totalCommissions = commandItems?.reduce((sum, item) => sum + Number(item.commission_amount), 0) || 0;
+        // Dividir em lotes de 500 IDs para evitar problemas de timeout
+        const batchSize = 500;
+        for (let i = 0; i < commandIds.length; i += batchSize) {
+          const batch = commandIds.slice(i, i + batchSize);
+          
+          try {
+            const { data: commandItems, error: commandItemsError } = await supabase
+              .from('command_items')
+              .select('commission_amount')
+              .in('command_id', batch);
+            
+            if (commandItemsError) {
+              console.error(`Error fetching command items batch ${i}-${i+batchSize}:`, commandItemsError);
+            } else {
+              console.log(`useFinancialData: Command items found in batch ${i}-${i+batchSize}:`, commandItems?.length || 0);
+              totalCommissions += commandItems?.reduce((sum, item) => sum + Number(item.commission_amount), 0) || 0;
+            }
+          } catch (batchError) {
+            console.error(`Batch error ${i}-${i+batchSize}:`, batchError);
+          }
         }
       }
 
