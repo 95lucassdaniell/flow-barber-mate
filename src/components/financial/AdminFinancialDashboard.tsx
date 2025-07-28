@@ -18,7 +18,15 @@ export default function AdminFinancialDashboard() {
   });
   const [selectedBarber, setSelectedBarber] = useState<string>("");
 
-  const { stats, barberRankings, commissions, loading } = useFinancialData(
+  const { 
+    stats, 
+    barberRankings, 
+    commissions, 
+    loading, 
+    statsLoading, 
+    rankingsLoading, 
+    commissionsLoading 
+  } = useFinancialData(
     dateRange.startDate,
     dateRange.endDate,
     selectedBarber || undefined
@@ -64,10 +72,22 @@ export default function AdminFinancialDashboard() {
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Performance dos Barbeiros</CardTitle>
+                <CardTitle>
+                  Performance dos Barbeiros
+                  {rankingsLoading && (
+                    <div className="inline-flex items-center ml-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    </div>
+                  )}
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                {barberRankings.length > 0 ? (
+                {rankingsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                    <span className="ml-2 text-muted-foreground">Atualizando rankings...</span>
+                  </div>
+                ) : barberRankings.length > 0 ? (
                   <BarberRankings rankings={barberRankings.slice(0, 5)} />
                 ) : (
                   <p className="text-muted-foreground text-center py-4">
@@ -99,20 +119,32 @@ export default function AdminFinancialDashboard() {
         </TabsContent>
 
         <TabsContent value="rankings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Ranking Completo dos Barbeiros</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {barberRankings.length > 0 ? (
-                <BarberRankings rankings={barberRankings} />
-              ) : (
-                <p className="text-muted-foreground text-center py-4">
-                  Nenhum dado encontrado para o período selecionado
-                </p>
-              )}
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  Ranking Completo dos Barbeiros
+                  {rankingsLoading && (
+                    <div className="inline-flex items-center ml-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    </div>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {rankingsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                    <span className="ml-2 text-muted-foreground">Atualizando rankings...</span>
+                  </div>
+                ) : barberRankings.length > 0 ? (
+                  <BarberRankings rankings={barberRankings} />
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">
+                    Nenhum dado encontrado para o período selecionado
+                  </p>
+                )}
+              </CardContent>
+            </Card>
         </TabsContent>
 
         <TabsContent value="commissions" className="space-y-4">

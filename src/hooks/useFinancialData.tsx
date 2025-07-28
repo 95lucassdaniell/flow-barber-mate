@@ -57,18 +57,25 @@ export function useFinancialData(
   const [productRankings, setProductRankings] = useState<ProductRanking[]>([]);
   const [commissions, setCommissions] = useState<CommissionData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [rankingsLoading, setRankingsLoading] = useState(false);
+  const [commissionsLoading, setCommissionsLoading] = useState(false);
 
+  // ID único para rastrear requests
+  const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  
   // Debug logs para os filtros
-  console.log('useFinancialData - Filters:', { startDate, endDate, barberId });
+  console.log(`[${requestId}] useFinancialData - Filters:`, { startDate, endDate, barberId });
 
   const fetchFinancialStats = async () => {
     if (!profile?.barbershop_id) {
-      console.log('useFinancialData: No barbershop_id found');
+      console.log(`[${requestId}] fetchFinancialStats: No barbershop_id found`);
       return;
     }
 
-    console.log('useFinancialData: Fetching stats for barbershop:', profile.barbershop_id);
-    console.log('useFinancialData: Filters applied - startDate:', startDate, 'endDate:', endDate, 'barberId:', barberId);
+    setStatsLoading(true);
+    console.log(`[${requestId}] fetchFinancialStats: Starting - barbershop:`, profile.barbershop_id);
+    console.log(`[${requestId}] fetchFinancialStats: Filters:`, { startDate, endDate, barberId });
     
     try {
       // Buscar vendas primeiro com filtros aplicados
@@ -112,7 +119,7 @@ export function useFinancialData(
       const totalSales = sales?.length || 0;
       const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
 
-      console.log('useFinancialData: Calculated stats:', { totalRevenue, totalCommissions, totalSales, averageTicket });
+      console.log(`[${requestId}] fetchFinancialStats: Calculated stats:`, { totalRevenue, totalCommissions, totalSales, averageTicket });
 
       setStats({
         totalRevenue,
@@ -121,15 +128,21 @@ export function useFinancialData(
         averageTicket,
       });
     } catch (error) {
-      console.error('Error fetching financial stats:', error);
+      console.error(`[${requestId}] fetchFinancialStats: Error:`, error);
+    } finally {
+      setStatsLoading(false);
     }
   };
 
   const fetchBarberRankings = async () => {
     if (!profile?.barbershop_id) return;
 
-    console.log('useFinancialData: Fetching barber rankings for barbershop:', profile.barbershop_id);
-    console.log('useFinancialData: Rankings filters - startDate:', startDate, 'endDate:', endDate, 'barberId:', barberId);
+    setRankingsLoading(true);
+    // Limpar rankings antes de buscar novos dados
+    setBarberRankings([]);
+    
+    console.log(`[${requestId}] fetchBarberRankings: Starting - barbershop:`, profile.barbershop_id);
+    console.log(`[${requestId}] fetchBarberRankings: Filters:`, { startDate, endDate, barberId });
     
     try {
       // Buscar vendas primeiro
@@ -149,11 +162,12 @@ export function useFinancialData(
         return;
       }
 
-      console.log('useFinancialData: Sales data found:', salesData?.length || 0);
+      console.log(`[${requestId}] fetchBarberRankings: Sales data found:`, salesData?.length || 0);
 
       if (!salesData || salesData.length === 0) {
-        console.log('useFinancialData: No sales found for rankings');
+        console.log(`[${requestId}] fetchBarberRankings: No sales found for rankings`);
         setBarberRankings([]);
+        setRankingsLoading(false);
         return;
       }
 
@@ -235,15 +249,20 @@ export function useFinancialData(
       const rankings = Object.values(barberStats)
         .sort((a, b) => b.totalCommissions - a.totalCommissions);
 
-      console.log('useFinancialData: Final rankings:', rankings);
+      console.log(`[${requestId}] fetchBarberRankings: Final rankings:`, rankings);
       setBarberRankings(rankings);
     } catch (error) {
-      console.error('Error fetching barber rankings:', error);
+      console.error(`[${requestId}] fetchBarberRankings: Error:`, error);
+    } finally {
+      setRankingsLoading(false);
     }
   };
 
   const fetchCommissions = async () => {
     if (!profile?.barbershop_id) return;
+
+    setCommissionsLoading(true);
+    console.log(`[${requestId}] fetchCommissions: Starting`);
 
     try {
       let query = supabase
@@ -284,7 +303,9 @@ export function useFinancialData(
 
       setCommissions(formattedData);
     } catch (error) {
-      console.error('Error fetching commissions:', error);
+      console.error(`[${requestId}] fetchCommissions: Error:`, error);
+    } finally {
+      setCommissionsLoading(false);
     }
   };
 
@@ -310,6 +331,9 @@ export function useFinancialData(
     productRankings,
     commissions,
     loading,
+    statsLoading,
+    rankingsLoading,
+    commissionsLoading,
     refetch: () => {
       fetchFinancialStats();
       fetchBarberRankings();
