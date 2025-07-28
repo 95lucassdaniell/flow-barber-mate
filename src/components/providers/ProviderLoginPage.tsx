@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useProviderAuth } from '@/hooks/useProviderAuth';
+import { useBarbershopBySlug } from '@/hooks/useBarbershopBySlug';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 
 const ProviderLoginPage = () => {
@@ -18,6 +19,7 @@ const ProviderLoginPage = () => {
   const { providerLogin } = useProviderAuth();
   const navigate = useNavigate();
   const { slug } = useParams();
+  const { barbershop, loading: barbershopLoading } = useBarbershopBySlug(slug || '');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,11 +49,21 @@ const ProviderLoginPage = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
-              <LogIn className="w-6 h-6 text-primary-foreground" />
-            </div>
+            {barbershop?.logo_url ? (
+              <img 
+                src={barbershop.logo_url} 
+                alt={`Logo ${barbershop.name}`}
+                className="w-12 h-12 object-contain rounded-lg"
+              />
+            ) : (
+              <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                <LogIn className="w-6 h-6 text-primary-foreground" />
+              </div>
+            )}
           </div>
-          <CardTitle className="text-2xl">Acesso do Prestador</CardTitle>
+          <CardTitle className="text-2xl">
+            {barbershop?.name ? `${barbershop.name}` : 'Acesso do Prestador'}
+          </CardTitle>
           <CardDescription>
             Entre com suas credenciais temporárias fornecidas pelo administrador
           </CardDescription>
