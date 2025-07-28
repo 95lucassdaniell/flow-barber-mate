@@ -280,14 +280,19 @@ export function useFinancialData(
             clients!inner(name)
           )
         `)
-        .eq('sales.barbershop_id', profile.barbershop_id)
-        .order('sales.sale_date', { ascending: false });
+        .eq('sales.barbershop_id', profile.barbershop_id);
 
       if (startDate) query = query.gte('sales.sale_date', startDate);
       if (endDate) query = query.lte('sales.sale_date', endDate);
       if (barberId) query = query.eq('sales.barber_id', barberId);
 
-      const { data } = await query;
+      // Buscar dados sem ordenação para evitar erro com joins
+      const { data, error: commissionsError } = await query;
+      
+      if (commissionsError) {
+        console.error(`[${requestId}] fetchCommissions: Error:`, commissionsError);
+        return;
+      }
       
       const formattedData = data?.map((item: any) => ({
         id: item.id,
@@ -301,6 +306,10 @@ export function useFinancialData(
         }
       })) || [];
 
+      // Ordenar manualmente por data de venda (mais recente primeiro)
+      formattedData.sort((a, b) => new Date(b.commission_date).getTime() - new Date(a.commission_date).getTime());
+
+      console.log(`[${requestId}] fetchCommissions: Formatted data:`, formattedData.length, 'commissions');
       setCommissions(formattedData);
     } catch (error) {
       console.error(`[${requestId}] fetchCommissions: Error:`, error);
