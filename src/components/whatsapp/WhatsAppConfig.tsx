@@ -7,8 +7,6 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Loader2, CheckCircle, XCircle, QrCode, Smartphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import EvolutionApiConfig from "./EvolutionApiConfig";
-import EvolutionApiTester from "./EvolutionApiTester";
 
 interface WhatsAppConfigProps {
   isConnected: boolean;
@@ -222,21 +220,6 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
 
   return (
     <div className="space-y-6">
-      {/* Evolution API Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Configuração da Evolution API</CardTitle>
-          <CardDescription>
-            Configure primeiro as credenciais da Evolution API antes de conectar o WhatsApp.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <EvolutionApiConfig />
-            <EvolutionApiTester />
-          </div>
-        </CardContent>
-      </Card>
       
       <Card>
         <CardHeader>
