@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,46 +21,25 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, MessageSquare } from "lucide-react";
+import { Plus, Edit, Trash2, MessageSquare, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Template {
   id: string;
   name: string;
   content: string;
   variables: string[];
-  category: 'appointment' | 'reminder' | 'confirmation' | 'general';
-  isActive: boolean;
+  category: 'appointment' | 'marketing' | 'reminder' | 'confirmation' | 'general';
+  trigger_type?: 'appointment_created' | 'appointment_reminder' | 'appointment_confirmation' | null;
+  is_active: boolean;
 }
 
 const MessageTemplates = () => {
   const { toast } = useToast();
-  const [templates, setTemplates] = useState<Template[]>([
-    {
-      id: '1',
-      name: 'Confirmação de Agendamento',
-      content: 'Olá {nome}! Seu agendamento foi confirmado para {data} às {hora} com {barbeiro}. Local: {endereco}',
-      variables: ['nome', 'data', 'hora', 'barbeiro', 'endereco'],
-      category: 'appointment',
-      isActive: true
-    },
-    {
-      id: '2',
-      name: 'Lembrete 1h Antes',
-      content: 'Oi {nome}! Lembrete: você tem agendamento hoje às {hora} com {barbeiro}. Te esperamos!',
-      variables: ['nome', 'hora', 'barbeiro'],
-      category: 'reminder',
-      isActive: true
-    },
-    {
-      id: '3',
-      name: 'Solicitar Confirmação',
-      content: 'Olá {nome}! Você tem agendamento amanhã às {hora}. Confirma sua presença? Responda SIM ou NÃO.',
-      variables: ['nome', 'hora'],
-      category: 'confirmation',
-      isActive: true
-    }
-  ]);
-
+  const { profile } = useAuth();
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [formData, setFormData] = useState({
@@ -69,42 +48,111 @@ const MessageTemplates = () => {
     category: 'general' as Template['category']
   });
 
-  const handleSave = () => {
+  // Fetch templates from database
+  const fetchTemplates = async () => {
+    if (!profile?.barbershop_id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_templates')
+        .select('*')
+        .eq('barbershop_id', profile.barbershop_id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Convert database data to match our interface
+      const formattedTemplates = (data || []).map(template => ({
+        id: template.id,
+        name: template.name,
+        content: template.content,
+        variables: Array.isArray(template.variables) ? template.variables.map(v => String(v)) : [],
+        category: template.category as Template['category'],
+        trigger_type: null, // Will be set based on category
+        is_active: template.is_active
+      }));
+      setTemplates(formattedTemplates);
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar templates.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTemplates();
+  }, [profile?.barbershop_id]);
+
+  const handleSave = async () => {
+    if (!profile?.barbershop_id) return;
+
     try {
       // Extract variables from content
       const variables = formData.content.match(/\{([^}]+)\}/g)?.map(v => v.slice(1, -1)) || [];
+      
+      // Determine trigger_type based on category
+      const getTriggerType = (category: string) => {
+        switch (category) {
+          case 'appointment':
+            return 'appointment_created';
+          case 'reminder':
+            return 'appointment_reminder';
+          case 'confirmation':
+            return 'appointment_confirmation';
+          default:
+            return null;
+        }
+      };
+
+      const templateData = {
+        barbershop_id: profile.barbershop_id,
+        name: formData.name,
+        content: formData.content,
+        variables,
+        category: formData.category,
+        trigger_type: getTriggerType(formData.category),
+        is_active: true
+      };
 
       if (editingTemplate) {
         // Update existing template
-        setTemplates(prev => prev.map(t => 
-          t.id === editingTemplate.id 
-            ? { ...t, ...formData, variables }
-            : t
-        ));
+        const { error } = await supabase
+          .from('whatsapp_templates')
+          .update(templateData)
+          .eq('id', editingTemplate.id);
+
+        if (error) throw error;
+
         toast({
           title: "Template atualizado",
           description: "O template foi atualizado com sucesso.",
         });
       } else {
         // Create new template
-        const newTemplate: Template = {
-          id: Date.now().toString(),
-          ...formData,
-          variables,
-          isActive: true
-        };
-        setTemplates(prev => [...prev, newTemplate]);
+        const { error } = await supabase
+          .from('whatsapp_templates')
+          .insert([templateData]);
+
+        if (error) throw error;
+
         toast({
           title: "Template criado",
           description: "O template foi criado com sucesso.",
         });
       }
 
-      // Reset form
+      // Reset form and refresh data
       setFormData({ name: '', content: '', category: 'general' });
       setEditingTemplate(null);
       setIsModalOpen(false);
+      fetchTemplates();
     } catch (error) {
+      console.error('Error saving template:', error);
       toast({
         title: "Erro",
         description: "Erro ao salvar o template.",
@@ -123,17 +171,35 @@ const MessageTemplates = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    setTemplates(prev => prev.filter(t => t.id !== id));
-    toast({
-      title: "Template removido",
-      description: "O template foi removido com sucesso.",
-    });
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('whatsapp_templates')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Template removido",
+        description: "O template foi removido com sucesso.",
+      });
+
+      fetchTemplates();
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao remover o template.",
+        variant: "destructive",
+      });
+    }
   };
 
   const getCategoryLabel = (category: Template['category']) => {
     const labels = {
       appointment: 'Agendamento',
+      marketing: 'Marketing',
       reminder: 'Lembrete',
       confirmation: 'Confirmação',
       general: 'Geral'
@@ -144,12 +210,21 @@ const MessageTemplates = () => {
   const getCategoryColor = (category: Template['category']) => {
     const colors = {
       appointment: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+      marketing: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
       reminder: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
       confirmation: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
       general: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
     };
     return colors[category];
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -196,6 +271,7 @@ const MessageTemplates = () => {
                   <option value="appointment">Agendamento</option>
                   <option value="reminder">Lembrete</option>
                   <option value="confirmation">Confirmação</option>
+                  <option value="marketing">Marketing</option>
                   <option value="general">Geral</option>
                 </select>
               </div>
@@ -210,7 +286,7 @@ const MessageTemplates = () => {
                   placeholder="Digite sua mensagem. Use {variavel} para campos dinâmicos como {nome}, {data}, {hora}"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Use chaves para variáveis dinâmicas: {"{nome}"}, {"{data}"}, {"{hora}"}, {"{barbeiro}"}, etc.
+                  Use chaves para variáveis dinâmicas: {"{nome}"}, {"{data}"}, {"{hora}"}, {"{barbeiro}"}, {"{endereco}"}
                 </p>
               </div>
 
@@ -283,8 +359,8 @@ const MessageTemplates = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={template.isActive ? "default" : "secondary"}>
-                          {template.isActive ? "Ativo" : "Inativo"}
+                        <Badge variant={template.is_active ? "default" : "secondary"}>
+                          {template.is_active ? "Ativo" : "Inativo"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">

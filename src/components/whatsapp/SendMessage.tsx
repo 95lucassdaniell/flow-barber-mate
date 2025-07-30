@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useClients } from "@/hooks/useClients";
 import { Send, AlertCircle, Users, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface SendMessageProps {
   isConnected: boolean;
@@ -23,7 +24,9 @@ interface SendMessageProps {
 const SendMessage = ({ isConnected }: SendMessageProps) => {
   const { toast } = useToast();
   const { clients } = useClients();
+  const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [dbTemplates, setDbTemplates] = useState<any[]>([]);
   
   const [messageData, setMessageData] = useState({
     recipients: 'single' as 'single' | 'multiple' | 'all',
@@ -33,7 +36,39 @@ const SendMessage = ({ isConnected }: SendMessageProps) => {
     template: ''
   });
 
-  const templates = [
+  // Fetch templates from database
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      if (!profile?.barbershop_id || !isConnected) return;
+      
+      try {
+        const { data: templates } = await supabase
+          .from('whatsapp_templates')
+          .select('*')
+          .eq('barbershop_id', profile.barbershop_id)
+          .eq('is_active', true)
+          .order('name');
+
+        if (templates) {
+          const formattedTemplates = templates.map(template => ({
+            id: template.id,
+            name: template.name,
+            content: template.content,
+            variables: Array.isArray(template.variables) ? template.variables.map(v => String(v)) : [],
+            category: template.category
+          }));
+          setDbTemplates(formattedTemplates);
+        }
+      } catch (error) {
+        console.error('Error fetching templates:', error);
+      }
+    };
+
+    fetchTemplates();
+  }, [profile?.barbershop_id, isConnected]);
+
+  // Combine database templates with fallback templates
+  const allTemplates = dbTemplates.length > 0 ? dbTemplates : [
     {
       id: '1',
       name: 'Boas-vindas',
@@ -215,7 +250,7 @@ const SendMessage = ({ isConnected }: SendMessageProps) => {
   };
 
   const handleTemplateSelect = (templateId: string) => {
-    const template = templates.find(t => t.id === templateId);
+    const template = allTemplates.find(t => t.id === templateId);
     if (template) {
       setMessageData(prev => ({ ...prev, message: template.content, template: templateId }));
     }
@@ -331,7 +366,7 @@ const SendMessage = ({ isConnected }: SendMessageProps) => {
                 <SelectValue placeholder="Escolha um template" />
               </SelectTrigger>
               <SelectContent>
-                {templates.map((template) => (
+                {allTemplates.map((template) => (
                   <SelectItem key={template.id} value={template.id}>
                     {template.name}
                   </SelectItem>
