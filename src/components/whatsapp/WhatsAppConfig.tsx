@@ -58,7 +58,7 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
   const loadSettings = async () => {
     try {
       const { data, error } = await supabase
-        .from('whatsapp_settings')
+        .from('whatsapp_instances')
         .select('*')
         .single();
 
@@ -138,14 +138,14 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
       }
 
       const { error } = await supabase
-        .from('whatsapp_settings')
-        .upsert({
-          barbershop_id: profile.barbershop_id,
+        .from('whatsapp_instances')
+        .update({
           business_name: settings.businessName,
           auto_reply: settings.autoReply,
           auto_reply_message: settings.autoReplyMessage,
           notification_settings: notifications,
-        });
+        })
+        .eq('barbershop_id', profile.barbershop_id);
 
       if (error) {
         console.error('Error saving settings:', error);
