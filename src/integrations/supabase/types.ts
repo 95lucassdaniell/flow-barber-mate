@@ -3110,6 +3110,84 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_automation_logs: {
+        Row: {
+          appointment_id: string | null
+          automation_id: string | null
+          barbershop_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          message_content: string
+          phone: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          automation_id?: string | null
+          barbershop_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_content: string
+          phone: string
+          sent_at?: string | null
+          status: string
+        }
+        Update: {
+          appointment_id?: string | null
+          automation_id?: string | null
+          barbershop_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_content?: string
+          phone?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      whatsapp_automations: {
+        Row: {
+          barbershop_id: string
+          created_at: string
+          delay_minutes: number | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          template_id: string
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          barbershop_id: string
+          created_at?: string
+          delay_minutes?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          template_id: string
+          trigger_type: string
+          updated_at?: string
+        }
+        Update: {
+          barbershop_id?: string
+          created_at?: string
+          delay_minutes?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          template_id?: string
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_instances: {
         Row: {
           api_type: string | null
@@ -3535,6 +3613,10 @@ export type Database = {
       process_pending_whatsapp_configurations: {
         Args: Record<PropertyKey, never>
         Returns: number
+      }
+      replace_template_variables: {
+        Args: { template_content: string; appointment_id: string }
+        Returns: string
       }
       set_provider_password: {
         Args: { provider_id: string; new_password: string }
