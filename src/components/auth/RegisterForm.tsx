@@ -103,6 +103,8 @@ const RegisterForm = () => {
   };
 
   const handleSubmit = async () => {
+    console.log('=== NOVO CÓDIGO DE REGISTRO INICIANDO ===');
+    
     // Validação do step 2
     if (!formData.businessName || !formData.address || !formData.city) {
       toast({
@@ -216,24 +218,39 @@ const RegisterForm = () => {
       navigate(`/app/${formData.businessSlug}`);
       
     } catch (error: any) {
-      console.error('Erro no registro:', error);
+      console.error('=== ERRO DETALHADO NO REGISTRO ===');
+      console.error('Tipo do erro:', typeof error);
+      console.error('Mensagem:', error.message);
+      console.error('Stack:', error.stack);
+      console.error('Erro completo:', error);
       
-      // Tratamento específico de erros
-      let errorMessage = error.message || "Ocorreu um erro inesperado. Tente novamente.";
+      // Tratamento específico de erros com mais detalhes
+      let errorMessage = "Ocorreu um erro inesperado. Tente novamente.";
+      let errorDetails = "";
       
       if (error.message.includes("User already registered")) {
-        errorMessage = "Este e-mail já está cadastrado. Tente fazer login ou use outro e-mail.";
+        errorMessage = "Este e-mail já está cadastrado.";
+        errorDetails = "Tente fazer login ou use outro e-mail.";
       } else if (error.message.includes("duplicate key value") || error.message.includes("já está em uso")) {
-        errorMessage = "Este nome de barbearia já está em uso. Tente outro nome.";
-      } else if (error.message.includes("For security purposes")) {
-        errorMessage = "Muitas tentativas de cadastro. Aguarde alguns segundos e tente novamente.";
+        errorMessage = "Este nome de barbearia já está em uso.";
+        errorDetails = "Tente outro nome para sua barbearia.";
+      } else if (error.message.includes("For security purposes") || error.message.includes("Too Many Requests")) {
+        errorMessage = "Muitas tentativas de cadastro.";
+        errorDetails = "Aguarde alguns segundos e tente novamente.";
       } else if (error.message.includes("406") || error.message.includes("Not Acceptable")) {
-        errorMessage = "Erro de permissão. Tente novamente em alguns instantes.";
+        errorMessage = "Erro de permissão no sistema.";
+        errorDetails = "Tente recarregar a página e tentar novamente.";
+      } else if (error.message.includes("autenticação") || error.message.includes("session")) {
+        errorMessage = "Problema na autenticação.";
+        errorDetails = "O usuário foi criado, mas houve um problema na sessão. Tente fazer login.";
+      } else {
+        errorMessage = error.message || "Erro desconhecido";
+        errorDetails = "Se o problema persistir, recarregue a página.";
       }
       
       toast({
-        title: "Erro ao criar conta",
-        description: errorMessage,
+        title: errorMessage,
+        description: errorDetails,
         variant: "destructive",
       });
     } finally {
