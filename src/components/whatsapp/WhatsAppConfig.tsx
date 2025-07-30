@@ -57,9 +57,21 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
 
   const loadSettings = async () => {
     try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('barbershop_id')
+        .eq('user_id', user.user.id)
+        .single();
+
+      if (!profile?.barbershop_id) return;
+
       const { data, error } = await supabase
         .from('whatsapp_instances')
-        .select('*')
+        .select('business_name, auto_reply, auto_reply_message, notification_settings')
+        .eq('barbershop_id', profile.barbershop_id)
         .single();
 
       if (data) {

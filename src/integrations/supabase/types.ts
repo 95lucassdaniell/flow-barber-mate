@@ -3114,13 +3114,17 @@ export type Database = {
         Row: {
           api_type: string | null
           auto_created: boolean | null
+          auto_reply: boolean | null
+          auto_reply_message: string | null
           barbershop_id: string
+          business_name: string | null
           created_at: string
           evolution_instance_name: string | null
           id: string
           instance_id: string | null
           instance_token: string | null
           last_connected_at: string | null
+          notification_settings: Json | null
           phone_number: string | null
           qr_code: string | null
           status: string
@@ -3130,13 +3134,17 @@ export type Database = {
         Insert: {
           api_type?: string | null
           auto_created?: boolean | null
+          auto_reply?: boolean | null
+          auto_reply_message?: string | null
           barbershop_id: string
+          business_name?: string | null
           created_at?: string
           evolution_instance_name?: string | null
           id?: string
           instance_id?: string | null
           instance_token?: string | null
           last_connected_at?: string | null
+          notification_settings?: Json | null
           phone_number?: string | null
           qr_code?: string | null
           status?: string
@@ -3146,13 +3154,17 @@ export type Database = {
         Update: {
           api_type?: string | null
           auto_created?: boolean | null
+          auto_reply?: boolean | null
+          auto_reply_message?: string | null
           barbershop_id?: string
+          business_name?: string | null
           created_at?: string
           evolution_instance_name?: string | null
           id?: string
           instance_id?: string | null
           instance_token?: string | null
           last_connected_at?: string | null
+          notification_settings?: Json | null
           phone_number?: string | null
           qr_code?: string | null
           status?: string
