@@ -136,6 +136,7 @@ serve(async (req) => {
           instance_token: instance.instance_token
         });
         
+        console.log('Calling evolution-instance-manager...');
         const { data, error } = await supabase.functions.invoke('evolution-instance-manager', {
           body: { action: 'create', barbershopId: profile.barbershop_id }
         });
@@ -153,13 +154,35 @@ serve(async (req) => {
           });
         }
 
+        if (!data?.success) {
+          console.error('Evolution instance manager returned failure:', data);
+          return new Response(JSON.stringify({ 
+            error: 'Failed to create Evolution instance',
+            details: data 
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
         // Refresh instance data
         console.log('Refreshing instance data...');
-        const { data: updatedInstance } = await supabase
+        const { data: updatedInstance, error: refreshError } = await supabase
           .from('whatsapp_instances')
           .select('*')
           .eq('barbershop_id', profile.barbershop_id)
           .single();
+
+        if (refreshError) {
+          console.error('Error refreshing instance:', refreshError);
+          return new Response(JSON.stringify({ 
+            error: 'Failed to refresh instance data',
+            details: refreshError 
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
 
         if (updatedInstance) {
           console.log('Updated instance:', updatedInstance);

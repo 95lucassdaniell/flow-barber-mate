@@ -7,16 +7,34 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('=== EVOLUTION INSTANCE MANAGER RECEIVED REQUEST ===');
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  console.log('Headers:', Object.fromEntries(req.headers.entries()));
+  
   if (req.method === 'OPTIONS') {
+    console.log('Returning CORS preflight response');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     console.log('=== EVOLUTION INSTANCE MANAGER STARTED ===');
     
+    // Test environment variables first
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
+    const evolutionApiKey = Deno.env.get('EVOLUTION_GLOBAL_API_KEY');
+    
+    console.log('Environment variables check:');
+    console.log('- SUPABASE_URL:', supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'NOT SET');
+    console.log('- SUPABASE_ANON_KEY:', supabaseAnonKey ? 'SET' : 'NOT SET');
+    console.log('- EVOLUTION_API_URL:', evolutionApiUrl ? `${evolutionApiUrl.substring(0, 30)}...` : 'NOT SET');
+    console.log('- EVOLUTION_GLOBAL_API_KEY:', evolutionApiKey ? 'SET' : 'NOT SET');
+    
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      supabaseUrl ?? '',
+      supabaseAnonKey ?? '',
       {
         global: {
           headers: { Authorization: req.headers.get('Authorization')! },
@@ -24,17 +42,24 @@ serve(async (req) => {
       }
     );
 
-    const requestBody = await req.json();
-    console.log('Request body:', JSON.stringify(requestBody, null, 2));
+    let requestBody;
+    try {
+      requestBody = await req.json();
+      console.log('Request body parsed successfully:', JSON.stringify(requestBody, null, 2));
+    } catch (parseError) {
+      console.error('Error parsing request body:', parseError);
+      return new Response(JSON.stringify({ 
+        error: 'Invalid JSON in request body',
+        details: parseError.message 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
     const { action, barbershopId } = requestBody;
 
-    const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
-    const evolutionApiKey = Deno.env.get('EVOLUTION_GLOBAL_API_KEY');
-
-    console.log('Environment check:', {
-      evolutionApiUrl: evolutionApiUrl ? `${evolutionApiUrl.substring(0, 20)}...` : 'NOT SET',
-      evolutionApiKey: evolutionApiKey ? 'SET' : 'NOT SET',
+    console.log('Extracted values:', {
       action,
       barbershopId
     });
