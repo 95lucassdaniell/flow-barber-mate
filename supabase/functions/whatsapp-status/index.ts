@@ -60,67 +60,144 @@ serve(async (req) => {
       });
     }
 
-    const zapiToken = Deno.env.get('ZAPI_CLIENT_TOKEN');
-    if (!zapiToken || !instance.instance_id || !instance.instance_token) {
-      return new Response(JSON.stringify({ 
-        status: 'disconnected',
-        connected: false 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
+    const evolutionApiKey = Deno.env.get('EVOLUTION_GLOBAL_API_KEY');
 
-    // Check status from Z-API
-    try {
-      const statusResponse = await fetch(`https://api.z-api.io/instances/${instance.instance_id}/token/${instance.instance_token}/status`, {
-        method: 'GET',
-        headers: {
-          'Client-Token': zapiToken
-        }
-      });
-
-      const statusData = await statusResponse.json();
-      
-      let newStatus = 'disconnected';
-      let phoneNumber = null;
-      let connected = false;
-
-      if (statusData.connected === true) {
-        newStatus = 'connected';
-        connected = true;
-        phoneNumber = statusData.phone || null;
-      } else if (statusData.connected === false) {
-        newStatus = 'disconnected';
+    // Check API type and get status accordingly
+    if (instance.api_type === 'evolution') {
+      if (!evolutionApiUrl || !evolutionApiKey || !instance.evolution_instance_name) {
+        return new Response(JSON.stringify({ 
+          status: 'disconnected',
+          connected: false,
+          api_type: 'evolution'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      // Update instance status
-      await supabase
-        .from('whatsapp_instances')
-        .update({
-          status: newStatus,
-          phone_number: phoneNumber,
-          last_connected_at: connected ? new Date().toISOString() : instance.last_connected_at
-        })
-        .eq('id', instance.id);
+      // Check status from Evolution API
+      try {
+        const statusResponse = await fetch(`${evolutionApiUrl}/instance/connectionState/${instance.evolution_instance_name}`, {
+          method: 'GET',
+          headers: {
+            'apikey': evolutionApiKey
+          }
+        });
 
-      return new Response(JSON.stringify({
-        status: newStatus,
-        connected,
-        phone_number: phoneNumber,
-        instance_id: instance.instance_id
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    } catch (error) {
-      console.error('Z-API Status Error:', error);
-      return new Response(JSON.stringify({ 
-        status: 'error',
-        connected: false,
-        error: 'Failed to check status' 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+        const statusData = await statusResponse.json();
+        
+        let newStatus = 'disconnected';
+        let phoneNumber = null;
+        let connected = false;
+
+        if (statusData.instance?.state === 'open') {
+          newStatus = 'connected';
+          connected = true;
+          phoneNumber = statusData.instance?.user?.id?.split('@')[0] || null;
+        } else if (statusData.instance?.state === 'connecting') {
+          newStatus = 'connecting';
+        } else {
+          newStatus = 'disconnected';
+        }
+
+        // Update instance status
+        await supabase
+          .from('whatsapp_instances')
+          .update({
+            status: newStatus,
+            phone_number: phoneNumber,
+            last_connected_at: connected ? new Date().toISOString() : instance.last_connected_at
+          })
+          .eq('id', instance.id);
+
+        return new Response(JSON.stringify({
+          status: newStatus,
+          connected,
+          phone_number: phoneNumber,
+          instance_id: instance.evolution_instance_name,
+          api_type: 'evolution'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (error) {
+        console.error('Evolution API Status Error:', error);
+        return new Response(JSON.stringify({ 
+          status: 'error',
+          connected: false,
+          error: 'Failed to check Evolution API status',
+          api_type: 'evolution'
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } else {
+      // Legacy Z-API support
+      const zapiToken = Deno.env.get('ZAPI_CLIENT_TOKEN');
+      if (!zapiToken || !instance.instance_id || !instance.instance_token) {
+        return new Response(JSON.stringify({ 
+          status: 'disconnected',
+          connected: false,
+          api_type: 'zapi'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Check status from Z-API
+      try {
+        const statusResponse = await fetch(`https://api.z-api.io/instances/${instance.instance_id}/token/${instance.instance_token}/status`, {
+          method: 'GET',
+          headers: {
+            'Client-Token': zapiToken
+          }
+        });
+
+        const statusData = await statusResponse.json();
+        
+        let newStatus = 'disconnected';
+        let phoneNumber = null;
+        let connected = false;
+
+        if (statusData.connected === true) {
+          newStatus = 'connected';
+          connected = true;
+          phoneNumber = statusData.phone || null;
+        } else if (statusData.connected === false) {
+          newStatus = 'disconnected';
+        }
+
+        // Update instance status
+        await supabase
+          .from('whatsapp_instances')
+          .update({
+            status: newStatus,
+            phone_number: phoneNumber,
+            last_connected_at: connected ? new Date().toISOString() : instance.last_connected_at
+          })
+          .eq('id', instance.id);
+
+        return new Response(JSON.stringify({
+          status: newStatus,
+          connected,
+          phone_number: phoneNumber,
+          instance_id: instance.instance_id,
+          api_type: 'zapi'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (error) {
+        console.error('Z-API Status Error:', error);
+        return new Response(JSON.stringify({ 
+          status: 'error',
+          connected: false,
+          error: 'Failed to check Z-API status',
+          api_type: 'zapi'
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
   } catch (error) {
     console.error('Error in whatsapp-status:', error);

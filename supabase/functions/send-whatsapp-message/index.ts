@@ -60,73 +60,122 @@ serve(async (req) => {
       });
     }
 
-    const zapiToken = Deno.env.get('ZAPI_CLIENT_TOKEN');
-    if (!zapiToken) {
-      return new Response(JSON.stringify({ error: 'Z-API token not configured' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
+    const evolutionApiKey = Deno.env.get('EVOLUTION_GLOBAL_API_KEY');
 
     // Format phone number
     const formattedPhone = phone.replace(/\D/g, '');
+    let sendData;
 
-    // Send message via Z-API
-    try {
-      const sendResponse = await fetch(`https://api.z-api.io/instances/${instance.instance_id}/token/${instance.instance_token}/send-text`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Client-Token': zapiToken
-        },
-        body: JSON.stringify({
-          phone: formattedPhone,
-          message: message
-        })
-      });
-
-      const sendData = await sendResponse.json();
-
-      if (sendData.value) {
-        // Save message to database
-        const { error: dbError } = await supabase
-          .from('whatsapp_messages')
-          .insert({
-            barbershop_id: profile.barbershop_id,
-            instance_id: instance.id,
-            message_id: sendData.value,
-            phone_number: formattedPhone,
-            message_type: messageType,
-            content: { text: message },
-            direction: 'outgoing',
-            status: 'sent'
-          });
-
-        if (dbError) {
-          console.error('Error saving message:', dbError);
-        }
-
-        return new Response(JSON.stringify({
-          success: true,
-          message_id: sendData.value,
-          phone: formattedPhone
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      } else {
-        console.error('Z-API Send response:', sendData);
-        return new Response(JSON.stringify({ error: 'Failed to send message' }), {
+    // Check API type and send accordingly
+    if (instance.api_type === 'evolution') {
+      if (!evolutionApiUrl || !evolutionApiKey) {
+        return new Response(JSON.stringify({ error: 'EvolutionAPI not configured' }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-    } catch (error) {
-      console.error('Z-API Send Error:', error);
-      return new Response(JSON.stringify({ error: 'Failed to send message' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+
+      // Send message via Evolution API
+      try {
+        const sendResponse = await fetch(`${evolutionApiUrl}/message/sendText/${instance.evolution_instance_name}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': evolutionApiKey
+          },
+          body: JSON.stringify({
+            number: `${formattedPhone}@s.whatsapp.net`,
+            text: message
+          })
+        });
+
+        sendData = await sendResponse.json();
+
+        if (!sendResponse.ok) {
+          console.error('Evolution API Send Error:', sendData);
+          return new Response(JSON.stringify({ 
+            error: 'Failed to send message via EvolutionAPI',
+            details: sendData 
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      } catch (error) {
+        console.error('Evolution API Send Error:', error);
+        return new Response(JSON.stringify({ error: 'Failed to send message via EvolutionAPI' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } else {
+      // Legacy Z-API support
+      const zapiToken = Deno.env.get('ZAPI_CLIENT_TOKEN');
+      if (!zapiToken) {
+        return new Response(JSON.stringify({ error: 'Z-API token not configured' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      try {
+        const sendResponse = await fetch(`https://api.z-api.io/instances/${instance.instance_id}/token/${instance.instance_token}/send-text`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Client-Token': zapiToken
+          },
+          body: JSON.stringify({
+            phone: formattedPhone,
+            message: message
+          })
+        });
+
+        sendData = await sendResponse.json();
+
+        if (!sendData.value) {
+          console.error('Z-API Send response:', sendData);
+          return new Response(JSON.stringify({ error: 'Failed to send message via Z-API' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      } catch (error) {
+        console.error('Z-API Send Error:', error);
+        return new Response(JSON.stringify({ error: 'Failed to send message via Z-API' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
+
+    // Save message to database
+    const { error: dbError } = await supabase
+      .from('whatsapp_messages')
+      .insert({
+        barbershop_id: profile.barbershop_id,
+        instance_id: instance.id,
+        message_id: sendData.key?.id || sendData.value || null,
+        phone_number: formattedPhone,
+        message_type: messageType,
+        content: { text: message },
+        direction: 'outgoing',
+        status: 'sent'
+      });
+
+    if (dbError) {
+      console.error('Error saving message:', dbError);
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      message_id: sendData.key?.id || sendData.value,
+      phone: formattedPhone,
+      api_type: instance.api_type
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('Error in send-whatsapp-message:', error);
     return new Response(JSON.stringify({ error: error.message }), {

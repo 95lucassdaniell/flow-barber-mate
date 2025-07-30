@@ -3112,8 +3112,11 @@ export type Database = {
       }
       whatsapp_instances: {
         Row: {
+          api_type: string | null
+          auto_created: boolean | null
           barbershop_id: string
           created_at: string
+          evolution_instance_name: string | null
           id: string
           instance_id: string | null
           instance_token: string | null
@@ -3125,8 +3128,11 @@ export type Database = {
           webhook_url: string | null
         }
         Insert: {
+          api_type?: string | null
+          auto_created?: boolean | null
           barbershop_id: string
           created_at?: string
+          evolution_instance_name?: string | null
           id?: string
           instance_id?: string | null
           instance_token?: string | null
@@ -3138,8 +3144,11 @@ export type Database = {
           webhook_url?: string | null
         }
         Update: {
+          api_type?: string | null
+          auto_created?: boolean | null
           barbershop_id?: string
           created_at?: string
+          evolution_instance_name?: string | null
           id?: string
           instance_id?: string | null
           instance_token?: string | null
