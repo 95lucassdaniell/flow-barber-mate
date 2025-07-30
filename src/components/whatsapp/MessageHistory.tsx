@@ -17,82 +17,47 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, MessageSquare, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Search, MessageSquare, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-
-interface MessageHistory {
-  id: string;
-  recipient: string;
-  message: string;
-  status: 'sent' | 'delivered' | 'read' | 'failed';
-  timestamp: Date;
-  type: 'manual' | 'automatic';
-  template?: string;
-}
+import { useWhatsAppMessages, type WhatsAppMessage } from "@/hooks/useWhatsAppMessages";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const MessageHistory = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [directionFilter, setDirectionFilter] = useState<string>("all");
+  
+  const { messages: rawMessages, loading, error } = useWhatsAppMessages();
 
-  // Mock data
-  const [messages] = useState<MessageHistory[]>([
-    {
-      id: '1',
-      recipient: 'João Silva (+55 11 99999-1111)',
-      message: 'Olá João! Seu agendamento foi confirmado para amanhã às 14:00 com Carlos.',
-      status: 'read',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30),
-      type: 'automatic',
-      template: 'Confirmação de Agendamento'
-    },
-    {
-      id: '2',
-      recipient: 'Maria Santos (+55 11 88888-2222)',
-      message: 'Oi Maria! Lembrete: você tem agendamento hoje às 16:00 com Pedro. Te esperamos!',
-      status: 'delivered',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-      type: 'automatic',
-      template: 'Lembrete 1h Antes'
-    },
-    {
-      id: '3',
-      recipient: 'Carlos Oliveira (+55 11 77777-3333)',
-      message: 'Obrigado pela preferência! Esperamos vê-lo novamente em breve.',
-      status: 'sent',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5),
-      type: 'manual'
-    },
-    {
-      id: '4',
-      recipient: 'Ana Costa (+55 11 66666-4444)',
-      message: 'Oi Ana! Você tem agendamento amanhã às 10:00. Confirma sua presença? Responda SIM ou NÃO.',
-      status: 'read',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-      type: 'automatic',
-      template: 'Solicitar Confirmação'
-    },
-    {
-      id: '5',
-      recipient: 'Roberto Lima (+55 11 55555-5555)',
-      message: 'Olá! Temos uma promoção especial hoje: 20% de desconto em todos os serviços. Aproveite!',
-      status: 'failed',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48),
-      type: 'manual'
+  const getMessageContent = (message: WhatsAppMessage): string => {
+    if (typeof message.content === 'string') {
+      return message.content;
     }
-  ]);
+    if (message.content && typeof message.content === 'object') {
+      return message.content.text || message.content.caption || 'Conteúdo não textual';
+    }
+    return 'Mensagem sem conteúdo';
+  };
 
-  const filteredMessages = messages.filter(message => {
-    const matchesSearch = message.recipient.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         message.message.toLowerCase().includes(searchTerm.toLowerCase());
+  const getRecipientDisplay = (message: WhatsAppMessage): string => {
+    const name = message.contact_name || 'Sem nome';
+    const phone = message.phone_number;
+    return `${name} (${phone})`;
+  };
+
+  const filteredMessages = rawMessages.filter(message => {
+    const recipient = getRecipientDisplay(message);
+    const content = getMessageContent(message);
+    const matchesSearch = recipient.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         content.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || message.status === statusFilter;
-    const matchesType = typeFilter === "all" || message.type === typeFilter;
+    const matchesDirection = directionFilter === "all" || message.direction === directionFilter;
     
-    return matchesSearch && matchesStatus && matchesType;
+    return matchesSearch && matchesStatus && matchesDirection;
   });
 
-  const getStatusIcon = (status: MessageHistory['status']) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case 'sent':
         return <CheckCircle className="w-4 h-4 text-blue-600" />;
@@ -102,12 +67,14 @@ const MessageHistory = () => {
         return <CheckCircle className="w-4 h-4 text-green-600 fill-current" />;
       case 'failed':
         return <XCircle className="w-4 h-4 text-red-600" />;
+      case 'pending':
+        return <Clock className="w-4 h-4 text-yellow-600" />;
       default:
         return <Clock className="w-4 h-4 text-gray-600" />;
     }
   };
 
-  const getStatusLabel = (status: MessageHistory['status']) => {
+  const getStatusLabel = (status: string) => {
     switch (status) {
       case 'sent':
         return 'Enviado';
@@ -117,12 +84,14 @@ const MessageHistory = () => {
         return 'Lido';
       case 'failed':
         return 'Falhou';
-      default:
+      case 'pending':
         return 'Pendente';
+      default:
+        return 'Desconhecido';
     }
   };
 
-  const getStatusColor = (status: MessageHistory['status']) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'sent':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
@@ -132,22 +101,56 @@ const MessageHistory = () => {
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
       case 'failed':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
     }
   };
 
-  const getTypeLabel = (type: MessageHistory['type']) => {
-    return type === 'automatic' ? 'Automática' : 'Manual';
+  const getDirectionLabel = (direction: string) => {
+    return direction === 'incoming' ? 'Recebida' : 'Enviada';
   };
 
   const stats = {
-    total: messages.length,
-    sent: messages.filter(m => m.status === 'sent').length,
-    delivered: messages.filter(m => m.status === 'delivered').length,
-    read: messages.filter(m => m.status === 'read').length,
-    failed: messages.filter(m => m.status === 'failed').length,
+    total: rawMessages.length,
+    sent: rawMessages.filter(m => m.status === 'sent').length,
+    delivered: rawMessages.filter(m => m.status === 'delivered').length,
+    read: rawMessages.filter(m => m.status === 'read').length,
+    failed: rawMessages.filter(m => m.status === 'failed').length,
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold">Histórico de Mensagens</h2>
+          <p className="text-muted-foreground">
+            Acompanhe todas as mensagens enviadas via WhatsApp
+          </p>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold">Histórico de Mensagens</h2>
+          <p className="text-muted-foreground">
+            Acompanhe todas as mensagens enviadas via WhatsApp
+          </p>
+        </div>
+        <Alert>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -222,14 +225,14 @@ const MessageHistory = () => {
               </SelectContent>
             </Select>
 
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <Select value={directionFilter} onValueChange={setDirectionFilter}>
               <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Tipo" />
+                <SelectValue placeholder="Direção" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os tipos</SelectItem>
-                <SelectItem value="automatic">Automática</SelectItem>
-                <SelectItem value="manual">Manual</SelectItem>
+                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="outgoing">Enviadas</SelectItem>
+                <SelectItem value="incoming">Recebidas</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -247,10 +250,10 @@ const MessageHistory = () => {
               <MessageSquare className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">Nenhuma mensagem encontrada</h3>
               <p className="text-muted-foreground">
-                {searchTerm || statusFilter !== "all" || typeFilter !== "all" 
-                  ? "Nenhuma mensagem corresponde aos filtros aplicados."
-                  : "Ainda não há mensagens no histórico."
-                }
+              {searchTerm || statusFilter !== "all" || directionFilter !== "all" 
+                ? "Nenhuma mensagem corresponde aos filtros aplicados."
+                : "Ainda não há mensagens no histórico."
+              }
               </p>
             </div>
           ) : (
@@ -260,7 +263,7 @@ const MessageHistory = () => {
                   <TableRow>
                     <TableHead>Destinatário</TableHead>
                     <TableHead>Mensagem</TableHead>
-                    <TableHead>Tipo</TableHead>
+                    <TableHead>Direção</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Data/Hora</TableHead>
                   </TableRow>
@@ -269,21 +272,24 @@ const MessageHistory = () => {
                   {filteredMessages.map((message) => (
                     <TableRow key={message.id}>
                       <TableCell className="font-medium">
-                        {message.recipient}
+                        {getRecipientDisplay(message)}
                       </TableCell>
                       <TableCell>
                         <div className="max-w-xs">
-                          <p className="truncate">{message.message}</p>
-                          {message.template && (
+                          <p className="truncate">{getMessageContent(message)}</p>
+                          {message.appointment_id && (
                             <Badge variant="outline" className="mt-1 text-xs">
-                              {message.template}
+                              Agendamento
                             </Badge>
                           )}
+                          <Badge variant="outline" className="mt-1 ml-1 text-xs">
+                            {message.message_type}
+                          </Badge>
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {getTypeLabel(message.type)}
+                          {getDirectionLabel(message.direction)}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -296,9 +302,9 @@ const MessageHistory = () => {
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          <div>{format(message.timestamp, "dd/MM/yyyy", { locale: ptBR })}</div>
+                          <div>{format(new Date(message.created_at), "dd/MM/yyyy", { locale: ptBR })}</div>
                           <div className="text-muted-foreground">
-                            {format(message.timestamp, "HH:mm", { locale: ptBR })}
+                            {format(new Date(message.created_at), "HH:mm", { locale: ptBR })}
                           </div>
                         </div>
                       </TableCell>
