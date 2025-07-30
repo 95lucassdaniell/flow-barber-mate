@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -103,7 +103,7 @@ const RegisterForm = () => {
   };
 
   const handleSubmit = async () => {
-    console.log('=== IMPLEMENTANDO PLANO ROBUSTO ===');
+    console.log('=== INICIANDO CADASTRO HÍBRIDO ===');
     
     // Validação do step 2
     if (!formData.businessName || !formData.address || !formData.city) {
@@ -117,154 +117,14 @@ const RegisterForm = () => {
 
     setLoading(true);
     
-    // Função robusta para aguardar sessão válida com logging detalhado
-    const waitForValidSession = async (maxAttempts = 25, delayMs = 2000): Promise<boolean> => {
-      console.log('=== INICIANDO VERIFICAÇÃO ROBUSTA DE SESSÃO ===');
-      
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        console.log(`Verificação de sessão - Tentativa ${attempt}/${maxAttempts}`);
-        
-        try {
-          // Verificar múltiplos aspectos da sessão
-          const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-          const { data: userData, error: userError } = await supabase.auth.getUser();
-          
-          console.log('Session data:', sessionData);
-          console.log('User data:', userData);
-          console.log('Session error:', sessionError);
-          console.log('User error:', userError);
-          
-          if (sessionData.session && userData.user && userData.user.id) {
-            console.log(`✅ Sessão válida estabelecida!`);
-            console.log(`- User ID: ${userData.user.id}`);
-            console.log(`- Access Token presente: ${!!sessionData.session.access_token}`);
-            console.log(`- Session válida: ${!!sessionData.session}`);
-            
-            // Teste adicional: verificar se conseguimos acessar dados protegidos
-            try {
-              const { data: testData, error: testError } = await supabase
-                .from('barbershops')
-                .select('id')
-                .limit(1);
-              
-              console.log('Teste de acesso RLS:', { testData, testError });
-              
-              // Se o teste de acesso funcionou (mesmo que retorne vazio), a sessão está ok
-              if (!testError || testError.code !== '42501') {
-                console.log('✅ Teste de acesso RLS bem-sucedido');
-                return true;
-              } else {
-                console.log('⚠️ Teste de acesso ainda com erro RLS, mas continuando...');
-              }
-            } catch (testError) {
-              console.log('Erro no teste de acesso:', testError);
-            }
-            
-            return true;
-          }
-          
-          console.log(`❌ Sessão ainda não válida na tentativa ${attempt}`);
-          
-          // Tentar refresh da sessão a cada 5 tentativas
-          if (attempt % 5 === 0) {
-            console.log('Tentando refresh da sessão...');
-            try {
-              const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-              console.log('Resultado do refresh:', { refreshData, refreshError });
-            } catch (refreshError) {
-              console.log('Erro no refresh:', refreshError);
-            }
-          }
-          
-        } catch (error) {
-          console.error(`Erro na verificação de sessão (tentativa ${attempt}):`, error);
-        }
-        
-        if (attempt < maxAttempts) {
-          console.log(`Aguardando ${delayMs}ms antes da próxima verificação...`);
-          await new Promise(resolve => setTimeout(resolve, delayMs));
-        }
-      }
-      
-      console.log('❌ FALHA: Não foi possível estabelecer sessão válida após todas as tentativas');
-      return false;
-    };
-
-    // Função auxiliar para criar barbearia com retry ainda mais robusto
-    const createBarbershopWithRetry = async (barbershopData: any, maxRetries = 5): Promise<any> => {
-      console.log('=== INICIANDO CRIAÇÃO DE BARBEARIA COM RETRY ===');
-      
-      for (let retry = 1; retry <= maxRetries; retry++) {
-        try {
-          console.log(`Tentativa ${retry}/${maxRetries} de criar barbearia...`);
-          
-          // Verificar sessão antes de cada tentativa
-          const { data: sessionCheck } = await supabase.auth.getSession();
-          console.log(`Estado da sessão na tentativa ${retry}:`, {
-            hasSession: !!sessionCheck.session,
-            hasAccessToken: !!sessionCheck.session?.access_token,
-            userId: sessionCheck.session?.user?.id
-          });
-          
-          const { data: result, error } = await supabase
-            .from('barbershops')
-            .insert(barbershopData)
-            .select()
-            .single();
-
-          if (error) {
-            console.error(`Erro Supabase na tentativa ${retry}:`, error);
-            throw error;
-          }
-          
-          console.log(`✅ Barbearia criada com sucesso na tentativa ${retry}:`, result);
-          return result;
-          
-        } catch (error: any) {
-          console.error(`❌ Erro na tentativa ${retry}:`, {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint
-          });
-          
-          if (retry === maxRetries) {
-            console.error('❌ FALHA FINAL: Todas as tentativas de criação falharam');
-            throw error;
-          }
-          
-          if (error.code === '42501' || error.message?.includes('Unauthorized')) {
-            const waitTime = retry * 3000; // Aumentar tempo de espera progressivamente
-            console.log(`RLS/Auth error detectado. Aguardando ${waitTime}ms antes de tentar novamente...`);
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-            
-            // Re-verificar sessão com mais agressividade
-            console.log('Re-verificando sessão antes da próxima tentativa...');
-            const sessionValid = await waitForValidSession(10, 1000);
-            if (!sessionValid) {
-              throw new Error("Não foi possível estabelecer uma sessão válida para criação da barbearia");
-            }
-          } else {
-            // Para outros tipos de erro, aguardar menos tempo
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-      }
-    };
-    
     try {
-      // 1. Criar o usuário
-      toast({
-        title: "Criando conta...",
-        description: "Configurando seu acesso ao sistema",
-      });
-      
+      // Primeiro, criar o usuário
       console.log('Criando usuário...');
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/app`,
+          emailRedirectTo: `${window.location.origin}/register?confirmed=true`,
           data: {
             full_name: formData.ownerName,
           }
@@ -279,116 +139,150 @@ const RegisterForm = () => {
         throw new Error("Falha na criação do usuário");
       }
 
-      console.log('Usuário criado com sucesso:', authData.user.id);
+      console.log('Usuário criado:', authData.user.id);
 
-      // 2. Aguardar a sessão ser estabelecida
-      toast({
-        title: "Estabelecendo sessão...",
-        description: "Configurando autenticação",
-      });
-      
-      const sessionEstablished = await waitForValidSession();
-      if (!sessionEstablished) {
-        throw new Error("Não foi possível estabelecer a sessão. O usuário foi criado, tente fazer login.");
-      }
-
-      // 3. Criar a barbearia com retry
-      toast({
-        title: "Configurando barbearia...",
-        description: "Criando seu espaço no sistema",
-      });
-      
-      const barbershopData = {
-        name: formData.businessName,
-        slug: formData.businessSlug,
-        address: `${formData.address}, ${formData.city}${formData.state ? `, ${formData.state}` : ''}`,
-        phone: formData.phone,
-        email: formData.email,
-        created_by: authData.user.id,
-        opening_hours: {
-          monday: { open: "09:00", close: "18:00" },
-          tuesday: { open: "09:00", close: "18:00" },
-          wednesday: { open: "09:00", close: "18:00" },
-          thursday: { open: "09:00", close: "18:00" },
-          friday: { open: "09:00", close: "18:00" },
-          saturday: { open: "09:00", close: "18:00" },
-          sunday: { open: "09:00", close: "18:00" }
-        }
-      };
-
-      const barbershopResult = await createBarbershopWithRetry(barbershopData);
-
-      // 4. Criar o perfil do administrador
-      toast({
-        title: "Finalizando configuração...",
-        description: "Criando seu perfil de administrador",
-      });
-      
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: authData.user.id,
-          full_name: formData.ownerName,
-          email: formData.email,
-          phone: formData.phone,
-          barbershop_id: barbershopResult.id,
-          role: 'admin'
+      // Verificar se email precisa ser confirmado
+      if (!authData.session) {
+        console.log('Email precisa ser confirmado - aguardando confirmação');
+        setStep(3); // Novo step para confirmação
+        toast({
+          title: "Confirme seu email",
+          description: "Enviamos um link de confirmação para seu email. Clique no link para continuar.",
         });
-
-      if (profileError) {
-        console.error('Erro ao criar perfil:', profileError);
-        throw new Error(`Erro ao criar perfil: ${profileError.message}`);
+        return;
       }
 
-      toast({
-        title: "Conta criada com sucesso!",
-        description: `Bem-vindo ao BarberFlow, ${formData.ownerName}!`,
-      });
+      // Se chegou aqui, sessão foi estabelecida - prosseguir com criação da barbearia
+      await createBarbershopAndProfile(authData.user.id);
 
-      // Redirecionar para o dashboard da barbearia
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      navigate(`/app/${formData.businessSlug}`);
-      
     } catch (error: any) {
-      console.error('=== ERRO DETALHADO NO REGISTRO ===');
-      console.error('Tipo do erro:', typeof error);
-      console.error('Mensagem:', error.message);
-      console.error('Stack:', error.stack);
-      console.error('Erro completo:', error);
-      
-      // Tratamento específico de erros com mais detalhes
-      let errorMessage = "Ocorreu um erro inesperado. Tente novamente.";
-      let errorDetails = "";
-      
-      if (error.message.includes("User already registered")) {
-        errorMessage = "Este e-mail já está cadastrado.";
-        errorDetails = "Tente fazer login ou use outro e-mail.";
-      } else if (error.message.includes("duplicate key value") || error.message.includes("já está em uso")) {
-        errorMessage = "Este nome de barbearia já está em uso.";
-        errorDetails = "Tente outro nome para sua barbearia.";
-      } else if (error.message.includes("For security purposes") || error.message.includes("Too Many Requests")) {
-        errorMessage = "Muitas tentativas de cadastro.";
-        errorDetails = "Aguarde alguns segundos e tente novamente.";
-      } else if (error.message.includes("406") || error.message.includes("Not Acceptable")) {
-        errorMessage = "Erro de permissão no sistema.";
-        errorDetails = "Tente recarregar a página e tentar novamente.";
-      } else if (error.message.includes("autenticação") || error.message.includes("session")) {
-        errorMessage = "Problema na autenticação.";
-        errorDetails = "O usuário foi criado, mas houve um problema na sessão. Tente fazer login.";
-      } else {
-        errorMessage = error.message || "Erro desconhecido";
-        errorDetails = "Se o problema persistir, recarregue a página.";
-      }
-      
+      console.error('Erro no cadastro:', error);
       toast({
-        title: errorMessage,
-        description: errorDetails,
+        title: "Erro no cadastro",
+        description: error.message || "Erro desconhecido ao criar conta",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
+
+  const createBarbershopAndProfile = async (userId: string) => {
+    console.log('Criando barbearia...');
+    
+    const barbershopData = {
+      name: formData.businessName,
+      slug: formData.businessSlug,
+      address: `${formData.address}, ${formData.city}${formData.state ? `, ${formData.state}` : ''}`,
+      phone: formData.phone,
+      email: formData.email,
+      created_by: userId,
+      opening_hours: {
+        monday: { open: "09:00", close: "18:00" },
+        tuesday: { open: "09:00", close: "18:00" },
+        wednesday: { open: "09:00", close: "18:00" },
+        thursday: { open: "09:00", close: "18:00" },
+        friday: { open: "09:00", close: "18:00" },
+        saturday: { open: "09:00", close: "18:00" },
+        sunday: { open: "09:00", close: "18:00" }
+      }
+    };
+
+    const { data: barbershop, error: barbershopError } = await supabase
+      .from('barbershops')
+      .insert(barbershopData)
+      .select()
+      .single();
+
+    if (barbershopError) {
+      throw new Error(`Erro ao criar barbearia: ${barbershopError.message}`);
+    }
+
+    console.log('Criando perfil...');
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        user_id: userId,
+        full_name: formData.ownerName,
+        email: formData.email,
+        phone: formData.phone,
+        barbershop_id: barbershop.id,
+        role: 'admin'
+      });
+
+    if (profileError) {
+      throw new Error(`Erro ao criar perfil: ${profileError.message}`);
+    }
+
+    console.log('Cadastro realizado com sucesso!');
+    toast({
+      title: "Sucesso!",
+      description: "Conta criada com sucesso! Redirecionando...",
+    });
+
+    setTimeout(() => {
+      window.location.href = '/app';
+    }, 1500);
+  };
+
+  const resendConfirmationEmail = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: formData.email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/register?confirmed=true`
+        }
+      });
+
+      if (error) {
+        toast({
+          title: "Erro",
+          description: "Erro ao reenviar email de confirmação",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Email reenviado",
+          description: "Um novo email de confirmação foi enviado",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao reenviar email",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailConfirmed = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        console.log("Email confirmado - finalizando cadastro");
+        await createBarbershopAndProfile(session.user.id);
+      }
+    } catch (error) {
+      console.error("Erro ao finalizar cadastro após confirmação:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao finalizar cadastro. Tente fazer login.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Verificar se voltou da confirmação de email
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('confirmed') === 'true') {
+      handleEmailConfirmed();
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-secondary/30 flex items-center justify-center p-4">
@@ -400,22 +294,24 @@ const RegisterForm = () => {
             <span className="text-2xl font-bold">BarberFlow</span>
           </div>
           <h1 className="text-2xl font-bold mb-2">
-            {step === 1 ? "Criar sua conta" : "Dados da barbearia"}
+            {step === 1 ? "Criar sua conta" : step === 2 ? "Dados da barbearia" : "Confirme seu email"}
           </h1>
           <p className="text-muted-foreground">
-            {step === 1 ? "Teste grátis por 14 dias" : "Configure sua barbearia"}
+            {step === 1 ? "Teste grátis por 14 dias" : step === 2 ? "Configure sua barbearia" : "Verifique seu email"}
           </p>
         </div>
 
         <Card className="shadow-elegant">
           <CardHeader>
             <CardTitle>
-              Passo {step} de 2
+              {step === 3 ? "Confirmação de Email" : `Passo ${step} de 2`}
             </CardTitle>
             <CardDescription>
               {step === 1 
                 ? "Primeiro, vamos criar sua conta pessoal" 
-                : "Agora configure os dados da sua barbearia"
+                : step === 2 
+                ? "Agora configure os dados da sua barbearia"
+                : "Verifique seu email para continuar"
               }
             </CardDescription>
           </CardHeader>
@@ -478,7 +374,7 @@ const RegisterForm = () => {
                   Próximo Passo
                 </Button>
               </>
-            ) : (
+            ) : step === 2 ? (
               // Step 2: Dados da barbearia
               <>
                 <div className="space-y-2">
@@ -554,6 +450,27 @@ const RegisterForm = () => {
                   </Button>
                 </div>
               </>
+            ) : (
+              // Step 3: Confirmação de email
+              <div className="space-y-4 text-center">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">Confirme seu email</h3>
+                  <p className="text-muted-foreground">
+                    Enviamos um link de confirmação para <strong>{formData.email}</strong>
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Clique no link no seu email para finalizar o cadastro
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={resendConfirmationEmail}
+                  disabled={loading}
+                >
+                  Reenviar email de confirmação
+                </Button>
+              </div>
             )}
 
             <div className="text-center pt-4 border-t">
