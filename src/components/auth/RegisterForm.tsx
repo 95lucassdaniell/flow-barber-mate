@@ -118,7 +118,7 @@ const RegisterForm = () => {
     try {
       console.log('Iniciando processo de registro...');
 
-      // 1. Criar usuário no Supabase Auth primeiro
+      // 1. Criar usuário no Supabase Auth
       console.log('Criando usuário...');
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
@@ -143,8 +143,8 @@ const RegisterForm = () => {
 
       console.log('Usuário criado com sucesso:', authData.user.id);
 
-      // 2. Aguardar autenticação  
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 2. Aguardar para garantir que a sessão seja estabelecida
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       // 3. Criar a barbearia
       console.log('Criando barbearia...');
@@ -185,42 +185,27 @@ const RegisterForm = () => {
 
       console.log('Barbearia criada com sucesso:', barbershopData.id);
 
-      // 4. Criar o perfil do usuário como admin com retry
+      // 4. Criar o perfil do usuário como admin
       console.log('Criando perfil...');
-      let profileCreated = false;
-      let attempts = 0;
-      const maxAttempts = 3;
-
-      while (!profileCreated && attempts < maxAttempts) {
-        attempts++;
-        console.log(`Tentativa ${attempts} de criar perfil...`);
-
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              user_id: authData.user.id,
-              barbershop_id: barbershopData.id,
-              full_name: formData.ownerName,
-              email: formData.email,
-              phone: formData.phone,
-              role: 'admin'
-            }
-          ]);
-
-        if (!profileError) {
-          profileCreated = true;
-          console.log('Perfil criado com sucesso');
-        } else {
-          console.error(`Erro na tentativa ${attempts}:`, profileError);
-          
-          if (attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          } else {
-            throw new Error("Erro ao criar perfil: " + profileError.message);
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          {
+            user_id: authData.user.id,
+            barbershop_id: barbershopData.id,
+            full_name: formData.ownerName,
+            email: formData.email,
+            phone: formData.phone,
+            role: 'admin'
           }
-        }
+        ]);
+
+      if (profileError) {
+        console.error('Erro ao criar perfil:', profileError);
+        throw new Error("Erro ao criar perfil: " + profileError.message);
       }
+
+      console.log('Perfil criado com sucesso');
 
       toast({
         title: "Conta criada com sucesso!",
