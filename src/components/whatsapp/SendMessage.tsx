@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useClients } from "@/hooks/useClients";
-import { Send, AlertCircle, Users } from "lucide-react";
+import { Send, AlertCircle, Users, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SendMessageProps {
   isConnected: boolean;
@@ -50,6 +51,39 @@ const SendMessage = ({ isConnected }: SendMessageProps) => {
     }
   ];
 
+  const formatPhoneNumber = (phone: string) => {
+    // Remove all non-numeric characters
+    return phone.replace(/\D/g, '');
+  };
+
+  const validatePhoneNumber = (phone: string) => {
+    const cleaned = formatPhoneNumber(phone);
+    // Brazilian phone numbers should have 10-11 digits
+    return cleaned.length >= 10 && cleaned.length <= 11;
+  };
+
+  const sendSingleMessage = async (phone: string) => {
+    const formattedPhone = formatPhoneNumber(phone);
+    
+    if (!validatePhoneNumber(phone)) {
+      throw new Error(`Número de telefone inválido: ${phone}`);
+    }
+
+    const { data, error } = await supabase.functions.invoke('send-whatsapp-message', {
+      body: {
+        phone: formattedPhone,
+        message: messageData.message,
+        messageType: 'text'
+      }
+    });
+
+    if (error) {
+      throw new Error(`Erro ao enviar para ${phone}: ${error.message}`);
+    }
+
+    return data;
+  };
+
   const handleSend = async () => {
     if (!isConnected) {
       toast({
@@ -69,6 +103,15 @@ const SendMessage = ({ isConnected }: SendMessageProps) => {
       return;
     }
 
+    if (messageData.message.length > 4096) {
+      toast({
+        title: "Mensagem muito longa",
+        description: "A mensagem deve ter no máximo 4096 caracteres.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (messageData.recipients === 'single' && !messageData.selectedClient && !messageData.phoneNumber) {
       toast({
         title: "Destinatário não selecionado",
@@ -79,34 +122,84 @@ const SendMessage = ({ isConnected }: SendMessageProps) => {
     }
 
     setLoading(true);
+    let successCount = 0;
+    let errorCount = 0;
+    const errors: string[] = [];
+
     try {
-      // Simular envio
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      let recipientCount = 1;
-      if (messageData.recipients === 'all') {
-        recipientCount = clients.length;
-      } else if (messageData.recipients === 'multiple') {
-        recipientCount = 5; // Simulated
+      if (messageData.recipients === 'single') {
+        // Single recipient
+        let phone = '';
+        if (messageData.selectedClient) {
+          const client = clients.find(c => c.id === messageData.selectedClient);
+          phone = client?.phone || '';
+        } else {
+          phone = messageData.phoneNumber;
+        }
+
+        if (!phone) {
+          throw new Error('Número de telefone não encontrado');
+        }
+
+        await sendSingleMessage(phone);
+        successCount = 1;
+      } else if (messageData.recipients === 'all') {
+        // All clients with valid phone numbers
+        const clientsWithPhone = clients.filter(client => 
+          client.phone && validatePhoneNumber(client.phone)
+        );
+
+        if (clientsWithPhone.length === 0) {
+          throw new Error('Nenhum cliente com número de telefone válido encontrado');
+        }
+
+        // Send to all clients with rate limiting
+        for (const client of clientsWithPhone) {
+          try {
+            await sendSingleMessage(client.phone);
+            successCount++;
+            // Rate limiting: wait 1 second between messages
+            if (successCount < clientsWithPhone.length) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          } catch (error) {
+            errorCount++;
+            errors.push(`${client.name}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+          }
+        }
       }
 
-      toast({
-        title: "Mensagem enviada",
-        description: `Mensagem enviada com sucesso para ${recipientCount} ${recipientCount === 1 ? 'contato' : 'contatos'}.`,
-      });
+      // Show results
+      if (successCount > 0) {
+        toast({
+          title: "Mensagens enviadas",
+          description: `${successCount} ${successCount === 1 ? 'mensagem enviada' : 'mensagens enviadas'} com sucesso.${errorCount > 0 ? ` ${errorCount} falharam.` : ''}`,
+        });
+      }
 
-      // Reset form
-      setMessageData({
-        recipients: 'single',
-        selectedClient: '',
-        phoneNumber: '',
-        message: '',
-        template: ''
-      });
+      if (errorCount > 0 && successCount === 0) {
+        toast({
+          title: "Erro ao enviar",
+          description: errors.length > 0 ? errors[0] : "Erro ao enviar as mensagens.",
+          variant: "destructive",
+        });
+      }
+
+      // Reset form only if at least one message was sent successfully
+      if (successCount > 0) {
+        setMessageData({
+          recipients: 'single',
+          selectedClient: '',
+          phoneNumber: '',
+          message: '',
+          template: ''
+        });
+      }
+
     } catch (error) {
       toast({
         title: "Erro ao enviar",
-        description: "Erro ao enviar a mensagem. Tente novamente.",
+        description: error instanceof Error ? error.message : "Erro ao enviar a mensagem. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -290,10 +383,14 @@ const SendMessage = ({ isConnected }: SendMessageProps) => {
           <div className="flex justify-end">
             <Button 
               onClick={handleSend} 
-              disabled={loading || !isConnected}
+              disabled={loading || !isConnected || !messageData.message.trim()}
               className="min-w-32"
             >
-              <Send className="w-4 h-4 mr-2" />
+              {loading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
               {loading ? "Enviando..." : "Enviar Mensagem"}
             </Button>
           </div>
