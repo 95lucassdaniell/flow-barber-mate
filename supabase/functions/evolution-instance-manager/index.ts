@@ -119,7 +119,7 @@ serve(async (req) => {
           instanceName: instanceName,
           token: `token_${instanceName}`,
           qrcode: true,
-          number: "",
+          number: null,
           typebot: "",
           webhook: `${Deno.env.get('SUPABASE_URL')}/functions/v1/evolution-webhook`,
           webhook_by_events: false,
