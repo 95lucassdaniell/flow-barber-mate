@@ -273,9 +273,13 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
                 <div className="text-center space-y-4">
                   <div className="p-4 bg-white rounded-lg border inline-block">
                     <img 
-                      src={`data:image/png;base64,${qrCode}`} 
+                      src={qrCode.startsWith('data:') ? qrCode : `data:image/png;base64,${qrCode}`} 
                       alt="QR Code WhatsApp" 
                       className="w-48 h-48"
+                      onError={(e) => {
+                        console.error('Error loading QR Code image:', e);
+                        e.currentTarget.src = '';
+                      }}
                     />
                   </div>
                   <div className="text-sm text-muted-foreground space-y-2">
