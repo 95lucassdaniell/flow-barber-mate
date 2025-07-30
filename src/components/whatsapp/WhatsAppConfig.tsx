@@ -40,6 +40,52 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
 
   const checkConnectionStatus = async () => {
     try {
+      // Primeiro, verificar se há instância pendente de configuração
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('barbershop_id')
+        .eq('user_id', user.user.id)
+        .single();
+
+      if (!profile?.barbershop_id) return;
+
+      const { data: instance, error: instanceError } = await supabase
+        .from('whatsapp_instances')
+        .select('*')
+        .eq('barbershop_id', profile.barbershop_id)
+        .single();
+
+      if (instanceError) {
+        console.error('Error checking instance:', instanceError);
+        return;
+      }
+
+      // Se a instância está pendente de configuração, tentar configurar automaticamente
+      if (instance && instance.status === 'pending_configuration') {
+        console.log('Instance pending configuration, triggering auto-configurator...');
+        
+        try {
+          const { data: autoConfigResult, error: autoConfigError } = await supabase.functions.invoke(
+            'whatsapp-auto-configurator'
+          );
+          
+          if (autoConfigError) {
+            console.error('Auto-configurator error:', autoConfigError);
+          } else {
+            console.log('Auto-configurator result:', autoConfigResult);
+            // Recarregar dados após configuração
+            setTimeout(() => checkConnectionStatus(), 3000);
+            return;
+          }
+        } catch (error) {
+          console.error('Error calling auto-configurator:', error);
+        }
+      }
+
+      // Verificar status real via função whatsapp-status
       const { data, error } = await supabase.functions.invoke('whatsapp-status');
       
       if (error) {

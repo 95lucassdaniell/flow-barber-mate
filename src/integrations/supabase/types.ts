@@ -3532,6 +3532,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      process_pending_whatsapp_configurations: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       set_provider_password: {
         Args: { provider_id: string; new_password: string }
         Returns: boolean
