@@ -12,45 +12,65 @@ serve(async (req) => {
   }
 
   try {
-    const { phone, message, messageType = 'text' } = await req.json();
+    const { phone, message, messageType = 'text', barbershop_id } = await req.json();
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', // Use service role key for internal calls
     );
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    let targetBarbershopId = barbershop_id;
 
-    // Get user's barbershop
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('barbershop_id')
-      .eq('user_id', user.id)
-      .single();
+    // If no barbershop_id provided, try to get it from authenticated user
+    if (!targetBarbershopId) {
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: 'No authorization or barbershop_id provided' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
-    if (!profile?.barbershop_id) {
-      return new Response(JSON.stringify({ error: 'Barbershop not found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      const userSupabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        {
+          global: {
+            headers: { Authorization: authHeader },
+          },
+        }
+      );
+
+      const { data: { user } } = await userSupabase.auth.getUser();
+      if (!user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Get user's barbershop
+      const { data: profile } = await userSupabase
+        .from('profiles')
+        .select('barbershop_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!profile?.barbershop_id) {
+        return new Response(JSON.stringify({ error: 'Barbershop not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      targetBarbershopId = profile.barbershop_id;
     }
 
     // Get instance
     const { data: instance } = await supabase
       .from('whatsapp_instances')
       .select('*')
-      .eq('barbershop_id', profile.barbershop_id)
+      .eq('barbershop_id', targetBarbershopId)
       .single();
 
     if (!instance || instance.status !== 'connected') {
@@ -157,7 +177,7 @@ serve(async (req) => {
     const { error: dbError } = await supabase
       .from('whatsapp_messages')
       .insert({
-        barbershop_id: profile.barbershop_id,
+        barbershop_id: targetBarbershopId,
         instance_id: instance.id,
         message_id: sendData.key?.id || sendData.value || null,
         phone_number: formattedPhone,

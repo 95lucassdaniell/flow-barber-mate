@@ -172,7 +172,8 @@ serve(async (req) => {
           body: {
             phone: clientPhone,
             message: finalMessage,
-            messageType: 'text'
+            messageType: 'text',
+            barbershop_id: appointment.barbershop_id
           }
         });
 
