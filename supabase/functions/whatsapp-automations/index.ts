@@ -83,12 +83,22 @@ serve(async (req) => {
     const { data: automations, error: automationsError } = await supabase
       .from('whatsapp_automations')
       .select(`
-        *,
-        template:whatsapp_templates(*)
+        id,
+        barbershop_id,
+        name,
+        description,
+        trigger_type,
+        template_id,
+        delay_minutes,
+        is_active,
+        created_at,
+        updated_at
       `)
       .eq('barbershop_id', appointment.barbershop_id)
       .eq('trigger_type', trigger_type)
       .eq('is_active', true);
+
+    console.log('Automations query result:', automations, automationsError);
 
     if (automationsError) {
       console.error('Error fetching automations:', automationsError);
@@ -105,9 +115,33 @@ serve(async (req) => {
 
     for (const automation of automations || []) {
       try {
+        console.log('Processing automation:', automation.id, 'for trigger:', trigger_type);
+        
+        // Get the template for this automation
+        const { data: template, error: templateError } = await supabase
+          .from('whatsapp_templates')
+          .select('*')
+          .eq('id', automation.template_id)
+          .eq('is_active', true)
+          .single();
+
+        if (templateError || !template) {
+          console.error('Error fetching template:', templateError);
+          results.push({
+            automation_id: automation.id,
+            template_name: 'Template not found',
+            phone: appointment.client?.phone || 'Unknown',
+            status: 'failed',
+            error: 'Template not found or inactive'
+          });
+          continue;
+        }
+
+        console.log('Found template:', template.name, 'Content:', template.content);
+
         // Replace template variables
         const processedMessage = await supabase.rpc('replace_template_variables', {
-          template_content: automation.template.content,
+          template_content: template.content,
           appointment_id: appointment_id
         });
 
@@ -121,8 +155,17 @@ serve(async (req) => {
 
         if (!clientPhone) {
           console.error('No phone number for client');
+          results.push({
+            automation_id: automation.id,
+            template_name: template.name,
+            phone: 'No phone',
+            status: 'failed',
+            error: 'Client has no phone number'
+          });
           continue;
         }
+
+        console.log('Sending WhatsApp message to:', clientPhone, 'Message:', finalMessage);
 
         // Send WhatsApp message
         const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-whatsapp-message', {
@@ -132,6 +175,8 @@ serve(async (req) => {
             messageType: 'text'
           }
         });
+
+        console.log('WhatsApp send result:', messageResult, 'Error:', messageError);
 
         // Log the automation execution
         const logData = {
@@ -150,7 +195,7 @@ serve(async (req) => {
 
         results.push({
           automation_id: automation.id,
-          template_name: automation.template.name,
+          template_name: template.name,
           phone: clientPhone,
           status: messageError ? 'failed' : 'sent',
           error: messageError?.message || null
@@ -160,7 +205,7 @@ serve(async (req) => {
         console.error('Error processing automation:', error);
         results.push({
           automation_id: automation.id,
-          template_name: automation.template?.name || 'Unknown',
+          template_name: 'Unknown',
           status: 'failed',
           error: error instanceof Error ? error.message : 'Unknown error'
         });
