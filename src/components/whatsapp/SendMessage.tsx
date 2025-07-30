@@ -53,13 +53,20 @@ const SendMessage = ({ isConnected }: SendMessageProps) => {
 
   const formatPhoneNumber = (phone: string) => {
     // Remove all non-numeric characters
-    return phone.replace(/\D/g, '');
+    const cleaned = phone.replace(/\D/g, '');
+    
+    // Add Brazil country code (55) if not present
+    if (!cleaned.startsWith('55')) {
+      return '55' + cleaned;
+    }
+    
+    return cleaned;
   };
 
   const validatePhoneNumber = (phone: string) => {
     const cleaned = formatPhoneNumber(phone);
-    // Brazilian phone numbers should have 10-11 digits
-    return cleaned.length >= 10 && cleaned.length <= 11;
+    // Brazilian phone numbers with country code should have 12-13 digits (55 + 10-11 digits)
+    return cleaned.length >= 12 && cleaned.length <= 13;
   };
 
   const sendSingleMessage = async (phone: string) => {

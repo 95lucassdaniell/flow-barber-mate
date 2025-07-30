@@ -63,8 +63,11 @@ serve(async (req) => {
     const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
     const evolutionApiKey = Deno.env.get('EVOLUTION_GLOBAL_API_KEY');
 
-    // Format phone number
-    const formattedPhone = phone.replace(/\D/g, '');
+    // Format phone number for Brazil (add 55 if not present)
+    let formattedPhone = phone.replace(/\D/g, '');
+    if (!formattedPhone.startsWith('55')) {
+      formattedPhone = '55' + formattedPhone;
+    }
     let sendData;
 
     // Check API type and send accordingly
