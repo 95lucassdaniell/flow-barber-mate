@@ -103,7 +103,7 @@ const RegisterForm = () => {
   };
 
   const handleSubmit = async () => {
-    console.log('=== NOVO CÓDIGO DE REGISTRO INICIANDO ===');
+    console.log('=== IMPLEMENTANDO PLANO DE CORREÇÃO ===');
     
     // Validação do step 2
     if (!formData.businessName || !formData.address || !formData.city) {
@@ -116,105 +116,159 @@ const RegisterForm = () => {
     }
 
     setLoading(true);
+    
+    // Função auxiliar para aguardar sessão válida
+    const waitForValidSession = async (maxAttempts = 15, delayMs = 1000): Promise<boolean> => {
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        console.log(`Tentativa ${attempt} de verificar sessão...`);
+        
+        const { data: sessionData } = await supabase.auth.getSession();
+        const { data: userData } = await supabase.auth.getUser();
+        
+        if (sessionData.session && userData.user && userData.user.id) {
+          console.log('Sessão válida estabelecida:', userData.user.id);
+          return true;
+        }
+        
+        if (attempt < maxAttempts) {
+          console.log(`Aguardando ${delayMs}ms antes da próxima verificação...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      }
+      return false;
+    };
 
+    // Função auxiliar para criar barbearia com retry
+    const createBarbershopWithRetry = async (barbershopData: any, maxRetries = 3): Promise<any> => {
+      for (let retry = 1; retry <= maxRetries; retry++) {
+        try {
+          console.log(`Tentativa ${retry} de criar barbearia...`);
+          
+          const { data: result, error } = await supabase
+            .from('barbershops')
+            .insert(barbershopData)
+            .select()
+            .single();
+
+          if (error) throw error;
+          return result;
+          
+        } catch (error: any) {
+          console.error(`Erro na tentativa ${retry}:`, error);
+          
+          if (retry === maxRetries) throw error;
+          
+          if (error.code === '42501') { // RLS violation
+            console.log(`RLS violation detectado. Aguardando ${retry * 2000}ms antes de tentar novamente...`);
+            await new Promise(resolve => setTimeout(resolve, retry * 2000));
+            
+            // Verificar novamente a sessão antes da próxima tentativa
+            const sessionValid = await waitForValidSession(5, 500);
+            if (!sessionValid) {
+              throw new Error("Não foi possível estabelecer uma sessão válida após múltiplas tentativas");
+            }
+          } else {
+            throw error; // Para outros tipos de erro, não tentar novamente
+          }
+        }
+      }
+    };
+    
     try {
-      console.log('Iniciando processo de registro...');
-
-      // 1. Criar usuário no Supabase Auth
+      // 1. Criar o usuário
+      toast({
+        title: "Criando conta...",
+        description: "Configurando seu acesso ao sistema",
+      });
+      
       console.log('Criando usuário...');
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/app`,
           data: {
             full_name: formData.ownerName,
-            phone: formData.phone,
           }
         }
       });
 
       if (authError) {
-        console.error('Erro ao criar usuário:', authError);
         throw new Error(authError.message);
       }
 
-      if (!authData.user) {
-        throw new Error("Erro ao criar usuário");
+      if (!authData?.user) {
+        throw new Error("Falha na criação do usuário");
       }
 
       console.log('Usuário criado com sucesso:', authData.user.id);
 
-      // 2. Aguardar para garantir que a sessão seja estabelecida
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // 3. Criar a barbearia
-      console.log('Criando barbearia...');
-      const { data: barbershopData, error: barbershopError } = await supabase
-        .from('barbershops')
-        .insert([
-          {
-            name: formData.businessName,
-            slug: formData.businessSlug,
-            address: `${formData.address}, ${formData.city}${formData.state ? `, ${formData.state}` : ''}`,
-            phone: formData.phone,
-            email: formData.email,
-            created_by: authData.user.id,
-            opening_hours: {
-              monday: { open: "09:00", close: "18:00" },
-              tuesday: { open: "09:00", close: "18:00" },
-              wednesday: { open: "09:00", close: "18:00" },
-              thursday: { open: "09:00", close: "18:00" },
-              friday: { open: "09:00", close: "18:00" },
-              saturday: { open: "09:00", close: "18:00" },
-              sunday: { open: "09:00", close: "18:00" }
-            }
-          }
-        ])
-        .select()
-        .single();
-
-      if (barbershopError) {
-        console.error('Erro ao criar barbearia:', barbershopError);
-        
-        // Handle specific duplicate slug error
-        if (barbershopError.code === '23505' && barbershopError.message.includes('slug')) {
-          throw new Error("Este nome de barbearia já está em uso. Tente outro nome.");
-        }
-        
-        throw new Error("Erro ao criar barbearia: " + barbershopError.message);
+      // 2. Aguardar a sessão ser estabelecida
+      toast({
+        title: "Estabelecendo sessão...",
+        description: "Configurando autenticação",
+      });
+      
+      const sessionEstablished = await waitForValidSession();
+      if (!sessionEstablished) {
+        throw new Error("Não foi possível estabelecer a sessão. O usuário foi criado, tente fazer login.");
       }
 
-      console.log('Barbearia criada com sucesso:', barbershopData.id);
+      // 3. Criar a barbearia com retry
+      toast({
+        title: "Configurando barbearia...",
+        description: "Criando seu espaço no sistema",
+      });
+      
+      const barbershopData = {
+        name: formData.businessName,
+        slug: formData.businessSlug,
+        address: `${formData.address}, ${formData.city}${formData.state ? `, ${formData.state}` : ''}`,
+        phone: formData.phone,
+        email: formData.email,
+        created_by: authData.user.id,
+        opening_hours: {
+          monday: { open: "09:00", close: "18:00" },
+          tuesday: { open: "09:00", close: "18:00" },
+          wednesday: { open: "09:00", close: "18:00" },
+          thursday: { open: "09:00", close: "18:00" },
+          friday: { open: "09:00", close: "18:00" },
+          saturday: { open: "09:00", close: "18:00" },
+          sunday: { open: "09:00", close: "18:00" }
+        }
+      };
 
-      // 4. Criar o perfil do usuário como admin
-      console.log('Criando perfil...');
+      const barbershopResult = await createBarbershopWithRetry(barbershopData);
+
+      // 4. Criar o perfil do administrador
+      toast({
+        title: "Finalizando configuração...",
+        description: "Criando seu perfil de administrador",
+      });
+      
       const { error: profileError } = await supabase
         .from('profiles')
-        .insert([
-          {
-            user_id: authData.user.id,
-            barbershop_id: barbershopData.id,
-            full_name: formData.ownerName,
-            email: formData.email,
-            phone: formData.phone,
-            role: 'admin'
-          }
-        ]);
+        .insert({
+          user_id: authData.user.id,
+          full_name: formData.ownerName,
+          email: formData.email,
+          phone: formData.phone,
+          barbershop_id: barbershopResult.id,
+          role: 'admin'
+        });
 
       if (profileError) {
         console.error('Erro ao criar perfil:', profileError);
-        throw new Error("Erro ao criar perfil: " + profileError.message);
+        throw new Error(`Erro ao criar perfil: ${profileError.message}`);
       }
-
-      console.log('Perfil criado com sucesso');
 
       toast({
         title: "Conta criada com sucesso!",
         description: `Bem-vindo ao BarberFlow, ${formData.ownerName}!`,
       });
 
-      // Redirecionamento para o dashboard da barbearia
+      // Redirecionar para o dashboard da barbearia
+      await new Promise(resolve => setTimeout(resolve, 1000));
       navigate(`/app/${formData.businessSlug}`);
       
     } catch (error: any) {
