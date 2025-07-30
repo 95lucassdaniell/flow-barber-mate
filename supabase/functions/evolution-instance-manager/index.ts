@@ -12,6 +12,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log('=== EVOLUTION INSTANCE MANAGER STARTED ===');
+    
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -22,14 +24,29 @@ serve(async (req) => {
       }
     );
 
-    const { action, barbershopId } = await req.json();
+    const requestBody = await req.json();
+    console.log('Request body:', JSON.stringify(requestBody, null, 2));
+    
+    const { action, barbershopId } = requestBody;
 
     const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
     const evolutionApiKey = Deno.env.get('EVOLUTION_GLOBAL_API_KEY');
 
+    console.log('Environment check:', {
+      evolutionApiUrl: evolutionApiUrl ? `${evolutionApiUrl.substring(0, 20)}...` : 'NOT SET',
+      evolutionApiKey: evolutionApiKey ? 'SET' : 'NOT SET',
+      action,
+      barbershopId
+    });
+
     if (!evolutionApiUrl || !evolutionApiKey) {
+      console.error('CRITICAL: Evolution API environment variables not configured');
       return new Response(JSON.stringify({ 
-        error: 'EvolutionAPI configuration not found' 
+        error: 'EvolutionAPI configuration not found',
+        details: {
+          evolutionApiUrl: evolutionApiUrl ? 'SET' : 'MISSING',
+          evolutionApiKey: evolutionApiKey ? 'SET' : 'MISSING'
+        }
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -37,24 +54,63 @@ serve(async (req) => {
     }
 
     if (action === 'create') {
+      console.log('=== CREATE ACTION STARTED ===');
+      
       // Get barbershop info
-      const { data: barbershop } = await supabase
+      console.log('Fetching barbershop info for ID:', barbershopId);
+      const { data: barbershop, error: barbershopError } = await supabase
         .from('barbershops')
         .select('id, name, slug')
         .eq('id', barbershopId)
         .single();
 
+      if (barbershopError) {
+        console.error('Error fetching barbershop:', barbershopError);
+        return new Response(JSON.stringify({ 
+          error: 'Database error fetching barbershop',
+          details: barbershopError 
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       if (!barbershop) {
+        console.error('Barbershop not found for ID:', barbershopId);
         return new Response(JSON.stringify({ error: 'Barbershop not found' }), {
           status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
+      console.log('Barbershop found:', barbershop);
+
       // Create instance name from barbershop slug
       const instanceName = `barber_${barbershop.slug.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+      console.log('Generated instance name:', instanceName);
 
       try {
+        const createPayload = {
+          instanceName: instanceName,
+          token: `token_${instanceName}`,
+          qrcode: true,
+          number: "",
+          typebot: "",
+          webhook: `${Deno.env.get('SUPABASE_URL')}/functions/v1/evolution-webhook`,
+          webhook_by_events: false,
+          events: [
+            "APPLICATION_STARTUP",
+            "QRCODE_UPDATED",
+            "CONNECTION_UPDATE",
+            "MESSAGES_UPSERT",
+            "MESSAGES_UPDATE",
+            "SEND_MESSAGE"
+          ]
+        };
+
+        console.log('Creating Evolution API instance with payload:', JSON.stringify(createPayload, null, 2));
+        console.log('Evolution API URL:', `${evolutionApiUrl}/instance/create`);
+
         // Create instance in EvolutionAPI
         const createResponse = await fetch(`${evolutionApiUrl}/instance/create`, {
           method: 'POST',
@@ -62,31 +118,21 @@ serve(async (req) => {
             'Content-Type': 'application/json',
             'apikey': evolutionApiKey,
           },
-          body: JSON.stringify({
-            instanceName: instanceName,
-            token: `token_${instanceName}`,
-            qrcode: true,
-            number: "",
-            typebot: "",
-            webhook: `${Deno.env.get('SUPABASE_URL')}/functions/v1/evolution-webhook`,
-            webhook_by_events: false,
-            events: [
-              "APPLICATION_STARTUP",
-              "QRCODE_UPDATED",
-              "CONNECTION_UPDATE",
-              "MESSAGES_UPSERT",
-              "MESSAGES_UPDATE",
-              "SEND_MESSAGE"
-            ]
-          }),
+          body: JSON.stringify(createPayload),
         });
 
+        console.log('Evolution API response status:', createResponse.status);
+        console.log('Evolution API response headers:', Object.fromEntries(createResponse.headers.entries()));
+
         const createResult = await createResponse.json();
+        console.log('Evolution API response body:', JSON.stringify(createResult, null, 2));
 
         if (!createResponse.ok) {
-          console.error('Evolution API Error:', createResult);
+          console.error('Evolution API Error - Status:', createResponse.status);
+          console.error('Evolution API Error - Body:', createResult);
           return new Response(JSON.stringify({ 
             error: 'Failed to create instance in EvolutionAPI',
+            status: createResponse.status,
             details: createResult 
           }), {
             status: 500,
@@ -94,36 +140,56 @@ serve(async (req) => {
           });
         }
 
+        console.log('Evolution API instance created successfully!');
+
         // Update database with instance info
+        console.log('Updating database with instance info...');
+        const updateData = {
+          instance_id: instanceName,
+          instance_token: `token_${instanceName}`,
+          evolution_instance_name: instanceName,
+          api_type: 'evolution',
+          status: 'disconnected',
+          webhook_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/evolution-webhook`
+        };
+
+        console.log('Update data:', JSON.stringify(updateData, null, 2));
+
         const { error: updateError } = await supabase
           .from('whatsapp_instances')
-          .update({
-            instance_id: instanceName,
-            instance_token: `token_${instanceName}`,
-            evolution_instance_name: instanceName,
-            api_type: 'evolution',
-            status: 'disconnected',
-            webhook_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/evolution-webhook`
-          })
+          .update(updateData)
           .eq('barbershop_id', barbershopId);
 
         if (updateError) {
           console.error('Database update error:', updateError);
+          return new Response(JSON.stringify({ 
+            error: 'Failed to update database with instance info',
+            details: updateError 
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
+
+        console.log('Database updated successfully!');
 
         return new Response(JSON.stringify({
           success: true,
           instance: createResult,
-          instanceName: instanceName
+          instanceName: instanceName,
+          updated: true
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
 
       } catch (error) {
         console.error('Error creating Evolution instance:', error);
+        console.error('Error stack:', error.stack);
         return new Response(JSON.stringify({ 
           error: 'Failed to create Evolution instance',
-          details: error.message 
+          message: error.message,
+          stack: error.stack,
+          type: error.constructor.name
         }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

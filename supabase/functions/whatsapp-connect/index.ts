@@ -12,6 +12,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log('=== WHATSAPP CONNECT STARTED ===');
+    
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -22,65 +24,146 @@ serve(async (req) => {
       }
     );
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    console.log('Getting user from auth...');
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      console.error('Auth error:', authError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    console.log('User authenticated:', user.id);
+
     // Get user's barbershop
-    const { data: profile } = await supabase
+    console.log('Getting user profile...');
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('barbershop_id')
       .eq('user_id', user.id)
       .single();
 
+    if (profileError) {
+      console.error('Profile error:', profileError);
+      return new Response(JSON.stringify({ 
+        error: 'Failed to get user profile',
+        details: profileError 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     if (!profile?.barbershop_id) {
+      console.error('No barbershop found for user');
       return new Response(JSON.stringify({ error: 'Barbershop not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    console.log('User barbershop ID:', profile.barbershop_id);
+
     // Get existing instance
-    const { data: instance } = await supabase
+    console.log('Getting WhatsApp instance...');
+    const { data: instance, error: instanceError } = await supabase
       .from('whatsapp_instances')
       .select('*')
       .eq('barbershop_id', profile.barbershop_id)
       .single();
 
+    if (instanceError) {
+      console.error('Instance error:', instanceError);
+      return new Response(JSON.stringify({ 
+        error: 'Failed to get WhatsApp instance',
+        details: instanceError 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     if (!instance) {
+      console.error('No WhatsApp instance found for barbershop');
       return new Response(JSON.stringify({ error: 'WhatsApp instance not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    console.log('WhatsApp instance found:', { 
+      id: instance.id, 
+      api_type: instance.api_type,
+      evolution_instance_name: instance.evolution_instance_name,
+      instance_id: instance.instance_id,
+      status: instance.status
+    });
+
     const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
     const evolutionApiKey = Deno.env.get('EVOLUTION_GLOBAL_API_KEY');
 
+    console.log('Environment check:', {
+      evolutionApiUrl: evolutionApiUrl ? `${evolutionApiUrl.substring(0, 20)}...` : 'NOT SET',
+      evolutionApiKey: evolutionApiKey ? 'SET' : 'NOT SET'
+    });
+
     // Check if this is an Evolution API instance
     if (instance.api_type === 'evolution') {
+      console.log('=== EVOLUTION API FLOW ===');
+      
       if (!evolutionApiUrl || !evolutionApiKey) {
-        return new Response(JSON.stringify({ error: 'EvolutionAPI not configured' }), {
+        console.error('Evolution API not configured');
+        return new Response(JSON.stringify({ 
+          error: 'EvolutionAPI not configured',
+          details: {
+            evolutionApiUrl: evolutionApiUrl ? 'SET' : 'MISSING',
+            evolutionApiKey: evolutionApiKey ? 'SET' : 'MISSING'
+          }
+        }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       // Create instance if not exists
-      if (!instance.evolution_instance_name) {
+      if (!instance.evolution_instance_name || !instance.instance_id) {
+        console.log('Instance not properly configured, creating...');
+        console.log('Current instance state:', {
+          evolution_instance_name: instance.evolution_instance_name,
+          instance_id: instance.instance_id,
+          instance_token: instance.instance_token
+        });
+        
         const { data, error } = await supabase.functions.invoke('evolution-instance-manager', {
           body: { action: 'create', barbershopId: profile.barbershop_id }
         });
 
+        console.log('Evolution instance manager response:', { data, error });
+
         if (error) {
-          return new Response(JSON.stringify({ error: 'Failed to create Evolution instance' }), {
+          console.error('Failed to create Evolution instance:', error);
+          return new Response(JSON.stringify({ 
+            error: 'Failed to create Evolution instance',
+            details: error 
+          }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
+        }
+
+        // Refresh instance data
+        console.log('Refreshing instance data...');
+        const { data: updatedInstance } = await supabase
+          .from('whatsapp_instances')
+          .select('*')
+          .eq('barbershop_id', profile.barbershop_id)
+          .single();
+
+        if (updatedInstance) {
+          console.log('Updated instance:', updatedInstance);
+          Object.assign(instance, updatedInstance);
         }
       }
 
