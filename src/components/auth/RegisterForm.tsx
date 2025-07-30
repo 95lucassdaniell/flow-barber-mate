@@ -103,7 +103,7 @@ const RegisterForm = () => {
   };
 
   const handleSubmit = async () => {
-    console.log('=== IMPLEMENTANDO PLANO DE CORREÇÃO ===');
+    console.log('=== IMPLEMENTANDO PLANO ROBUSTO ===');
     
     // Validação do step 2
     if (!formData.businessName || !formData.address || !formData.city) {
@@ -117,17 +117,67 @@ const RegisterForm = () => {
 
     setLoading(true);
     
-    // Função auxiliar para aguardar sessão válida
-    const waitForValidSession = async (maxAttempts = 15, delayMs = 1000): Promise<boolean> => {
+    // Função robusta para aguardar sessão válida com logging detalhado
+    const waitForValidSession = async (maxAttempts = 25, delayMs = 2000): Promise<boolean> => {
+      console.log('=== INICIANDO VERIFICAÇÃO ROBUSTA DE SESSÃO ===');
+      
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        console.log(`Tentativa ${attempt} de verificar sessão...`);
+        console.log(`Verificação de sessão - Tentativa ${attempt}/${maxAttempts}`);
         
-        const { data: sessionData } = await supabase.auth.getSession();
-        const { data: userData } = await supabase.auth.getUser();
-        
-        if (sessionData.session && userData.user && userData.user.id) {
-          console.log('Sessão válida estabelecida:', userData.user.id);
-          return true;
+        try {
+          // Verificar múltiplos aspectos da sessão
+          const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          
+          console.log('Session data:', sessionData);
+          console.log('User data:', userData);
+          console.log('Session error:', sessionError);
+          console.log('User error:', userError);
+          
+          if (sessionData.session && userData.user && userData.user.id) {
+            console.log(`✅ Sessão válida estabelecida!`);
+            console.log(`- User ID: ${userData.user.id}`);
+            console.log(`- Access Token presente: ${!!sessionData.session.access_token}`);
+            console.log(`- Session válida: ${!!sessionData.session}`);
+            
+            // Teste adicional: verificar se conseguimos acessar dados protegidos
+            try {
+              const { data: testData, error: testError } = await supabase
+                .from('barbershops')
+                .select('id')
+                .limit(1);
+              
+              console.log('Teste de acesso RLS:', { testData, testError });
+              
+              // Se o teste de acesso funcionou (mesmo que retorne vazio), a sessão está ok
+              if (!testError || testError.code !== '42501') {
+                console.log('✅ Teste de acesso RLS bem-sucedido');
+                return true;
+              } else {
+                console.log('⚠️ Teste de acesso ainda com erro RLS, mas continuando...');
+              }
+            } catch (testError) {
+              console.log('Erro no teste de acesso:', testError);
+            }
+            
+            return true;
+          }
+          
+          console.log(`❌ Sessão ainda não válida na tentativa ${attempt}`);
+          
+          // Tentar refresh da sessão a cada 5 tentativas
+          if (attempt % 5 === 0) {
+            console.log('Tentando refresh da sessão...');
+            try {
+              const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+              console.log('Resultado do refresh:', { refreshData, refreshError });
+            } catch (refreshError) {
+              console.log('Erro no refresh:', refreshError);
+            }
+          }
+          
+        } catch (error) {
+          console.error(`Erro na verificação de sessão (tentativa ${attempt}):`, error);
         }
         
         if (attempt < maxAttempts) {
@@ -135,14 +185,26 @@ const RegisterForm = () => {
           await new Promise(resolve => setTimeout(resolve, delayMs));
         }
       }
+      
+      console.log('❌ FALHA: Não foi possível estabelecer sessão válida após todas as tentativas');
       return false;
     };
 
-    // Função auxiliar para criar barbearia com retry
-    const createBarbershopWithRetry = async (barbershopData: any, maxRetries = 3): Promise<any> => {
+    // Função auxiliar para criar barbearia com retry ainda mais robusto
+    const createBarbershopWithRetry = async (barbershopData: any, maxRetries = 5): Promise<any> => {
+      console.log('=== INICIANDO CRIAÇÃO DE BARBEARIA COM RETRY ===');
+      
       for (let retry = 1; retry <= maxRetries; retry++) {
         try {
-          console.log(`Tentativa ${retry} de criar barbearia...`);
+          console.log(`Tentativa ${retry}/${maxRetries} de criar barbearia...`);
+          
+          // Verificar sessão antes de cada tentativa
+          const { data: sessionCheck } = await supabase.auth.getSession();
+          console.log(`Estado da sessão na tentativa ${retry}:`, {
+            hasSession: !!sessionCheck.session,
+            hasAccessToken: !!sessionCheck.session?.access_token,
+            userId: sessionCheck.session?.user?.id
+          });
           
           const { data: result, error } = await supabase
             .from('barbershops')
@@ -150,25 +212,41 @@ const RegisterForm = () => {
             .select()
             .single();
 
-          if (error) throw error;
+          if (error) {
+            console.error(`Erro Supabase na tentativa ${retry}:`, error);
+            throw error;
+          }
+          
+          console.log(`✅ Barbearia criada com sucesso na tentativa ${retry}:`, result);
           return result;
           
         } catch (error: any) {
-          console.error(`Erro na tentativa ${retry}:`, error);
+          console.error(`❌ Erro na tentativa ${retry}:`, {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint
+          });
           
-          if (retry === maxRetries) throw error;
+          if (retry === maxRetries) {
+            console.error('❌ FALHA FINAL: Todas as tentativas de criação falharam');
+            throw error;
+          }
           
-          if (error.code === '42501') { // RLS violation
-            console.log(`RLS violation detectado. Aguardando ${retry * 2000}ms antes de tentar novamente...`);
-            await new Promise(resolve => setTimeout(resolve, retry * 2000));
+          if (error.code === '42501' || error.message?.includes('Unauthorized')) {
+            const waitTime = retry * 3000; // Aumentar tempo de espera progressivamente
+            console.log(`RLS/Auth error detectado. Aguardando ${waitTime}ms antes de tentar novamente...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
             
-            // Verificar novamente a sessão antes da próxima tentativa
-            const sessionValid = await waitForValidSession(5, 500);
+            // Re-verificar sessão com mais agressividade
+            console.log('Re-verificando sessão antes da próxima tentativa...');
+            const sessionValid = await waitForValidSession(10, 1000);
             if (!sessionValid) {
-              throw new Error("Não foi possível estabelecer uma sessão válida após múltiplas tentativas");
+              throw new Error("Não foi possível estabelecer uma sessão válida para criação da barbearia");
             }
           } else {
-            throw error; // Para outros tipos de erro, não tentar novamente
+            // Para outros tipos de erro, aguardar menos tempo
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
         }
       }
