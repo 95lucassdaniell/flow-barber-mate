@@ -120,6 +120,7 @@ serve(async (req) => {
           token: `token_${instanceName}`,
           qrcode: true,
           typebot: "",
+          integration: "WHATSAPP-BAILEYS",
           webhook: `${Deno.env.get('SUPABASE_URL')}/functions/v1/evolution-webhook`,
           webhook_by_events: false,
           events: [
