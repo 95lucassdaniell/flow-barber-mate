@@ -143,26 +143,10 @@ const RegisterForm = () => {
 
       console.log('Usuário criado com sucesso:', authData.user.id);
 
-      // 2. Aguardar autenticação e verificar slug após login
+      // 2. Aguardar autenticação  
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // 3. Verificar se o slug já existe agora que temos autenticação
-      const { data: existingBarbershop, error: slugError } = await supabase
-        .from('barbershops')
-        .select('slug')
-        .eq('slug', formData.businessSlug)
-        .maybeSingle();
-
-      if (slugError && slugError.code !== 'PGRST116') {
-        console.error('Erro ao verificar slug:', slugError);
-        throw new Error("Erro ao verificar disponibilidade do nome. Tente novamente.");
-      }
-
-      if (existingBarbershop) {
-        throw new Error("Este nome de barbearia já está em uso. Tente outro.");
-      }
-
-      // 4. Criar a barbearia
+      // 3. Criar a barbearia
       console.log('Criando barbearia...');
       const { data: barbershopData, error: barbershopError } = await supabase
         .from('barbershops')
@@ -190,12 +174,18 @@ const RegisterForm = () => {
 
       if (barbershopError) {
         console.error('Erro ao criar barbearia:', barbershopError);
+        
+        // Handle specific duplicate slug error
+        if (barbershopError.code === '23505' && barbershopError.message.includes('slug')) {
+          throw new Error("Este nome de barbearia já está em uso. Tente outro nome.");
+        }
+        
         throw new Error("Erro ao criar barbearia: " + barbershopError.message);
       }
 
       console.log('Barbearia criada com sucesso:', barbershopData.id);
 
-      // 5. Criar o perfil do usuário como admin com retry
+      // 4. Criar o perfil do usuário como admin com retry
       console.log('Criando perfil...');
       let profileCreated = false;
       let attempts = 0;
@@ -248,8 +238,12 @@ const RegisterForm = () => {
       
       if (error.message.includes("User already registered")) {
         errorMessage = "Este e-mail já está cadastrado. Tente fazer login ou use outro e-mail.";
-      } else if (error.message.includes("duplicate key value")) {
+      } else if (error.message.includes("duplicate key value") || error.message.includes("já está em uso")) {
         errorMessage = "Este nome de barbearia já está em uso. Tente outro nome.";
+      } else if (error.message.includes("For security purposes")) {
+        errorMessage = "Muitas tentativas de cadastro. Aguarde alguns segundos e tente novamente.";
+      } else if (error.message.includes("406") || error.message.includes("Not Acceptable")) {
+        errorMessage = "Erro de permissão. Tente novamente em alguns instantes.";
       }
       
       toast({
