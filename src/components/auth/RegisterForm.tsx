@@ -118,18 +118,7 @@ const RegisterForm = () => {
     try {
       console.log('Iniciando processo de registro...');
 
-      // 1. Verificar se o slug já existe antes de criar o usuário
-      const { data: existingBarbershop } = await supabase
-        .from('barbershops')
-        .select('slug')
-        .eq('slug', formData.businessSlug)
-        .single();
-
-      if (existingBarbershop) {
-        throw new Error("Este nome de barbearia já está em uso. Tente outro.");
-      }
-
-      // 2. Criar usuário no Supabase Auth
+      // 1. Criar usuário no Supabase Auth primeiro
       console.log('Criando usuário...');
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
@@ -154,16 +143,26 @@ const RegisterForm = () => {
 
       console.log('Usuário criado com sucesso:', authData.user.id);
 
-      // 3. Aguardar um momento para garantir que o usuário foi persistido
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // 2. Aguardar autenticação e verificar slug após login
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // 4. Verificar se o usuário foi realmente criado
-      const { data: session } = await supabase.auth.getSession();
-      if (!session?.session?.user) {
-        throw new Error("Falha na autenticação do usuário. Tente fazer login.");
+      // 3. Verificar se o slug já existe agora que temos autenticação
+      const { data: existingBarbershop, error: slugError } = await supabase
+        .from('barbershops')
+        .select('slug')
+        .eq('slug', formData.businessSlug)
+        .maybeSingle();
+
+      if (slugError && slugError.code !== 'PGRST116') {
+        console.error('Erro ao verificar slug:', slugError);
+        throw new Error("Erro ao verificar disponibilidade do nome. Tente novamente.");
       }
 
-      // 5. Criar a barbearia
+      if (existingBarbershop) {
+        throw new Error("Este nome de barbearia já está em uso. Tente outro.");
+      }
+
+      // 4. Criar a barbearia
       console.log('Criando barbearia...');
       const { data: barbershopData, error: barbershopError } = await supabase
         .from('barbershops')
@@ -174,6 +173,7 @@ const RegisterForm = () => {
             address: `${formData.address}, ${formData.city}${formData.state ? `, ${formData.state}` : ''}`,
             phone: formData.phone,
             email: formData.email,
+            created_by: authData.user.id,
             opening_hours: {
               monday: { open: "09:00", close: "18:00" },
               tuesday: { open: "09:00", close: "18:00" },
@@ -195,7 +195,7 @@ const RegisterForm = () => {
 
       console.log('Barbearia criada com sucesso:', barbershopData.id);
 
-      // 6. Criar o perfil do usuário como admin com retry
+      // 5. Criar o perfil do usuário como admin com retry
       console.log('Criando perfil...');
       let profileCreated = false;
       let attempts = 0;
@@ -209,7 +209,7 @@ const RegisterForm = () => {
           .from('profiles')
           .insert([
             {
-              user_id: session.session.user.id,
+              user_id: authData.user.id,
               barbershop_id: barbershopData.id,
               full_name: formData.ownerName,
               email: formData.email,
