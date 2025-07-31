@@ -23,21 +23,59 @@ const SchedulePage = () => {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
   const [selectedBarberId_, setSelectedBarberId_] = useState<string>('');
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
 
   // Debounce the date changes to avoid too many API calls
   const debouncedDate = useDebounce(selectedDate, 300);
 
+  // Loading timeout to prevent infinite loading
+  useEffect(() => {
+    if (barbersLoading || appointmentsLoading) {
+      const timer = setTimeout(() => {
+        setLoadingTimeout(true);
+        console.warn('SchedulePage: Loading timeout reached');
+        toast.error('Carregamento demorou muito. Tente recarregar a página.');
+      }, 10000); // 10 seconds
+
+      return () => clearTimeout(timer);
+    } else {
+      setLoadingTimeout(false);
+    }
+  }, [barbersLoading, appointmentsLoading]);
+
   // Fetch appointments when date changes - get all barbers' appointments
   useEffect(() => {
-    if (!profile?.barbershop_id || barbersLoading || barbers.length === 0) return;
+    console.log('SchedulePage: Checking fetch conditions', {
+      profile_barbershop_id: profile?.barbershop_id,
+      barbersLoading,
+      barbersCount: barbers.length,
+      selectedDate: format(debouncedDate, 'yyyy-MM-dd')
+    });
 
+    if (!profile?.barbershop_id) {
+      console.log('SchedulePage: No barbershop_id, skipping fetch');
+      return;
+    }
+    
+    if (barbersLoading) {
+      console.log('SchedulePage: Barbers still loading, skipping fetch');
+      return;
+    }
+    
+    if (barbers.length === 0) {
+      console.log('SchedulePage: No barbers found, skipping fetch');
+      return;
+    }
+
+    console.log('SchedulePage: Fetching appointments for date', format(debouncedDate, 'yyyy-MM-dd'));
+    
     // Evitar múltiplas requests com um timeout
     const timeoutId = setTimeout(() => {
       fetchAppointments(undefined, format(debouncedDate, 'yyyy-MM-dd'), 'day');
     }, 100);
 
     return () => clearTimeout(timeoutId);
-  }, [profile?.barbershop_id, debouncedDate, barbersLoading, barbers.length]);
+  }, [profile?.barbershop_id, debouncedDate, barbersLoading, barbers.length, fetchAppointments]);
 
   const handleTimeSlotClick = (barberId: string, timeSlot: string) => {
     setSelectedTimeSlot(timeSlot);
