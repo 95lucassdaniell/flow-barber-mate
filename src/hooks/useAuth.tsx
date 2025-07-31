@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { globalState, cacheManager } from '@/lib/globalState';
+import { ensureUserProfile } from '@/utils/ensureUserProfile';
 
 interface Profile {
   id: string;
@@ -76,9 +77,16 @@ export const useAuth = () => {
               // Fetch profile with timeout
               setTimeout(async () => {
                 if (mounted) {
-                  const profileData = await fetchProfile(session.user.id);
+                  let profileData = await fetchProfile(session.user.id);
+                  
+                  // If no profile exists, create one
+                  if (!profileData) {
+                    console.log('📋 No profile found, creating admin profile...');
+                    profileData = await ensureUserProfile(session.user.id);
+                  }
+                  
                   if (mounted) {
-                    setProfile(profileData);
+                    setProfile(profileData as Profile);
                     console.log('📋 Perfil carregado:', profileData?.role, profileData?.barbershop_id);
                   }
                 }
