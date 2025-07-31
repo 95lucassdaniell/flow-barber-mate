@@ -105,17 +105,94 @@ export const useBarbershopSettings = () => {
     return slots;
   };
 
-  // Generate time slots based on opening hours (only available ones)
-  const generateTimeSlots = (date: Date, intervalMinutes: number = 15): string[] => {
-    return generateAllTimeSlots(date, intervalMinutes).filter(timeString => 
-      !isTimeSlotInPast(date, timeString)
-    );
+  // Generate time slots based on opening hours considering service duration
+  const generateTimeSlots = (date: Date, intervalMinutes: number = 15, serviceDurationMinutes: number = 15): string[] => {
+    if (!settings?.opening_hours) return [];
+
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = dayNames[date.getDay()];
+    const dayHours = settings.opening_hours[dayName];
+
+    if (!dayHours?.open || !dayHours?.close) return [];
+
+    const slots: string[] = [];
+    const [openHour, openMinute] = dayHours.open.split(':').map(Number);
+    const [closeHour, closeMinute] = dayHours.close.split(':').map(Number);
+
+    const startTime = openHour * 60 + openMinute; // Convert to minutes
+    const endTime = closeHour * 60 + closeMinute; // Convert to minutes
+
+    // Generate slots ensuring service can finish before closing
+    for (let time = startTime; time <= endTime - serviceDurationMinutes; time += intervalMinutes) {
+      const hours = Math.floor(time / 60);
+      const minutes = time % 60;
+      const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      
+      // Only include if not in the past
+      if (!isTimeSlotInPast(date, timeString)) {
+        slots.push(timeString);
+      }
+    }
+
+    console.log('Generated time slots:', {
+      date: date.toLocaleDateString('pt-BR'),
+      dayName,
+      openTime: dayHours.open,
+      closeTime: dayHours.close,
+      serviceDuration: serviceDurationMinutes,
+      totalSlots: slots.length,
+      slots: slots.slice(0, 10) // Show first 10 for debugging
+    });
+
+    return slots;
   };
 
-  // Check if a time slot is available for booking
-  const isTimeSlotAvailable = (date: Date, timeSlot: string): boolean => {
-    if (!isOpenOnDate(date)) return false;
-    if (isTimeSlotInPast(date, timeSlot)) return false;
+  // Check if a time slot is available for booking considering service duration
+  const isTimeSlotAvailable = (date: Date, timeSlot: string, serviceDurationMinutes: number = 15): boolean => {
+    if (!isOpenOnDate(date)) {
+      console.log('Time slot unavailable: barbershop closed on this date');
+      return false;
+    }
+    
+    if (isTimeSlotInPast(date, timeSlot)) {
+      console.log('Time slot unavailable: slot is in the past');
+      return false;
+    }
+
+    // Check if service can finish before closing time
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = dayNames[date.getDay()];
+    const dayHours = settings?.opening_hours?.[dayName];
+
+    if (!dayHours?.close) {
+      console.log('Time slot unavailable: no closing time defined');
+      return false;
+    }
+
+    const [slotHours, slotMinutes] = timeSlot.split(':').map(Number);
+    const [closeHours, closeMinutes] = dayHours.close.split(':').map(Number);
+    
+    const slotTimeInMinutes = slotHours * 60 + slotMinutes;
+    const closeTimeInMinutes = closeHours * 60 + closeMinutes;
+    const serviceEndTime = slotTimeInMinutes + serviceDurationMinutes;
+
+    const canFinishBeforeClosing = serviceEndTime <= closeTimeInMinutes;
+    
+    console.log('Service timing validation:', {
+      timeSlot,
+      serviceDuration: serviceDurationMinutes,
+      closeTime: dayHours.close,
+      slotTimeInMinutes,
+      closeTimeInMinutes,
+      serviceEndTime,
+      canFinishBeforeClosing
+    });
+
+    if (!canFinishBeforeClosing) {
+      console.log('Time slot unavailable: service would finish after closing time');
+      return false;
+    }
+
     return true;
   };
 
