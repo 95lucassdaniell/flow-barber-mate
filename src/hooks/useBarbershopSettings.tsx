@@ -139,12 +139,22 @@ export const useBarbershopSettings = () => {
   };
 
   // Check if a time slot is available for booking considering service duration
+  // NOTE: This function only checks basic availability (open hours, not in past)
+  // For appointment conflicts, use getAvailableTimeSlots from useAppointments
   const isTimeSlotAvailable = (date: Date, timeSlot: string, serviceDurationMinutes: number = 15): boolean => {
+    console.log('🔍 isTimeSlotAvailable checking:', { 
+      date: date.toISOString().split('T')[0], 
+      timeSlot, 
+      serviceDurationMinutes 
+    });
+
     if (!isOpenOnDate(date)) {
+      console.log('❌ Barbershop closed on this date');
       return false;
     }
     
     if (isTimeSlotInPast(date, timeSlot)) {
+      console.log('❌ Time slot is in the past');
       return false;
     }
 
@@ -154,6 +164,7 @@ export const useBarbershopSettings = () => {
     const dayHours = settings?.opening_hours?.[dayName];
 
     if (!dayHours?.close) {
+      console.log('❌ No closing time defined for this day');
       return false;
     }
 
@@ -167,9 +178,15 @@ export const useBarbershopSettings = () => {
     const canFinishBeforeClosing = serviceEndTime <= closeTimeInMinutes;
 
     if (!canFinishBeforeClosing) {
+      console.log('❌ Service cannot finish before closing time:', {
+        slotTime: timeSlot,
+        serviceEndTime: `${Math.floor(serviceEndTime / 60)}:${(serviceEndTime % 60).toString().padStart(2, '0')}`,
+        closingTime: dayHours.close
+      });
       return false;
     }
 
+    console.log('✅ Time slot is available (basic check only - no appointment conflicts checked)');
     return true;
   };
 

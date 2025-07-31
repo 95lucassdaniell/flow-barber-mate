@@ -185,18 +185,39 @@ export const useAppointments = () => {
         date: appointmentData.appointment_date,
         time: appointmentData.start_time,
         duration: serviceDuration,
+        barberId: appointmentData.barber_id,
         isOpen: isOpenOnDate(appointmentDate),
         isPast: isTimeSlotInPast(appointmentDate, appointmentData.start_time)
       });
 
-      // Verificar se o horário está disponível considerando a duração do serviço
-      const available = isTimeSlotAvailable(appointmentDate, appointmentData.start_time, serviceDuration);
-      console.log('📋 Availability result:', { available });
+      // First check basic availability (opening hours, not in past)
+      const basicAvailable = isTimeSlotAvailable(appointmentDate, appointmentData.start_time, serviceDuration);
+      console.log('📋 Basic availability result:', { basicAvailable });
 
-      if (!available) {
+      if (!basicAvailable) {
         toast({
           title: "Horário indisponível",
-          description: "Este horário não está disponível para agendamento.",
+          description: "Este horário não está disponível para agendamento (fora do horário de funcionamento).",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // Now check for appointment conflicts using the real-time conflict check
+      const availableSlots = getAvailableTimeSlots(appointmentData.barber_id, appointmentData.appointment_date, serviceDuration);
+      const slotAvailable = availableSlots.includes(appointmentData.start_time);
+      
+      console.log('📋 Conflict check result:', { 
+        slotAvailable, 
+        totalAvailableSlots: availableSlots.length,
+        requestedTime: appointmentData.start_time,
+        availableSlots: availableSlots.slice(0, 5) // Show first 5 slots for debugging
+      });
+
+      if (!slotAvailable) {
+        toast({
+          title: "Horário indisponível",
+          description: "Este horário já está ocupado. Tente outro horário.",
           variant: "destructive",
         });
         return false;
