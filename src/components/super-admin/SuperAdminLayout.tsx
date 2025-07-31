@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useSuperAuth } from "@/hooks/useSuperAuth";
 import { Link, useLocation } from "react-router-dom";
+import usePageTitle from "@/hooks/usePageTitle";
 
 interface SuperAdminLayoutProps {
   children: ReactNode;
@@ -26,6 +27,31 @@ export default function SuperAdminLayout({ children, activeTab }: SuperAdminLayo
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { superAdmin, signOut } = useSuperAuth();
   const location = useLocation();
+
+  // Get current page title from pathname
+  const getCurrentTitle = () => {
+    const pathParts = location.pathname.split('/');
+    const page = pathParts[pathParts.length - 1] || 'dashboard';
+    
+    const titles: Record<string, string> = {
+      'super-admin': 'Dashboard',
+      'dashboard': 'Dashboard',
+      'barbershops': 'Barbearias',
+      'users': 'Usuários',
+      'financial': 'Financeiro',
+      'monitoring': 'Monitoramento',
+      'audit': 'Auditoria',
+      'settings': 'Configurações',
+      'historical': 'Dados Históricos'
+    };
+    
+    return titles[page] || 'Dashboard';
+  };
+
+  // Update page title
+  usePageTitle({ 
+    title: `${getCurrentTitle()} | Super Admin` 
+  });
 
   const navigation = [
     { name: "Dashboard", icon: BarChart3, href: "/super-admin", current: location.pathname === "/super-admin" },

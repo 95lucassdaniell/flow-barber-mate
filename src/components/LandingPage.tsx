@@ -4,8 +4,11 @@ import { Scissors, Calendar, MessageCircle, TrendingUp, Users, Clock } from "luc
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-barbershop.jpg";
 import logo from "@/assets/barberflow-logo.png";
+import usePageTitle from "@/hooks/usePageTitle";
 
 const LandingPage = () => {
+  usePageTitle();
+  
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}

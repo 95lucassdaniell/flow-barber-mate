@@ -23,6 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useBarbershopBySlug } from "@/hooks/useBarbershopBySlug";
 import logo from "@/assets/barberflow-logo.png";
+import usePageTitle from "@/hooks/usePageTitle";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -131,6 +132,32 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
   const handleLogout = async () => {
     await signOut();
   };
+
+  // Tab name mapping for better titles
+  const getTabTitle = (tabId: string) => {
+    const tabNames: Record<string, string> = {
+      dashboard: "Dashboard",
+      agenda: "Agenda",
+      clients: "Clientes",
+      crm: "CRM",
+      ai: "IA Preditiva",
+      providers: "Prestadores",
+      services: "Serviços",
+      produtos: "Produtos",
+      comandas: "Comandas",
+      caixa: "Caixa",
+      whatsapp: "WhatsApp",
+      financial: "Financeiro",
+      settings: "Configurações"
+    };
+    return tabNames[tabId] || "Dashboard";
+  };
+
+  // Update page title
+  usePageTitle({ 
+    title: getTabTitle(activeTab), 
+    barbershopName: barbershopData.name 
+  });
 
   return (
     <div className="min-h-screen bg-secondary/20 flex">

@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/barberflow-logo.png";
+import usePageTitle from "@/hooks/usePageTitle";
 
 const RegisterForm = () => {
   const [step, setStep] = useState(1);
@@ -30,6 +31,8 @@ const RegisterForm = () => {
   
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  usePageTitle({ title: "Cadastro" });
 
   const generateSlug = (name: string) => {
     return name

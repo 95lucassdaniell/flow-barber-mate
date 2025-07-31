@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useProviderAuth } from '@/hooks/useProviderAuth';
 import { useBarbershopBySlug } from '@/hooks/useBarbershopBySlug';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
+import usePageTitle from '@/hooks/usePageTitle';
 
 const ProviderLoginPage = () => {
   const [email, setEmail] = useState('');
@@ -20,6 +21,12 @@ const ProviderLoginPage = () => {
   const navigate = useNavigate();
   const { slug } = useParams();
   const { barbershop, loading: barbershopLoading } = useBarbershopBySlug(slug || '');
+  
+  // Update page title with barbershop name
+  usePageTitle({ 
+    title: "Login Prestador", 
+    barbershopName: barbershop?.name 
+  });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

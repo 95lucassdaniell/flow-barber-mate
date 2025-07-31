@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/barberflow-logo.png";
+import usePageTitle from "@/hooks/usePageTitle";
 
 const LoginForm = () => {
   const [formData, setFormData] = useState({
@@ -18,6 +19,8 @@ const LoginForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  
+  usePageTitle({ title: "Login" });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
