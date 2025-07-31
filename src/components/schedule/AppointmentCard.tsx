@@ -1,9 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import { Clock, User, Scissors, Phone } from "lucide-react";
-import { SLOT_HEIGHT_PX, calculateSlotsCount } from "@/lib/utils";
 
 interface Appointment {
   id: string;
+  barbershop_id: string;
   client_id: string;
   barber_id: string;
   service_id: string;
@@ -13,7 +13,10 @@ interface Appointment {
   total_price: number;
   status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
   notes?: string;
+  created_at: string;
+  updated_at: string;
   
+  // Relacionamentos
   client?: {
     id: string;
     name: string;
@@ -34,30 +37,26 @@ interface Appointment {
 interface AppointmentCardProps {
   appointment: Appointment;
   onClick?: () => void;
-  slotsCount?: number;
   barberColor: string;
+  slotsCount?: number;
 }
 
-export const AppointmentCard = ({ 
-  appointment, 
-  onClick, 
-  slotsCount, 
-  barberColor 
-}: AppointmentCardProps) => {
+export const AppointmentCard = ({ appointment, onClick, barberColor, slotsCount }: AppointmentCardProps) => {
   // Calculate slots based on service duration if not provided
-  const actualSlotsCount = slotsCount || (appointment.service ? calculateSlotsCount(appointment.service.duration_minutes) : 1);
+  const actualSlotsCount = slotsCount || 1;
+  
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return 'bg-green-500/10 border-green-500/20 text-green-700';
+        return 'bg-green-100 border-green-300 text-green-800';
       case 'scheduled':
-        return 'bg-yellow-500/10 border-yellow-500/20 text-yellow-700';
+        return 'bg-blue-100 border-blue-300 text-blue-800';
       case 'cancelled':
-        return 'bg-red-500/10 border-red-500/20 text-red-700';
+        return 'bg-red-100 border-red-300 text-red-800';
       case 'completed':
-        return 'bg-blue-500/10 border-blue-500/20 text-blue-700';
+        return 'bg-gray-100 border-gray-300 text-gray-800';
       default:
-        return 'bg-muted border-border text-foreground';
+        return 'bg-gray-100 border-gray-300 text-gray-800';
     }
   };
 
@@ -79,22 +78,22 @@ export const AppointmentCard = ({
   return (
     <div
       className={`
-        relative p-2 rounded-md border cursor-pointer transition-all hover:shadow-sm
+        relative p-2 rounded-md border-l-4 cursor-pointer transition-all hover:shadow-md
         ${getStatusColor(appointment.status)}
       `}
       style={{
-        minHeight: `${actualSlotsCount * SLOT_HEIGHT_PX}px`,
-        borderLeftWidth: '3px',
-        borderLeftColor: barberColor
+        minHeight: `60px`,
+        borderLeftColor: barberColor,
+        zIndex: actualSlotsCount > 1 ? 10 : 1
       }}
       onClick={onClick}
     >
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-start justify-between mb-1">
         <div className="flex items-center gap-1">
           <Clock className="h-3 w-3" />
           <span className="text-xs font-medium">{appointment.start_time}</span>
         </div>
-        <Badge variant="outline" className="text-xs px-1 py-0 h-5">
+        <Badge variant="outline" className="text-xs px-1 py-0">
           {getStatusText(appointment.status)}
         </Badge>
       </div>
@@ -112,6 +111,13 @@ export const AppointmentCard = ({
         <div className="flex items-center gap-1 mb-1">
           <Scissors className="h-3 w-3" />
           <span className="text-xs truncate">{appointment.service.name}</span>
+        </div>
+      )}
+
+      {appointment.client?.phone && (
+        <div className="flex items-center gap-1 mb-1">
+          <Phone className="h-3 w-3" />
+          <span className="text-xs">{appointment.client.phone}</span>
         </div>
       )}
 

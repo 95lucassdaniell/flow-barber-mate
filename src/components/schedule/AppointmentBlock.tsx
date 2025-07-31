@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Clock, User, Scissors, Phone } from "lucide-react";
-import { SLOT_HEIGHT_PX, calculateSlotsCount } from "@/lib/utils";
+import { calculateAppointmentHeight, calculateAppointmentTop } from "@/lib/utils";
 
 interface Appointment {
   id: string;
@@ -43,7 +43,7 @@ interface AppointmentBlockProps {
 
 export const AppointmentBlock = ({ appointment, onClick, slotsCount }: AppointmentBlockProps) => {
   // Calculate slots based on service duration if not provided
-  const actualSlotsCount = slotsCount || (appointment.service ? calculateSlotsCount(appointment.service.duration_minutes) : 1);
+  const actualSlotsCount = slotsCount || 1;
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed':
@@ -81,7 +81,7 @@ export const AppointmentBlock = ({ appointment, onClick, slotsCount }: Appointme
         ${getStatusColor(appointment.status)}
       `}
       style={{
-        minHeight: `${actualSlotsCount * SLOT_HEIGHT_PX}px`,
+        minHeight: `60px`,
         zIndex: actualSlotsCount > 1 ? 10 : 1
       }}
       onClick={onClick}

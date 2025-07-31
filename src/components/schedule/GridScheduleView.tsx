@@ -1,15 +1,16 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Filter } from "lucide-react";
+import { Filter } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { AppointmentBlock } from "./AppointmentBlock";
+import { TimeColumn } from "./TimeColumn";
+import { NewBarberColumn } from "./NewBarberColumn";
 import { useBarbershopSettings } from "@/hooks/useBarbershopSettings";
-import { SLOT_HEIGHT_PX, calculateSlotsCount, isTimeInRange } from "@/lib/utils";
+import { generateTimeSlots } from "@/lib/utils";
 
 interface Appointment {
   id: string;
@@ -71,46 +72,26 @@ export const GridScheduleView = ({
   const [selectedBarbers, setSelectedBarbers] = useState<string[]>(
     barbers.map(b => b.id)
   );
-  const { generateTimeSlots, isOpenOnDate } = useBarbershopSettings();
+  const { settings, isOpenOnDate } = useBarbershopSettings();
 
   const filteredBarbers = barbers.filter(b => selectedBarbers.includes(b.id));
-  const dateString = format(date, 'yyyy-MM-dd');
-  
-  // Use barbershop settings for time slots (using default 15 min duration)
-  const barbershopTimeSlots = generateTimeSlots(date, 15, 15);
   const isOpen = isOpenOnDate(date);
 
-  // Calcular quantos slots um agendamento ocupa (baseado na duração)
-  const getAppointmentSlotsCount = (appointment: Appointment): number => {
-    const duration = appointment.service?.duration_minutes || 30;
-    return calculateSlotsCount(duration);
-  };
+  // Get operating hours from settings
+  const openTime = "08:00"; // Use default for now
+  const closeTime = "18:00"; // Use default for now
+  
+  // Generate hourly time slots for the day
+  const hourlyTimeSlots = generateTimeSlots(openTime, closeTime);
 
-  // Verificar se um agendamento ocupa um slot específico
-  const isAppointmentInSlot = (appointment: Appointment, timeSlot: string): boolean => {
-    const normalizedStartTime = appointment.start_time.slice(0, 5);
-    const normalizedEndTime = appointment.end_time.slice(0, 5);
-    
-    return isTimeInRange(timeSlot, normalizedStartTime, normalizedEndTime);
-  };
+  // Define barber colors
+  const barberColors = [
+    '#3B82F6', '#EF4444', '#10B981', '#F59E0B', 
+    '#8B5CF6', '#F97316', '#06B6D4', '#84CC16'
+  ];
 
-  // Obter agendamento para um barbeiro e horário específico
-  const getAppointmentForSlot = (barberId: string, timeSlot: string): Appointment | null => {
-    return appointments.find(apt => 
-      apt.barber_id === barberId &&
-      apt.appointment_date === dateString &&
-      apt.start_time === timeSlot
-    ) || null;
-  };
-
-  // Verificar se um slot está ocupado por um agendamento que começou antes
-  const isSlotOccupiedByPreviousAppointment = (barberId: string, timeSlot: string): Appointment | null => {
-    return appointments.find(apt => 
-      apt.barber_id === barberId &&
-      apt.appointment_date === dateString &&
-      apt.start_time !== timeSlot &&
-      isAppointmentInSlot(apt, timeSlot)
-    ) || null;
+  const getBarberColor = (index: number) => {
+    return barberColors[index % barberColors.length];
   };
 
   const handleBarberToggle = (barberId: string) => {
@@ -128,9 +109,6 @@ export const GridScheduleView = ({
   const handleUnselectAll = () => {
     setSelectedBarbers([]);
   };
-
-  // Use barbershop time slots or provided ones
-  const displaySlots = barbershopTimeSlots.length > 0 ? barbershopTimeSlots : (timeSlots || []);
 
   return (
     <div className="space-y-4">
@@ -154,7 +132,7 @@ export const GridScheduleView = ({
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-              {barbers.map(barber => (
+              {barbers.map((barber, index) => (
                 <div key={barber.id} className="flex items-center space-x-2">
                   <Checkbox
                     id={`barber-${barber.id}`}
@@ -165,11 +143,10 @@ export const GridScheduleView = ({
                     htmlFor={`barber-${barber.id}`}
                     className="text-sm font-medium cursor-pointer flex items-center gap-2"
                   >
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="text-xs">
-                        {barber.full_name.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div 
+                      className="w-4 h-4 rounded-full"
+                      style={{ backgroundColor: getBarberColor(index) }}
+                    />
                     {barber.full_name}
                     {barber.role === 'admin' && (
                       <Badge variant="secondary" className="text-xs">Admin</Badge>
@@ -182,7 +159,7 @@ export const GridScheduleView = ({
         </CardContent>
       </Card>
 
-      {/* Grid da Agenda */}
+      {/* Grid da Agenda Estilo Google Calendar */}
       <Card>
         <CardHeader>
           <CardTitle>
@@ -197,84 +174,33 @@ export const GridScheduleView = ({
                 <p className="text-sm text-muted-foreground">A barbearia está fechada no dia selecionado.</p>
               </div>
             </div>
-          ) : displaySlots.length === 0 ? (
+          ) : filteredBarbers.length === 0 ? (
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
-                <p className="text-lg font-medium text-muted-foreground">Sem Horários Disponíveis</p>
-                <p className="text-sm text-muted-foreground">Não há horários disponíveis para agendamento hoje.</p>
+                <p className="text-lg font-medium text-muted-foreground">Nenhum Barbeiro Selecionado</p>
+                <p className="text-sm text-muted-foreground">Selecione pelo menos um barbeiro para visualizar a agenda.</p>
               </div>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <div 
-                className="grid gap-0 border"
-                style={{
-                  gridTemplateColumns: `80px repeat(${filteredBarbers.length}, minmax(200px, 1fr))`,
-                  minWidth: `${80 + filteredBarbers.length * 200}px`
-                }}
-              >
-              {/* Cabeçalho */}
-              <div className="p-2 border-b bg-muted font-medium text-center">
-                Horário
-              </div>
-              {filteredBarbers.map(barber => (
-                <div key={barber.id} className="p-2 border-b bg-muted">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-xs">
-                        {barber.full_name.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium text-sm">{barber.full_name}</div>
-                      {barber.role === 'admin' && (
-                        <Badge variant="secondary" className="text-xs">Admin</Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {/* Linhas de Horário */}
-              {displaySlots.map(timeSlot => (
-                <>
-                  <div 
-                    key={`time-${timeSlot}`} 
-                    className="p-2 border-b border-r text-sm font-medium text-center bg-gray-50"
-                  >
-                    {timeSlot}
-                  </div>
-                  {filteredBarbers.map(barber => {
-                    const appointment = getAppointmentForSlot(barber.id, timeSlot);
-                    const occupiedByPrevious = isSlotOccupiedByPreviousAppointment(barber.id, timeSlot);
-                    
-                    return (
-                      <div 
-                        key={`${barber.id}-${timeSlot}`}
-                        className="border-b border-r relative"
-                        style={{ minHeight: `${SLOT_HEIGHT_PX}px` }}
-                      >
-                        {appointment ? (
-                          <AppointmentBlock
-                            appointment={appointment}
-                            onClick={() => onAppointmentClick?.(appointment)}
-                            slotsCount={getAppointmentSlotsCount(appointment)}
-                          />
-                        ) : occupiedByPrevious ? (
-                          <div className="h-full bg-gray-100 opacity-50" />
-                        ) : (
-                          <div 
-                            className="h-full hover:bg-muted/50 cursor-pointer transition-colors flex items-center justify-center"
-                            onClick={() => onTimeSlotClick?.(barber.id, timeSlot)}
-                          >
-                            <Plus className="h-4 w-4 text-muted-foreground opacity-0 hover:opacity-100 transition-opacity" />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </>
-              ))}
+              <div className="flex border-t">
+                {/* Time column */}
+                <TimeColumn timeSlots={hourlyTimeSlots} />
+                
+                {/* Barber columns */}
+                {filteredBarbers.map((barber, index) => (
+                  <NewBarberColumn
+                    key={barber.id}
+                    barber={barber}
+                    appointments={appointments}
+                    barberColor={getBarberColor(index)}
+                    timeSlots={hourlyTimeSlots}
+                    dayStartTime={openTime}
+                    dayEndTime={closeTime}
+                    onAppointmentClick={onAppointmentClick!}
+                    onTimeSlotClick={onTimeSlotClick!}
+                  />
+                ))}
               </div>
             </div>
           )}
