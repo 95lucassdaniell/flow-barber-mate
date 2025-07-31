@@ -65,42 +65,58 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
   useEffect(() => {
     console.log('🏪 DashboardLayout state:', {
       slug,
-      profile: profile?.barbershop_id,
-      barbershopBySlug: barbershopBySlug?.name,
+      profileId: profile?.id,
+      profileBarbershopId: profile?.barbershop_id,
+      barbershopBySlugName: barbershopBySlug?.name,
+      barbershopBySlugId: barbershopBySlug?.id,
       slugLoading,
-      currentData: barbershopData
+      currentDataName: barbershopData.name,
+      authLoading: !profile && !barbershopBySlug
     });
   }, [slug, profile, barbershopBySlug, slugLoading, barbershopData]);
 
-  // Primary effect: Use profile-based data when available
+  // Fallback effect: Use slug-based data immediately when available
   useEffect(() => {
-    if (profile?.barbershop_id) {
-      fetchBarbershopData();
-    }
-  }, [profile]);
-
-  // Fallback effect: Use slug-based data immediately
-  useEffect(() => {
-    if (barbershopBySlug && !profile?.barbershop_id) {
-      console.log('🔄 Using slug-based barbershop data:', barbershopBySlug);
+    if (barbershopBySlug) {
+      console.log('🔄 Using slug-based barbershop data (fallback):', barbershopBySlug);
       setBarbershopData({
         name: barbershopBySlug.name || "Barbearia",
         logo_url: barbershopBySlug.logo_url || ""
       });
     }
-  }, [barbershopBySlug, profile]);
+  }, [barbershopBySlug]);
+
+  // Primary effect: Use profile-based data when available (can override slug data)
+  useEffect(() => {
+    if (profile?.barbershop_id) {
+      console.log('🎯 Profile available, fetching barbershop data via profile...');
+      fetchBarbershopData();
+    }
+  }, [profile]);
 
   const fetchBarbershopData = async () => {
+    if (!profile?.barbershop_id) {
+      console.warn('🚫 No barbershop_id in profile, skipping fetch');
+      return;
+    }
+
     try {
+      console.log('📡 Fetching barbershop data for ID:', profile.barbershop_id);
+      
       const { data, error } = await supabase
         .from('barbershops')
         .select('name, logo_url')
-        .eq('id', profile!.barbershop_id)
+        .eq('id', profile.barbershop_id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching barbershop data via profile:', error);
+        // Don't throw error, keep using fallback data
+        return;
+      }
 
       if (data) {
+        console.log('✅ Barbershop data fetched via profile:', data.name);
         setBarbershopData({
           name: data.name || "Barbearia",
           logo_url: data.logo_url || ""
@@ -108,6 +124,7 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
       }
     } catch (error) {
       console.error('Error fetching barbershop data:', error);
+      // Keep using fallback data from slug
     }
   };
 

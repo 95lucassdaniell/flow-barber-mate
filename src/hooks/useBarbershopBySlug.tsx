@@ -31,33 +31,55 @@ export const useBarbershopBySlug = (slug: string) => {
         return;
       }
 
-      try {
-        setLoading(true);
-        setError(null);
+      let retryCount = 0;
+      const maxRetries = 3;
 
-        console.log('🔍 Fetching barbershop by slug:', slug);
+      const attemptFetch = async (attempt = 0): Promise<void> => {
+        try {
+          setLoading(true);
+          setError(null);
 
-        const { data, error } = await supabase
-          .from("barbershops")
-          .select("id, name, logo_url")
-          .eq("slug", slug)
-          .single();
+          console.log(`🔍 Fetching barbershop by slug: ${slug} (tentativa ${attempt + 1}/${maxRetries})`);
 
-        if (error) throw error;
+          const { data, error } = await supabase
+            .from("barbershops")
+            .select("id, name, logo_url")
+            .eq("slug", slug)
+            .single();
 
-        // Cache the result for 5 minutes
-        if (data) {
-          cacheManager.set(cacheKey, data, 5 * 60 * 1000);
-          console.log('✅ Barbershop data fetched and cached:', data.name);
+          if (error) {
+            if (error.code === 'PGRST116') {
+              // No rows returned
+              throw new Error('Barbearia não encontrada');
+            }
+            throw error;
+          }
+
+          // Cache the result for 5 minutes
+          if (data) {
+            cacheManager.set(cacheKey, data, 5 * 60 * 1000);
+            console.log('✅ Barbershop data fetched and cached:', data.name);
+          }
+
+          setBarbershop(data);
+          setLoading(false);
+        } catch (err: any) {
+          console.error(`Error fetching barbershop (attempt ${attempt + 1}):`, err);
+          
+          if (attempt < maxRetries - 1) {
+            // Retry com delay exponencial
+            const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+            console.log(`🔄 Tentando novamente em ${delay}ms...`);
+            setTimeout(() => attemptFetch(attempt + 1), delay);
+          } else {
+            console.error('🚫 Máximo de tentativas excedido para buscar barbearia');
+            setError(err.message || "Erro ao carregar informações da barbearia");
+            setLoading(false);
+          }
         }
+      };
 
-        setBarbershop(data);
-      } catch (err: any) {
-        console.error("Error fetching barbershop:", err);
-        setError(err.message || "Erro ao carregar informações da barbearia");
-      } finally {
-        setLoading(false);
-      }
+      attemptFetch();
     };
 
     fetchBarbershop();

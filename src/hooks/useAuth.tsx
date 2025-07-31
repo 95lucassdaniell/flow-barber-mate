@@ -48,30 +48,40 @@ export const useAuth = () => {
 
   useEffect(() => {
     let mounted = true;
+    let retryCount = 0;
+    const maxRetries = 3;
     
-    // Timeout de segurança para loading
+    // Timeout de segurança estendido para loading
     globalState.setOperationTimeout('auth-loading', () => {
       if (mounted) {
         setLoading(false);
         console.warn('useAuth: Loading timeout - forçando false');
       }
-    }, 3000);
+    }, 8000); // Aumentado para 8 segundos
 
     const initializeAuth = async () => {
       try {
+        console.log('🔐 Inicializando autenticação...');
+        
         // Set up auth state listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, session) => {
             if (!mounted) return;
             
+            console.log('🔄 Auth state change:', event, !!session);
             setAuthError(null);
             setSession(session);
             setUser(session?.user ?? null);
             
             if (session?.user) {
+              console.log('👤 Usuário autenticado, buscando perfil...', session.user.id);
               const profileData = await fetchProfile(session.user.id);
-              if (mounted) setProfile(profileData);
+              if (mounted) {
+                setProfile(profileData);
+                console.log('📋 Perfil carregado:', profileData?.role, profileData?.barbershop_id);
+              }
             } else {
+              console.log('❌ Usuário não autenticado');
               if (mounted) setProfile(null);
             }
             
@@ -82,13 +92,46 @@ export const useAuth = () => {
           }
         );
 
-        // Check existing session
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session && mounted) {
-          setLoading(false);
-          globalState.clearOperationTimeout('auth-loading');
-        }
+        // Check existing session with retry logic
+        const checkSession = async (attempt = 0): Promise<void> => {
+          try {
+            console.log(`🔍 Verificando sessão existente (tentativa ${attempt + 1}/${maxRetries})...`);
+            const { data: { session }, error } = await supabase.auth.getSession();
+            
+            if (error) {
+              console.error('Erro ao verificar sessão:', error);
+              throw error;
+            }
+            
+            if (session) {
+              console.log('✅ Sessão encontrada:', session.user.id);
+              // A sessão será processada pelo onAuthStateChange
+            } else {
+              console.log('⚠️ Nenhuma sessão encontrada');
+              if (mounted) {
+                setLoading(false);
+                globalState.clearOperationTimeout('auth-loading');
+              }
+            }
+          } catch (error) {
+            console.error(`Erro na tentativa ${attempt + 1}:`, error);
+            
+            if (attempt < maxRetries - 1) {
+              // Retry com delay exponencial
+              const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+              console.log(`🔄 Tentando novamente em ${delay}ms...`);
+              setTimeout(() => checkSession(attempt + 1), delay);
+            } else {
+              console.error('🚫 Máximo de tentativas excedido');
+              if (mounted) {
+                setLoading(false);
+                globalState.clearOperationTimeout('auth-loading');
+              }
+            }
+          }
+        };
+
+        await checkSession();
 
         return () => {
           subscription.unsubscribe();
