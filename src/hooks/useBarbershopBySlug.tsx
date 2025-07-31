@@ -14,75 +14,75 @@ export const useBarbershopBySlug = (slug: string) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchBarbershop = async () => {
-      if (!slug) {
-        setLoading(false);
-        return;
-      }
+    if (!slug) {
+      setLoading(false);
+      return;
+    }
 
-      // Check cache first
-      const cacheKey = `barbershop-${slug}`;
-      const cached = cacheManager.get<BarbershopInfo>(cacheKey);
-      
-      if (cached) {
-        console.log('🚀 Using cached barbershop data for:', slug);
-        setBarbershop(cached);
-        setLoading(false);
-        return;
-      }
+    let mounted = true;
+    const maxRetries = 5;
 
-      let retryCount = 0;
-      const maxRetries = 3;
-
-      const attemptFetch = async (attempt = 0): Promise<void> => {
-        try {
-          setLoading(true);
-          setError(null);
-
-          console.log(`🔍 Fetching barbershop by slug: ${slug} (tentativa ${attempt + 1}/${maxRetries})`);
-
-          const { data, error } = await supabase
-            .from("barbershops")
-            .select("id, name, logo_url")
-            .eq("slug", slug)
-            .single();
-
-          if (error) {
-            if (error.code === 'PGRST116') {
-              // No rows returned
-              throw new Error('Barbearia não encontrada');
-            }
-            throw error;
-          }
-
-          // Cache the result for 5 minutes
-          if (data) {
-            cacheManager.set(cacheKey, data, 5 * 60 * 1000);
-            console.log('✅ Barbershop data fetched and cached:', data.name);
-          }
-
-          setBarbershop(data);
+    const fetchBarbershop = async (attempt = 0): Promise<void> => {
+      try {
+        console.log(`🏪 Fetching barbershop: ${slug} (tentativa ${attempt + 1}/${maxRetries})`);
+        
+        // Check cache first
+        const cacheKey = `barbershop-${slug}`;
+        const cached = cacheManager.get<BarbershopInfo>(cacheKey);
+        
+        if (cached && mounted) {
+          console.log('🏪 Barbershop carregada do cache:', cached.name);
+          setBarbershop(cached);
           setLoading(false);
-        } catch (err: any) {
-          console.error(`Error fetching barbershop (attempt ${attempt + 1}):`, err);
-          
-          if (attempt < maxRetries - 1) {
-            // Retry com delay exponencial
-            const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
-            console.log(`🔄 Tentando novamente em ${delay}ms...`);
-            setTimeout(() => attemptFetch(attempt + 1), delay);
-          } else {
-            console.error('🚫 Máximo de tentativas excedido para buscar barbearia');
-            setError(err.message || "Erro ao carregar informações da barbearia");
-            setLoading(false);
-          }
+          return;
         }
-      };
 
-      attemptFetch();
+        // Public query - não depende de autenticação  
+        const { data, error } = await supabase
+          .from("barbershops")
+          .select("id, name, logo_url")
+          .eq("slug", slug)
+          .maybeSingle(); // Use maybeSingle instead of single
+
+        if (error) {
+          console.error('❌ Barbershop fetch error:', error);
+          throw error;
+        }
+
+        if (data && mounted) {
+          const barbershopData = data as BarbershopInfo;
+          console.log('✅ Barbershop carregada:', barbershopData.name);
+          setBarbershop(barbershopData);
+          cacheManager.set(cacheKey, barbershopData, 10 * 60 * 1000); // 10 min cache
+          setError(null);
+        } else if (mounted) {
+          console.log('⚠️ Barbershop não encontrada para slug:', slug);
+          setError('Barbearia não encontrada');
+        }
+      } catch (err: any) {
+        console.error(`❌ Erro na tentativa ${attempt + 1}:`, err);
+        
+        if (attempt < maxRetries - 1 && mounted) {
+          // Immediate retry for first few attempts
+          const delay = attempt < 2 ? 200 : Math.pow(2, attempt - 2) * 1000;
+          console.log(`🔄 Retry barbershop em ${delay}ms...`);
+          setTimeout(() => fetchBarbershop(attempt + 1), delay);
+        } else if (mounted) {
+          setError(err.message || "Erro ao carregar informações da barbearia");
+        }
+      } finally {
+        if (mounted && (attempt >= maxRetries - 1 || barbershop || error)) {
+          setLoading(false);
+        }
+      }
     };
 
+    // Immediate fetch - barbershop data should always be available
     fetchBarbershop();
+
+    return () => {
+      mounted = false;
+    };
   }, [slug]);
 
   return {

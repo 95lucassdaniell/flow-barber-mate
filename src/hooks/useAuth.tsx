@@ -49,23 +49,21 @@ export const useAuth = () => {
   useEffect(() => {
     let mounted = true;
     let retryCount = 0;
-    const maxRetries = 3;
+    const maxRetries = 5;
     
-    // Timeout de segurança estendido para loading
-    globalState.setOperationTimeout('auth-loading', () => {
-      if (mounted) {
-        setLoading(false);
-        console.warn('useAuth: Loading timeout - forçando false');
-      }
-    }, 8000); // Aumentado para 8 segundos
-
     const initializeAuth = async () => {
       try {
         console.log('🔐 Inicializando autenticação...');
         
-        // Set up auth state listener
+        // Verificação síncrona imediata do localStorage
+        const storedSession = localStorage.getItem('sb-yzqwmxffjufefocgkevz-auth-token');
+        if (storedSession) {
+          console.log('🗄️ Sessão encontrada no localStorage');
+        }
+
+        // Set up auth state listener FIRST
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
+          (event, session) => {
             if (!mounted) return;
             
             console.log('🔄 Auth state change:', event, !!session);
@@ -74,12 +72,17 @@ export const useAuth = () => {
             setUser(session?.user ?? null);
             
             if (session?.user) {
-              console.log('👤 Usuário autenticado, buscando perfil...', session.user.id);
-              const profileData = await fetchProfile(session.user.id);
-              if (mounted) {
-                setProfile(profileData);
-                console.log('📋 Perfil carregado:', profileData?.role, profileData?.barbershop_id);
-              }
+              console.log('👤 Usuário autenticado, ID:', session.user.id);
+              // Fetch profile with timeout
+              setTimeout(async () => {
+                if (mounted) {
+                  const profileData = await fetchProfile(session.user.id);
+                  if (mounted) {
+                    setProfile(profileData);
+                    console.log('📋 Perfil carregado:', profileData?.role, profileData?.barbershop_id);
+                  }
+                }
+              }, 0);
             } else {
               console.log('❌ Usuário não autenticado');
               if (mounted) setProfile(null);
@@ -92,10 +95,12 @@ export const useAuth = () => {
           }
         );
 
-        // Check existing session with retry logic
+        // Aggressive session check with immediate retry
         const checkSession = async (attempt = 0): Promise<void> => {
           try {
-            console.log(`🔍 Verificando sessão existente (tentativa ${attempt + 1}/${maxRetries})...`);
+            console.log(`🔍 Verificando sessão (tentativa ${attempt + 1}/${maxRetries})...`);
+            
+            // Force session refresh if needed
             const { data: { session }, error } = await supabase.auth.getSession();
             
             if (error) {
@@ -104,25 +109,35 @@ export const useAuth = () => {
             }
             
             if (session) {
-              console.log('✅ Sessão encontrada:', session.user.id);
-              // A sessão será processada pelo onAuthStateChange
+              console.log('✅ Sessão válida encontrada:', session.user.id);
+              // Auth state change will handle the rest
             } else {
-              console.log('⚠️ Nenhuma sessão encontrada');
+              console.log('⚠️ Nenhuma sessão ativa');
+              // Try to refresh session if we have stored tokens
+              if (attempt === 0 && storedSession) {
+                console.log('🔄 Tentando refresh da sessão...');
+                const { data: refreshData } = await supabase.auth.refreshSession();
+                if (refreshData.session) {
+                  console.log('✅ Sessão restaurada via refresh');
+                  return;
+                }
+              }
+              
               if (mounted) {
                 setLoading(false);
                 globalState.clearOperationTimeout('auth-loading');
               }
             }
           } catch (error) {
-            console.error(`Erro na tentativa ${attempt + 1}:`, error);
+            console.error(`❌ Erro na tentativa ${attempt + 1}:`, error);
             
             if (attempt < maxRetries - 1) {
-              // Retry com delay exponencial
-              const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
-              console.log(`🔄 Tentando novamente em ${delay}ms...`);
+              // Immediate retry for first few attempts
+              const delay = attempt < 2 ? 100 : Math.pow(2, attempt - 2) * 1000;
+              console.log(`🔄 Retry em ${delay}ms...`);
               setTimeout(() => checkSession(attempt + 1), delay);
             } else {
-              console.error('🚫 Máximo de tentativas excedido');
+              console.error('🚫 Tentativas esgotadas');
               if (mounted) {
                 setLoading(false);
                 globalState.clearOperationTimeout('auth-loading');
@@ -131,13 +146,22 @@ export const useAuth = () => {
           }
         };
 
+        // Timeout de segurança mais longo
+        globalState.setOperationTimeout('auth-loading', () => {
+          if (mounted) {
+            console.warn('⏰ Auth timeout - forçando loading=false');
+            setLoading(false);
+          }
+        }, 12000);
+
+        // Start session check
         await checkSession();
 
         return () => {
           subscription.unsubscribe();
         };
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        console.error('❌ Erro na inicialização auth:', error);
         if (mounted) {
           setLoading(false);
           globalState.clearOperationTimeout('auth-loading');

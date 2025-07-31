@@ -4,22 +4,28 @@ import App from './App.tsx'
 import './index.css'
 import { LoadingProvider } from './contexts/LoadingContext'
 
-// Configure React Query with aggressive anti-loop settings
+// Configure React Query with session-aware settings
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      refetchOnMount: false,
-      refetchOnReconnect: false,
-      retry: 0, // No retries to prevent loops
-      staleTime: 30 * 60 * 1000, // 30 minutes - very long cache
-      gcTime: 60 * 60 * 1000, // 1 hour cache time
+      refetchOnMount: true, // Enable mount refetch for fresh data after refresh
+      refetchOnReconnect: true, // Enable reconnect refetch
+      retry: (failureCount, error: any) => {
+        // Retry on auth errors up to 3 times
+        if (error?.message?.includes('JWT') || error?.code === 'PGRST301') {
+          return failureCount < 3;
+        }
+        return false;
+      },
+      staleTime: 5 * 60 * 1000, // 5 minutes - shorter for auth-dependent data
+      gcTime: 30 * 60 * 1000, // 30 minutes cache time
       networkMode: 'online',
       refetchInterval: false,
       refetchIntervalInBackground: false,
     },
     mutations: {
-      retry: 0, // No retries for mutations
+      retry: 1, // Single retry for mutations
     }
   },
 })
