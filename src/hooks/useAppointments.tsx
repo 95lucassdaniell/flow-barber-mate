@@ -56,7 +56,7 @@ export const useAppointments = () => {
   const { toast } = useToast();
   const abortControllerRef = useRef<AbortController>();
   const lastSuccessfulFetchRef = useRef<string>('');
-  const { isTimeSlotAvailable, isOpenOnDate, generateTimeSlots } = useBarbershopSettings();
+  const { isTimeSlotAvailable, isOpenOnDate, generateTimeSlots, isTimeSlotInPast } = useBarbershopSettings();
 
   const fetchAppointments = useCallback(async (barberId?: string, date?: string, mode: 'day' | 'week' = 'day') => {
     if (!profile?.barbershop_id || globalState.isEmergencyStopActive()) return;
@@ -180,8 +180,20 @@ export const useAppointments = () => {
       
       const serviceDuration = serviceData.duration_minutes || 15;
 
+      // Debug: Verificar detalhes da validação
+      console.log('🔍 Validating appointment:', {
+        date: appointmentData.appointment_date,
+        time: appointmentData.start_time,
+        duration: serviceDuration,
+        isOpen: isOpenOnDate(appointmentDate),
+        isPast: isTimeSlotInPast(appointmentDate, appointmentData.start_time)
+      });
+
       // Verificar se o horário está disponível considerando a duração do serviço
-      if (!isTimeSlotAvailable(appointmentDate, appointmentData.start_time, serviceDuration)) {
+      const available = isTimeSlotAvailable(appointmentDate, appointmentData.start_time, serviceDuration);
+      console.log('📋 Availability result:', { available });
+
+      if (!available) {
         toast({
           title: "Horário indisponível",
           description: "Este horário não está disponível para agendamento.",
