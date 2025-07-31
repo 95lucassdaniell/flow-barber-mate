@@ -35,6 +35,7 @@ import ProviderLoginPage from "./components/providers/ProviderLoginPage";
 import ProviderProtectedRoute from "./components/providers/ProviderProtectedRoute";
 import ProviderDashboard from "./components/providers/dashboard/ProviderDashboard";
 import ProviderDashboardLayout from "./components/providers/dashboard/ProviderDashboardLayout";
+import ProviderSchedulePage from "./components/providers/schedule/ProviderSchedulePage";
 
 
 function App() {
@@ -131,6 +132,13 @@ function App() {
             <ProviderProtectedRoute>
               <ProviderDashboardLayout activeTab="dashboard">
                 <ProviderDashboard />
+              </ProviderDashboardLayout>
+            </ProviderProtectedRoute>
+          } />
+          <Route path="/provider/:slug/schedule" element={
+            <ProviderProtectedRoute>
+              <ProviderDashboardLayout activeTab="schedule">
+                <ProviderSchedulePage />
               </ProviderDashboardLayout>
             </ProviderProtectedRoute>
           } />
