@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Index from "./pages/Index";
+import DashboardRedirect from "./pages/DashboardRedirect";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -48,6 +49,10 @@ const App = () => (
     <BrowserRouter>
       <NavigationDebugger />
         <Routes>
+          {/* Redirect invalid /dashboard route */}
+          <Route path="/dashboard" element={<DashboardRedirect />} />
+          
+          {/* Public routes */}
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />

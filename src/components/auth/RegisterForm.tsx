@@ -221,7 +221,7 @@ const RegisterForm = () => {
     });
 
     setTimeout(() => {
-      window.location.href = '/app';
+      navigate('/app');
     }, 1500);
   };
 

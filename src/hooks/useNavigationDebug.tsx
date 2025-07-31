@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
+import { usePageReloadDetector } from './usePageReloadDetector';
 
 export const useNavigationDebug = () => {
   const location = useLocation();
   const navigationType = useNavigationType();
+  usePageReloadDetector();
 
   useEffect(() => {
     console.log('🧭 Navigation Debug:', {
