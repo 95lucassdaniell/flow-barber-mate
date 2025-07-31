@@ -51,14 +51,29 @@ export const useBarbershopSettings = () => {
   };
 
   // Check if a time slot is in the past
-  const isTimeSlotInPast = (date: Date, timeSlot: string, safetyMarginMinutes: number = 30): boolean => {
+  const isTimeSlotInPast = (date: Date, timeSlot: string, safetyMarginMinutes: number = 5): boolean => {
     const now = new Date();
     const appointmentDateTime = new Date(date);
     const [hours, minutes] = timeSlot.split(':').map(Number);
     appointmentDateTime.setHours(hours, minutes, 0, 0);
     
-    // Add safety margin to current time
-    const safetyTime = new Date(now.getTime() + safetyMarginMinutes * 60000);
+    // For today, use minimal safety margin (5 minutes)
+    // For future dates, no safety margin needed
+    const isToday = appointmentDateTime.toDateString() === now.toDateString();
+    const actualMargin = isToday ? safetyMarginMinutes : 0;
+    
+    const safetyTime = new Date(now.getTime() + actualMargin * 60000);
+    
+    // Debug logging
+    console.log('Time slot validation:', {
+      timeSlot,
+      appointmentDateTime: appointmentDateTime.toLocaleString('pt-BR'),
+      now: now.toLocaleString('pt-BR'),
+      safetyTime: safetyTime.toLocaleString('pt-BR'),
+      isToday,
+      actualMargin,
+      isPast: appointmentDateTime <= safetyTime
+    });
     
     return appointmentDateTime <= safetyTime;
   };
