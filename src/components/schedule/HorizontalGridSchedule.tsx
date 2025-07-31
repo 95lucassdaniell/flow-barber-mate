@@ -5,41 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
-interface Appointment {
-  id: string;
-  client_id: string;
-  barber_id: string;
-  service_id: string;
-  appointment_date: string;
-  start_time: string;
-  end_time: string;
-  total_price: number;
-  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
-  notes?: string;
-  
-  client?: {
-    id: string;
-    name: string;
-    phone: string;
-    email?: string;
-  };
-  service?: {
-    id: string;
-    name: string;
-    duration_minutes: number;
-  };
-  barber?: {
-    id: string;
-    full_name: string;
-  };
-}
-
-interface Barber {
-  id: string;
-  full_name: string;
-  role: string;
-  is_active: boolean;
-}
+import { Appointment, Barber } from "@/types/appointment";
 
 interface HorizontalGridScheduleProps {
   date: Date;

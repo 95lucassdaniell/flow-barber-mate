@@ -1,38 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Clock, User, Scissors, Phone } from "lucide-react";
-
-interface Appointment {
-  id: string;
-  barbershop_id: string;
-  client_id: string;
-  barber_id: string;
-  service_id: string;
-  appointment_date: string;
-  start_time: string;
-  end_time: string;
-  total_price: number;
-  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-  
-  // Relacionamentos
-  client?: {
-    id: string;
-    name: string;
-    phone: string;
-    email?: string;
-  };
-  service?: {
-    id: string;
-    name: string;
-    duration_minutes: number;
-  };
-  barber?: {
-    id: string;
-    full_name: string;
-  };
-}
+import { Appointment } from "@/types/appointment";
 
 interface AppointmentCardProps {
   appointment: Appointment;

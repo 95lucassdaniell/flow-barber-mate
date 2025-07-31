@@ -11,46 +11,7 @@ import { TimeColumn } from "./TimeColumn";
 import { NewBarberColumn } from "./NewBarberColumn";
 import { useBarbershopSettings } from "@/hooks/useBarbershopSettings";
 import { generateTimeSlots } from "@/lib/utils";
-
-interface Appointment {
-  id: string;
-  barbershop_id: string;
-  client_id: string;
-  barber_id: string;
-  service_id: string;
-  appointment_date: string;
-  start_time: string;
-  end_time: string;
-  total_price: number;
-  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-  
-  // Relacionamentos
-  client?: {
-    id: string;
-    name: string;
-    phone: string;
-    email?: string;
-  };
-  service?: {
-    id: string;
-    name: string;
-    duration_minutes: number;
-  };
-  barber?: {
-    id: string;
-    full_name: string;
-  };
-}
-
-interface Barber {
-  id: string;
-  full_name: string;
-  role: string;
-  is_active: boolean;
-}
+import { Appointment, Barber } from "@/types/appointment";
 
 interface GridScheduleViewProps {
   date: Date;

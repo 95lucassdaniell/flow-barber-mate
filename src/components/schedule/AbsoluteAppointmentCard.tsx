@@ -1,35 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Clock, User, Scissors } from "lucide-react";
 import { calculateAppointmentHeight, calculateAppointmentTop } from "@/lib/utils";
-
-interface Appointment {
-  id: string;
-  client_id: string;
-  barber_id: string;
-  service_id: string;
-  appointment_date: string;
-  start_time: string;
-  end_time: string;
-  total_price: number;
-  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
-  notes?: string;
-  
-  client?: {
-    id: string;
-    name: string;
-    phone: string;
-    email?: string;
-  };
-  service?: {
-    id: string;
-    name: string;
-    duration_minutes: number;
-  };
-  barber?: {
-    id: string;
-    full_name: string;
-  };
-}
+import { Appointment } from "@/types/appointment";
 
 interface AbsoluteAppointmentCardProps {
   appointment: Appointment;
