@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronLeft, ChevronRight, Calendar, Plus, User, Clock } from "lucide-react";
+import { LiveClock } from "@/components/ui/live-clock";
 import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -201,6 +202,8 @@ export const SimpleGridScheduleView = ({
                 Novo Agendamento
               </Button>
             </div>
+            
+            <LiveClock />
           </div>
         </div>
 
