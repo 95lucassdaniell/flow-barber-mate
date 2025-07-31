@@ -209,13 +209,13 @@ export const useAppointments = () => {
       const endTime = new Date(startTime.getTime() + serviceData.duration_minutes * 60000);
       const end_time = endTime.toTimeString().slice(0, 5);
 
-      // Verificar conflitos de horário
+      // Verificar conflitos de horário - apenas agendamentos ativos
       const { data: conflicts, error: conflictError } = await supabase
         .from('appointments')
         .select('id')
         .eq('barber_id', appointmentData.barber_id)
         .eq('appointment_date', appointmentData.appointment_date)
-        .neq('status', 'cancelled')
+        .in('status', ['scheduled', 'confirmed'])
         .lt('start_time', end_time)
         .gt('end_time', appointmentData.start_time);
 
@@ -410,7 +410,7 @@ export const useAppointments = () => {
     const dayAppointments = appointments.filter(
       apt => apt.barber_id === barberId && 
              apt.appointment_date === date && 
-             apt.status !== 'cancelled'
+             (apt.status === 'scheduled' || apt.status === 'confirmed')
     );
 
     // Filtrar e logar agendamentos corrompidos
