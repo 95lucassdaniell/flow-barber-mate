@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { useAuth } from './useAuth';
@@ -56,7 +56,7 @@ export const useAppointments = () => {
   const [lastFetchKey, setLastFetchKey] = useState<string>('');
   const { isTimeSlotAvailable, isOpenOnDate, generateTimeSlots } = useBarbershopSettings();
 
-  const fetchAppointments = async (barberId?: string, date?: string, mode: 'day' | 'week' = 'day') => {
+  const fetchAppointments = useCallback(async (barberId?: string, date?: string, mode: 'day' | 'week' = 'day') => {
     if (!profile?.barbershop_id) return;
 
     // Criar chave única para evitar requests duplicadas
@@ -140,7 +140,7 @@ export const useAppointments = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.barbershop_id, lastFetchKey, loading, toast]);
 
   const createAppointment = async (appointmentData: CreateAppointmentData): Promise<boolean> => {
     if (!profile?.barbershop_id) return false;
@@ -400,11 +400,17 @@ export const useAppointments = () => {
     });
   };
 
+  // Memoize the initial fetch to prevent unnecessary re-renders
+  const shouldFetchInitial = useMemo(() => 
+    !!profile?.barbershop_id, 
+    [profile?.barbershop_id]
+  );
+
   useEffect(() => {
-    if (profile?.barbershop_id) {
+    if (shouldFetchInitial) {
       fetchAppointments();
     }
-  }, [profile?.barbershop_id]);
+  }, [shouldFetchInitial, fetchAppointments]);
 
   const getClientAppointments = async (clientId: string) => {
     try {

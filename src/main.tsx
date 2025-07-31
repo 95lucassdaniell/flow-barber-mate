@@ -3,15 +3,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App.tsx'
 import './index.css'
 
-// Configure React Query to prevent automatic refetching on window focus
+// Configure React Query to prevent automatic refetching and page reloads
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       refetchOnMount: false,
-      refetchOnReconnect: true,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes (was cacheTime)
+      refetchOnReconnect: false, // Disable to prevent reloads on tab focus
+      retry: 1, // Reduce retries to prevent hanging
+      staleTime: 10 * 60 * 1000, // 10 minutes - longer cache
+      gcTime: 15 * 60 * 1000, // 15 minutes cache time
+      networkMode: 'online', // Only fetch when online
     },
   },
 })

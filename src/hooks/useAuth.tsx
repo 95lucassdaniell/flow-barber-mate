@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -18,7 +18,7 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const fetchProfile = async (userId: string): Promise<Profile | null> => {
+  const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     try {
       const { data: profileData, error } = await supabase
         .from('profiles')
@@ -36,52 +36,51 @@ export const useAuth = () => {
       console.error('Profile fetch error:', error);
       return null;
     }
-  };
+  }, []);
 
   useEffect(() => {
-    console.log('useAuth: Starting initialization');
+    let isInitialized = false;
     
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         console.log('Auth state change:', event, session?.user?.id);
         setAuthError(null);
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Defer profile fetch to avoid blocking auth state
-          setTimeout(async () => {
-            const profileData = await fetchProfile(session.user.id);
-            setProfile(profileData);
-          }, 0);
+          const profileData = await fetchProfile(session.user.id);
+          setProfile(profileData);
         } else {
           setProfile(null);
         }
         
-        setLoading(false);
+        if (!isInitialized) {
+          setLoading(false);
+          isInitialized = true;
+        }
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('useAuth: Initial session check', session?.user?.id);
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchProfile(session.user.id).then(setProfile);
-      } else {
-        setProfile(null);
-      }
-      
-      setLoading(false);
-    });
+    // Check for existing session only once
+    if (!isInitialized) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!isInitialized) {
+          console.log('useAuth: Initial session check', session?.user?.id);
+          // The onAuthStateChange will handle the state updates
+          if (!session) {
+            setLoading(false);
+            isInitialized = true;
+          }
+        }
+      });
+    }
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchProfile]);
 
   const signOut = async () => {
     try {

@@ -1,7 +1,6 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useNavigationDebug } from "@/hooks/useNavigationDebug";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -36,11 +35,6 @@ import ProviderProtectedRoute from "./components/providers/ProviderProtectedRout
 import ProviderDashboard from "./components/providers/dashboard/ProviderDashboard";
 import ProviderDashboardLayout from "./components/providers/dashboard/ProviderDashboardLayout";
 
-// Debug component to monitor navigation issues
-const NavigationDebugger = () => {
-  useNavigationDebug();
-  return null;
-};
 
 function App() {
   return (
@@ -48,7 +42,6 @@ function App() {
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        {/* <NavigationDebugger /> */}
         <Routes>
           {/* Redirect invalid /dashboard route */}
           <Route path="/dashboard" element={<DashboardRedirect />} />
