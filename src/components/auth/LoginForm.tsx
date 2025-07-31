@@ -29,9 +29,15 @@ const LoginForm = () => {
   // Check if user is already authenticated and redirect
   useEffect(() => {
     const checkAuthentication = async () => {
-      if (authLoading) return; // Wait for auth to load
+      console.log('LoginForm - Checking auth:', { authLoading, user: !!user, profile: !!profile });
+      
+      if (authLoading) {
+        console.log('LoginForm - Auth still loading, waiting...');
+        return; // Wait for auth to load
+      }
       
       if (user && profile) {
+        console.log('LoginForm - User authenticated, fetching barbershop...');
         try {
           // Buscar dados da barbearia
           const { data: barbershop, error: barbershopError } = await supabase
@@ -45,15 +51,16 @@ const LoginForm = () => {
             const state = location.state as { from?: string };
             const redirectTo = state?.from || `/app/${barbershop.slug}`;
             
-            console.log('Usuário já autenticado, redirecionando para:', redirectTo);
+            console.log('LoginForm - Usuário já autenticado, redirecionando para:', redirectTo);
             navigate(redirectTo, { replace: true });
             return;
           }
         } catch (error) {
-          console.error('Erro ao verificar barbearia:', error);
+          console.error('LoginForm - Erro ao verificar barbearia:', error);
         }
       }
       
+      console.log('LoginForm - Auth check complete, showing login form');
       setCheckingAuth(false);
     };
 
