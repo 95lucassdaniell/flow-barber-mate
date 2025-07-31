@@ -153,7 +153,6 @@ const SchedulePage = () => {
           selectedBarberId={selectedBarberId_}
           appointment={selectedAppointment}
           onAppointmentCreated={() => {
-            handleRefreshAppointments();
             setIsAppointmentModalOpen(false);
             setSelectedAppointment(null);
           }}

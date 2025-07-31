@@ -57,7 +57,108 @@ export const useAppointments = () => {
   const { toast } = useToast();
   const abortControllerRef = useRef<AbortController>();
   const lastSuccessfulFetchRef = useRef<string>('');
+  const realtimeChannelRef = useRef<any>(null);
   const { isTimeSlotAvailable, isOpenOnDate, generateTimeSlots, isTimeSlotInPast } = useBarbershopSettings();
+
+  // Setup real-time subscription
+  useEffect(() => {
+    if (!profile?.barbershop_id) return;
+
+    // Cleanup previous subscription
+    if (realtimeChannelRef.current) {
+      supabase.removeChannel(realtimeChannelRef.current);
+    }
+
+    // Create new subscription for appointments
+    const channel = supabase
+      .channel('appointments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'appointments',
+          filter: `barbershop_id=eq.${profile.barbershop_id}`
+        },
+        async (payload) => {
+          console.log('Real-time: Nova appointment inserida:', payload.new);
+          
+          // Fetch the full appointment with relations
+          const { data } = await supabase
+            .from('appointments')
+            .select(`
+              *,
+              client:clients(id, name, phone, email),
+              service:services(id, name, duration_minutes),
+              barber:profiles!appointments_barber_id_fkey(id, full_name)
+            `)
+            .eq('id', payload.new.id)
+            .single();
+
+          if (data) {
+            setAppointments(prev => {
+              // Evitar duplicatas
+              if (prev.some(apt => apt.id === data.id)) return prev;
+              return [...prev, data as Appointment];
+            });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'appointments',
+          filter: `barbershop_id=eq.${profile.barbershop_id}`
+        },
+        async (payload) => {
+          console.log('Real-time: Appointment atualizada:', payload.new);
+          
+          // Fetch the full appointment with relations
+          const { data } = await supabase
+            .from('appointments')
+            .select(`
+              *,
+              client:clients(id, name, phone, email),
+              service:services(id, name, duration_minutes),
+              barber:profiles!appointments_barber_id_fkey(id, full_name)
+            `)
+            .eq('id', payload.new.id)
+            .single();
+
+          if (data) {
+            setAppointments(prev => 
+              prev.map(apt => apt.id === data.id ? data as Appointment : apt)
+            );
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'appointments',
+          filter: `barbershop_id=eq.${profile.barbershop_id}`
+        },
+        (payload) => {
+          console.log('Real-time: Appointment deletada:', payload.old);
+          setAppointments(prev => 
+            prev.filter(apt => apt.id !== payload.old.id)
+          );
+        }
+      )
+      .subscribe();
+
+    realtimeChannelRef.current = channel;
+
+    return () => {
+      if (realtimeChannelRef.current) {
+        supabase.removeChannel(realtimeChannelRef.current);
+      }
+    };
+  }, [profile?.barbershop_id]);
 
   const fetchAppointments = useCallback(async (barberId?: string, date?: string, mode: 'day' | 'week' = 'day') => {
     if (!profile?.barbershop_id || globalState.isEmergencyStopActive()) return;
@@ -288,7 +389,7 @@ export const useAppointments = () => {
         return false;
       }
 
-      setAppointments(prev => [...prev, data as Appointment]);
+      // Real-time subscription will handle adding the appointment
       toast({
         title: "Agendamento criado",
         description: "O agendamento foi criado com sucesso.",
