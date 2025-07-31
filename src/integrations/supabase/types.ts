@@ -2081,7 +2081,7 @@ export type Database = {
           role: string
           status: string | null
           updated_at: string
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           barbershop_id: string
@@ -2096,7 +2096,7 @@ export type Database = {
           role?: string
           status?: string | null
           updated_at?: string
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           barbershop_id?: string
@@ -2111,7 +2111,7 @@ export type Database = {
           role?: string
           status?: string | null
           updated_at?: string
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -2251,6 +2251,41 @@ export type Database = {
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rate_limit_log: {
+        Row: {
+          action: string
+          barbershop_id: string | null
+          created_at: string | null
+          id: string
+          ip_address: unknown | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          barbershop_id?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          barbershop_id?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rate_limit_log_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
             referencedColumns: ["id"]
           },
         ]
@@ -3449,6 +3484,10 @@ export type Database = {
         Args: { user_email: string; user_full_name: string }
         Returns: string
       }
+      create_super_admin_secure: {
+        Args: { user_email: string; user_full_name: string }
+        Returns: string
+      }
       generate_command_number: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -3610,6 +3649,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      log_security_event: {
+        Args: { event_type: string; details?: Json }
+        Returns: undefined
+      }
       process_pending_whatsapp_configurations: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -3625,6 +3668,14 @@ export type Database = {
       update_barbershop_stats: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      validate_email: {
+        Args: { email_input: string }
+        Returns: boolean
+      }
+      validate_phone: {
+        Args: { phone_input: string }
+        Returns: boolean
       }
     }
     Enums: {
