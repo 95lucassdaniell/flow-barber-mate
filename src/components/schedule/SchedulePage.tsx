@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,6 +11,8 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { SimpleGridScheduleView } from './SimpleGridScheduleView';
 import { useBarbershopSettings } from '@/hooks/useBarbershopSettings';
 import { toast } from "sonner";
+import { globalState } from '@/lib/globalState';
+import { EmergencyStopUI } from '@/components/debug/EmergencyStopUI';
 
 const SchedulePage = () => {
   const { profile } = useAuth();
@@ -24,9 +26,14 @@ const SchedulePage = () => {
   const [selectedBarberId_, setSelectedBarberId_] = useState<string>('');
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+  
+  // Refs para controle de execução
+  const lastFetchDateRef = useRef<string>('');
+  const fetchTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // Debounce the date changes to avoid too many API calls
-  const debouncedDate = useDebounce(selectedDate, 300);
+  // Debounce mais agressivo e memoização da data
+  const debouncedDate = useDebounce(selectedDate, 500);
+  const formattedDate = useMemo(() => format(debouncedDate, 'yyyy-MM-dd'), [debouncedDate]);
 
   // Loading timeout to prevent infinite loading
   useEffect(() => {
@@ -43,28 +50,31 @@ const SchedulePage = () => {
     }
   }, [barbersLoading, appointmentsLoading]);
 
-  // Fetch appointments when date changes - get all barbers' appointments
+  // Fetch appointments com controle anti-loop
   useEffect(() => {
-    console.log('SchedulePage: Checking fetch conditions', {
-      profile_barbershop_id: profile?.barbershop_id,
-      barbersLoading,
-      barbersCount: barbers.length,
-      selectedDate: format(debouncedDate, 'yyyy-MM-dd')
-    });
-
-    if (!profile?.barbershop_id) {
-      console.log('SchedulePage: No barbershop_id, skipping fetch');
-      return;
-    }
+    if (globalState.isEmergencyStopActive()) return;
     
-    if (barbersLoading) {
-      console.log('SchedulePage: Barbers still loading, skipping fetch');
+    if (!profile?.barbershop_id || barbersLoading || formattedDate === lastFetchDateRef.current) {
       return;
     }
 
-    console.log('SchedulePage: Fetching appointments for date', format(debouncedDate, 'yyyy-MM-dd'));
-    fetchAppointments(undefined, format(debouncedDate, 'yyyy-MM-dd'), 'day');
-  }, [profile?.barbershop_id, debouncedDate, barbersLoading]);
+    // Clear any existing timeout
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current);
+    }
+
+    // Debounce the fetch
+    fetchTimeoutRef.current = setTimeout(() => {
+      lastFetchDateRef.current = formattedDate;
+      fetchAppointments(undefined, formattedDate, 'day');
+    }, 200);
+
+    return () => {
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+    };
+  }, [profile?.barbershop_id, formattedDate, barbersLoading, fetchAppointments]);
 
   const handleTimeSlotClick = (barberId: string, timeSlot: string) => {
     setSelectedTimeSlot(timeSlot);
@@ -120,63 +130,79 @@ const SchedulePage = () => {
   }
 
   return (
-    <div>
-      {!isOpen ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <p className="text-lg font-medium text-muted-foreground">Barbearia Fechada</p>
-            <p className="text-sm text-muted-foreground">A barbearia está fechada no dia selecionado.</p>
+    <>
+      <EmergencyStopUI />
+      <div>
+        {loadingTimeout ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <p className="text-lg font-medium text-destructive">Timeout de Carregamento</p>
+              <p className="text-sm text-muted-foreground">O carregamento demorou muito. Tente recarregar.</p>
+              <button 
+                onClick={() => window.location.reload()}
+                className="mt-2 px-4 py-2 bg-primary text-white rounded"
+              >
+                Recarregar Página
+              </button>
+            </div>
           </div>
-        </div>
-      ) : appointmentsLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Carregando agendamentos...</p>
+        ) : !isOpen ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <p className="text-lg font-medium text-muted-foreground">Barbearia Fechada</p>
+              <p className="text-sm text-muted-foreground">A barbearia está fechada no dia selecionado.</p>
+            </div>
           </div>
-        </div>
-      ) : (
-        <SimpleGridScheduleView
-          date={selectedDate}
-          barbers={barbers}
-          appointments={appointments}
-          onAppointmentClick={handleAppointmentClick}
-          onTimeSlotClick={handleTimeSlotClick}
-          onNavigateDate={handleNavigateDate}
-          onGoToToday={navigateToToday}
-          onNewAppointment={handleNewAppointment}
+        ) : appointmentsLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">Carregando agendamentos...</p>
+            </div>
+          </div>
+        ) : (
+          <SimpleGridScheduleView
+            date={selectedDate}
+            barbers={barbers}
+            appointments={appointments}
+            onAppointmentClick={handleAppointmentClick}
+            onTimeSlotClick={handleTimeSlotClick}
+            onNavigateDate={handleNavigateDate}
+            onGoToToday={navigateToToday}
+            onNewAppointment={handleNewAppointment}
+          />
+        )}
+
+        {/* Appointment Modal */}
+        <AppointmentModal
+          isOpen={isAppointmentModalOpen}
+          onClose={() => {
+            setIsAppointmentModalOpen(false);
+            setSelectedAppointment(null);
+          }}
+          selectedDate={selectedDate}
+          selectedTime={selectedTimeSlot}
+          selectedBarberId={selectedBarberId_}
+          appointment={selectedAppointment}
+          onAppointmentCreated={() => {
+            fetchAppointments(undefined, formattedDate, 'day');
+            setIsAppointmentModalOpen(false);
+            setSelectedAppointment(null);
+          }}
         />
-      )}
 
-      {/* Appointment Modal */}
-      <AppointmentModal
-        isOpen={isAppointmentModalOpen}
-        onClose={() => {
-          setIsAppointmentModalOpen(false);
-          setSelectedAppointment(null);
-        }}
-        selectedDate={selectedDate}
-        selectedTime={selectedTimeSlot}
-        selectedBarberId={selectedBarberId_}
-        appointment={selectedAppointment}
-        onAppointmentCreated={() => {
-          fetchAppointments(undefined, format(selectedDate, 'yyyy-MM-dd'), 'day');
-          setIsAppointmentModalOpen(false);
-          setSelectedAppointment(null);
-        }}
-      />
-
-      <AppointmentDetailsModal
-        appointment={selectedAppointment}
-        isOpen={isDetailsModalOpen}
-        onClose={() => {
-          setIsDetailsModalOpen(false);
-          setSelectedAppointment(null);
-        }}
-        onEdit={handleEditAppointment}
-        onRefresh={() => fetchAppointments(undefined, format(selectedDate, 'yyyy-MM-dd'), 'day')}
-      />
-    </div>
+        <AppointmentDetailsModal
+          appointment={selectedAppointment}
+          isOpen={isDetailsModalOpen}
+          onClose={() => {
+            setIsDetailsModalOpen(false);
+            setSelectedAppointment(null);
+          }}
+          onEdit={handleEditAppointment}
+          onRefresh={() => fetchAppointments(undefined, formattedDate, 'day')}
+        />
+      </div>
+    </>
   );
 };
 

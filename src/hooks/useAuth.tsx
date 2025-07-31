@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { globalState, cacheManager } from '@/lib/globalState';
 
 interface Profile {
   id: string;
@@ -17,8 +18,23 @@ export const useAuth = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  
+  // Refs para controle de inicialização e montagem
+  const initializingRef = useRef(false);
+  const mountedRef = useRef(true);
+  const timeoutRef = useRef<NodeJS.Timeout>();
 
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
+    if (globalState.isEmergencyStopActive()) return null;
+
+    const operationKey = `profile-${userId}`;
+    
+    // Verificar cache primeiro
+    const cached = cacheManager.get<Profile>(operationKey);
+    if (cached) return cached;
+
+    if (!await globalState.acquireLock(operationKey)) return null;
+
     try {
       const { data: profileData, error } = await supabase
         .from('profiles')
@@ -26,61 +42,90 @@ export const useAuth = () => {
         .eq('user_id', userId)
         .single();
       
-      if (error) {
-        console.error('Error fetching profile:', error);
-        return null;
-      }
+      if (error) throw error;
       
-      return profileData as Profile;
+      const profile = profileData as Profile;
+      cacheManager.set(operationKey, profile, 300000); // 5 min cache
+      return profile;
     } catch (error) {
       console.error('Profile fetch error:', error);
       return null;
+    } finally {
+      globalState.releaseLock(operationKey);
     }
   }, []);
 
   useEffect(() => {
-    let isInitialized = false;
-    
-    // Set up auth state listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change:', event, session?.user?.id);
-        setAuthError(null);
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          const profileData = await fetchProfile(session.user.id);
-          setProfile(profileData);
-        } else {
-          setProfile(null);
-        }
-        
-        if (!isInitialized) {
-          setLoading(false);
-          isInitialized = true;
-        }
-      }
-    );
+    if (initializingRef.current) return;
+    initializingRef.current = true;
 
-    // Check for existing session only once
-    if (!isInitialized) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (!isInitialized) {
-          console.log('useAuth: Initial session check', session?.user?.id);
-          // The onAuthStateChange will handle the state updates
-          if (!session) {
-            setLoading(false);
-            isInitialized = true;
+    const operationKey = 'auth-init';
+    
+    const initializeAuth = async () => {
+      if (!await globalState.acquireLock(operationKey)) {
+        initializingRef.current = false;
+        return;
+      }
+
+      try {
+        // Set up auth state listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            if (!mountedRef.current) return;
+            
+            setAuthError(null);
+            setSession(session);
+            setUser(session?.user ?? null);
+            
+            if (session?.user) {
+              const profileData = await fetchProfile(session.user.id);
+              if (mountedRef.current) setProfile(profileData);
+            } else {
+              if (mountedRef.current) setProfile(null);
+            }
+            
+            if (mountedRef.current) setLoading(false);
           }
+        );
+
+        // Check existing session with timeout
+        timeoutRef.current = setTimeout(() => {
+          if (mountedRef.current) {
+            setLoading(false);
+            console.warn('useAuth: Session check timeout');
+          }
+        }, 3000);
+
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
         }
-      });
-    }
+
+        if (!session && mountedRef.current) {
+          setLoading(false);
+        }
+
+        return () => {
+          subscription.unsubscribe();
+        };
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        if (mountedRef.current) setLoading(false);
+      } finally {
+        globalState.releaseLock(operationKey);
+      }
+    };
+
+    initializeAuth();
 
     return () => {
-      subscription.unsubscribe();
+      mountedRef.current = false;
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
     };
-  }, []); // Removed fetchProfile dependency to prevent loops
+  }, []); // Dependency array empty to run only once
 
   const signOut = async () => {
     try {

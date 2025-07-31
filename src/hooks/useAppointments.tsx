@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { useBarbershopSettings } from './useBarbershopSettings';
+import { globalState, cacheManager } from '@/lib/globalState';
 
 export interface Appointment {
   id: string;
@@ -53,26 +54,42 @@ export const useAppointments = () => {
   const [loading, setLoading] = useState(false);
   const { profile } = useAuth();
   const { toast } = useToast();
-  const [lastFetchKey, setLastFetchKey] = useState<string>('');
+  const abortControllerRef = useRef<AbortController>();
+  const lastSuccessfulFetchRef = useRef<string>('');
   const { isTimeSlotAvailable, isOpenOnDate, generateTimeSlots } = useBarbershopSettings();
 
   const fetchAppointments = useCallback(async (barberId?: string, date?: string, mode: 'day' | 'week' = 'day') => {
-    if (!profile?.barbershop_id) return;
+    if (!profile?.barbershop_id || globalState.isEmergencyStopActive()) return;
 
-    // Criar chave única para evitar requests duplicadas
-    const fetchKey = `${barberId || 'all'}-${date || 'all'}-${mode}-${profile.barbershop_id}`;
-    if (fetchKey === lastFetchKey && loading) {
-      console.log('⏭️ Pulando request duplicada:', fetchKey);
+    const fetchKey = `appointments-${barberId || 'all'}-${date || 'all'}-${mode}-${profile.barbershop_id}`;
+    
+    // Verificar cache primeiro
+    const cached = cacheManager.get<Appointment[]>(fetchKey);
+    if (cached && lastSuccessfulFetchRef.current !== fetchKey) {
+      setAppointments(cached);
+      lastSuccessfulFetchRef.current = fetchKey;
+      return;
+    }
+
+    // Verificar se já temos a mesma requisição
+    if (lastSuccessfulFetchRef.current === fetchKey) {
+      return;
+    }
+
+    if (!await globalState.acquireLock(fetchKey)) {
       return;
     }
 
     try {
+      // Cancelar requisição anterior se existe
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      abortControllerRef.current = new AbortController();
       setLoading(true);
-      setLastFetchKey(fetchKey);
       
-      // Removed excessive logging for performance
-      
-      // Para modo "day", limpar agendamentos antes da busca
+      // Para modo "day", limpar agendamentos
       if (mode === 'day') {
         setAppointments([]);
       }
@@ -85,7 +102,8 @@ export const useAppointments = () => {
           service:services(id, name, duration_minutes),
           barber:profiles!appointments_barber_id_fkey(id, full_name)
         `)
-        .eq('barbershop_id', profile.barbershop_id);
+        .eq('barbershop_id', profile.barbershop_id)
+        .abortSignal(abortControllerRef.current.signal);
 
       if (barberId) {
         query = query.eq('barber_id', barberId);
@@ -94,53 +112,51 @@ export const useAppointments = () => {
       if (date) {
         query = query.eq('appointment_date', date);
       } else {
-        // Se não especificar data, usar data atual por padrão para melhorar performance
         const today = format(new Date(), 'yyyy-MM-dd');
         query = query.eq('appointment_date', today);
       }
 
-      const { data, error } = await query.order('appointment_date', { ascending: true })
-                                    .order('start_time', { ascending: true })
-                                    .limit(1000); // Adicionar limite para melhorar performance
+      const { data, error } = await query
+        .order('appointment_date', { ascending: true })
+        .order('start_time', { ascending: true })
+        .limit(500);
 
       if (error) {
-        console.error('❌ Erro ao buscar agendamentos:', error);
-        toast({
-          title: "Erro ao carregar agendamentos",
-          description: "Ocorreu um erro ao buscar os agendamentos.",
-          variant: "destructive",
-        });
-        return;
+        if (error.name === 'AbortError') return;
+        throw error;
       }
 
+      const appointments = (data || []) as Appointment[];
+      
+      // Cache dos dados
+      cacheManager.set(fetchKey, appointments, 60000); // 1 min cache
+      lastSuccessfulFetchRef.current = fetchKey;
+
       if (mode === 'day') {
-        // No modo "day", sempre substituir todos os agendamentos
-        setAppointments((data || []) as Appointment[]);
+        setAppointments(appointments);
       } else {
-        // No modo "week", verificar se já temos agendamentos desta data
         setAppointments(prev => {
-          const newAppointments = (data || []) as Appointment[];
-          
-          // Remover agendamentos da mesma data para evitar duplicatas
           const filteredPrev = prev.filter(app => {
             const appDate = format(new Date(app.appointment_date), 'yyyy-MM-dd');
             return appDate !== date;
           });
-          
-          return [...filteredPrev, ...newAppointments];
+          return [...filteredPrev, ...appointments];
         });
       }
-    } catch (error) {
-      console.error('❌ Erro inesperado ao buscar agendamentos:', error);
+    } catch (error: any) {
+      if (error?.name === 'AbortError') return;
+      
+      console.error('Erro ao buscar agendamentos:', error);
       toast({
         title: "Erro ao carregar agendamentos",
-        description: "Ocorreu um erro inesperado.",
+        description: "Ocorreu um erro ao buscar os agendamentos.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
+      globalState.releaseLock(fetchKey);
     }
-  }, [profile?.barbershop_id, lastFetchKey, loading, toast]);
+  }, [profile?.barbershop_id, toast]);
 
   const createAppointment = async (appointmentData: CreateAppointmentData): Promise<boolean> => {
     if (!profile?.barbershop_id) return false;
@@ -445,17 +461,19 @@ export const useAppointments = () => {
     });
   };
 
-  // Memoize the initial fetch to prevent unnecessary re-renders
-  const shouldFetchInitial = useMemo(() => 
-    !!profile?.barbershop_id, 
-    [profile?.barbershop_id]
-  );
+  // Memoized initial fetch - only when barbershop_id changes
+  const stableBarbershopId = useMemo(() => profile?.barbershop_id, [profile?.barbershop_id]);
 
   useEffect(() => {
-    if (shouldFetchInitial) {
-      fetchAppointments();
+    if (stableBarbershopId && !globalState.isEmergencyStopActive()) {
+      // Debounce inicial para evitar chamadas múltiplas
+      const timer = setTimeout(() => {
+        fetchAppointments();
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
-  }, [shouldFetchInitial, fetchAppointments]);
+  }, [stableBarbershopId]); // Removed fetchAppointments dependency
 
   const getClientAppointments = async (clientId: string) => {
     try {
@@ -502,7 +520,8 @@ export const useAppointments = () => {
     }
   };
 
-  return {
+  // Memoized returns para evitar re-renders desnecessários
+  const returnValue = useMemo(() => ({
     appointments,
     loading,
     createAppointment,
@@ -512,6 +531,18 @@ export const useAppointments = () => {
     fetchAppointments,
     getAvailableTimeSlots,
     getClientAppointments,
-    setAppointments,
-  };
+    setAppointments
+  }), [
+    appointments,
+    loading,
+    createAppointment,
+    updateAppointment,
+    cancelAppointment,
+    deleteAppointment,
+    fetchAppointments,
+    getAvailableTimeSlots,
+    getClientAppointments
+  ]);
+
+  return returnValue;
 };
