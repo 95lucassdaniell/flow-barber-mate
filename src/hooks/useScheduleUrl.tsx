@@ -21,10 +21,10 @@ export const useScheduleUrl = () => {
       console.warn('Data inválida na URL:', date);
     }
 
-    // Se a data é inválida, redirecionar para hoje
+    // Se a data é inválida, redirecionar para hoje (sem replace para evitar loops)
     const today = startOfDay(new Date());
     const todayString = format(today, 'yyyy-MM-dd');
-    navigate(`/app/${slug}/agenda/${todayString}`, { replace: true });
+    navigate(`/app/${slug}/agenda/${todayString}`);
     return today;
   }, [date, slug, navigate]);
 

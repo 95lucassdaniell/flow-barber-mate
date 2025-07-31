@@ -20,8 +20,7 @@ const ProtectedRoute = ({ children, requiresRole }: ProtectedRouteProps) => {
     if (!loading && !user) {
       // Save current location to redirect back after login
       navigate('/login', { 
-        state: { from: location.pathname },
-        replace: true 
+        state: { from: location.pathname }
       });
     }
   }, [user, loading, navigate, location]);
@@ -41,8 +40,7 @@ const ProtectedRoute = ({ children, requiresRole }: ProtectedRouteProps) => {
             // Force refresh and redirect to login
             await supabase.auth.signOut();
             navigate('/login', { 
-              state: { from: location.pathname, message: 'Sessão expirada. Por favor, faça login novamente.' },
-              replace: true 
+              state: { from: location.pathname, message: 'Sessão expirada. Por favor, faça login novamente.' }
             });
             return;
           }
@@ -55,15 +53,14 @@ const ProtectedRoute = ({ children, requiresRole }: ProtectedRouteProps) => {
               (requiresRole === 'receptionist' && profile.role === 'admin');
             
             if (!hasRequiredRole) {
-              navigate('/dashboard', { replace: true });
+              navigate('/dashboard');
             }
           }
         } catch (error) {
           console.error('ProtectedRoute: Auth validation error', error);
           await supabase.auth.signOut();
           navigate('/login', { 
-            state: { from: location.pathname, message: 'Erro de autenticação. Tente novamente.' },
-            replace: true 
+            state: { from: location.pathname, message: 'Erro de autenticação. Tente novamente.' }
           });
         } finally {
           setAuthValidating(false);

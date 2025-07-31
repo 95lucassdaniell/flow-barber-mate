@@ -152,18 +152,37 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
       setQrCode(data.qr_code);
       setInstanceStatus(data.status);
       
-      // Start checking status periodically
-      const statusInterval = setInterval(async () => {
-        await checkConnectionStatus();
-        if (instanceStatus === 'connected') {
+      // Start checking status periodically only when component is visible
+      let statusInterval: NodeJS.Timeout;
+      let timeoutId: NodeJS.Timeout;
+
+      const startStatusCheck = () => {
+        statusInterval = setInterval(async () => {
+          if (!document.hidden) { // Only check when tab is active
+            await checkConnectionStatus();
+            if (instanceStatus === 'connected') {
+              clearInterval(statusInterval);
+              clearTimeout(timeoutId);
+              setQrCode(null);
+              toast.success("WhatsApp conectado com sucesso!");
+            }
+          }
+        }, 3000);
+
+        // Clear interval after 5 minutes
+        timeoutId = setTimeout(() => {
           clearInterval(statusInterval);
           setQrCode(null);
-          toast.success("WhatsApp conectado com sucesso!");
-        }
-      }, 3000);
+        }, 300000);
+      };
 
-      // Clear interval after 5 minutes
-      setTimeout(() => clearInterval(statusInterval), 300000);
+      startStatusCheck();
+
+      // Cleanup function
+      return () => {
+        if (statusInterval) clearInterval(statusInterval);
+        if (timeoutId) clearTimeout(timeoutId);
+      };
       
     } catch (error) {
       toast.error("Erro ao conectar WhatsApp");

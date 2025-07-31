@@ -95,7 +95,7 @@ const LoginForm = () => {
       console.log('Redirecionando para:', redirectTo);
       
       // Redirecionar para o dashboard da barbearia do usuário ou página original
-      navigate(redirectTo, { replace: true });
+      navigate(redirectTo);
 
     } catch (error: any) {
       console.error('Erro no login:', error);
