@@ -13,6 +13,7 @@ import { useScheduleUrl } from '@/hooks/useScheduleUrl';
 import { useDebounce } from '@/hooks/useDebounce';
 import { HorizontalGridSchedule } from './HorizontalGridSchedule';
 import { CompactCalendar } from './CompactCalendar';
+import { useBarbershopSettings } from '@/hooks/useBarbershopSettings';
 import { toast } from "sonner";
 
 const SchedulePage = () => {
@@ -20,6 +21,7 @@ const SchedulePage = () => {
   const { selectedDate, navigateToDate } = useScheduleUrl();
   const { barbers, loading: barbersLoading } = useBarberSelection();
   const { appointments, loading: appointmentsLoading, fetchAppointments } = useAppointments();
+  const { settings: barbershopSettings, generateTimeSlots, isOpenOnDate } = useBarbershopSettings();
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
@@ -59,14 +61,11 @@ const SchedulePage = () => {
     setIsAppointmentModalOpen(true);
   };
 
-  // Generate time slots for the day
-  const timeSlots = [];
-  for (let hour = 8; hour <= 18; hour++) {
-    for (let minute = 0; minute < 60; minute += 15) {
-      const timeSlot = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-      timeSlots.push(timeSlot);
-    }
-  }
+  // Generate time slots based on barbershop settings
+  const timeSlots = generateTimeSlots(selectedDate);
+  
+  // Check if barbershop is open on selected date
+  const isOpen = isOpenOnDate(selectedDate);
 
   if (!profile) {
     return (
@@ -119,11 +118,25 @@ const SchedulePage = () => {
       {/* Grid Schedule */}
       <Card>
         <CardContent className="pt-6">
-          {appointmentsLoading ? (
+          {!isOpen ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <p className="text-lg font-medium text-muted-foreground">Barbearia Fechada</p>
+                <p className="text-sm text-muted-foreground">A barbearia está fechada no dia selecionado.</p>
+              </div>
+            </div>
+          ) : appointmentsLoading ? (
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">Carregando agendamentos...</p>
+              </div>
+            </div>
+          ) : timeSlots.length === 0 ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <p className="text-lg font-medium text-muted-foreground">Sem Horários Disponíveis</p>
+                <p className="text-sm text-muted-foreground">Não há horários disponíveis para agendamento hoje.</p>
               </div>
             </div>
           ) : (

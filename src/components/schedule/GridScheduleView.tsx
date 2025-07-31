@@ -8,6 +8,7 @@ import { Plus, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AppointmentBlock } from "./AppointmentBlock";
+import { useBarbershopSettings } from "@/hooks/useBarbershopSettings";
 
 interface Appointment {
   id: string;
@@ -69,9 +70,14 @@ export const GridScheduleView = ({
   const [selectedBarbers, setSelectedBarbers] = useState<string[]>(
     barbers.map(b => b.id)
   );
+  const { generateTimeSlots, isOpenOnDate } = useBarbershopSettings();
 
   const filteredBarbers = barbers.filter(b => selectedBarbers.includes(b.id));
   const dateString = format(date, 'yyyy-MM-dd');
+  
+  // Use barbershop settings for time slots
+  const barbershopTimeSlots = generateTimeSlots(date);
+  const isOpen = isOpenOnDate(date);
 
   // Calcular quantos slots um agendamento ocupa (baseado na duração)
   const calculateSlotsCount = (appointment: Appointment): number => {
@@ -133,15 +139,8 @@ export const GridScheduleView = ({
     setSelectedBarbers([]);
   };
 
-  const fallbackTimeSlots = [
-    "09:00", "09:15", "09:30", "09:45", "10:00", "10:15", "10:30", "10:45",
-    "11:00", "11:15", "11:30", "11:45", "12:00", "12:15", "12:30", "12:45",
-    "13:00", "13:15", "13:30", "13:45", "14:00", "14:15", "14:30", "14:45",
-    "15:00", "15:15", "15:30", "15:45", "16:00", "16:15", "16:30", "16:45",
-    "17:00", "17:15", "17:30", "17:45", "18:00"
-  ];
-
-  const displaySlots = timeSlots.length > 0 ? timeSlots : fallbackTimeSlots;
+  // Use barbershop time slots or provided ones
+  const displaySlots = barbershopTimeSlots.length > 0 ? barbershopTimeSlots : (timeSlots || []);
 
   return (
     <div className="space-y-4">
@@ -201,14 +200,29 @@ export const GridScheduleView = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <div 
-              className="grid gap-0 border"
-              style={{
-                gridTemplateColumns: `80px repeat(${filteredBarbers.length}, minmax(200px, 1fr))`,
-                minWidth: `${80 + filteredBarbers.length * 200}px`
-              }}
-            >
+          {!isOpen ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <p className="text-lg font-medium text-muted-foreground">Barbearia Fechada</p>
+                <p className="text-sm text-muted-foreground">A barbearia está fechada no dia selecionado.</p>
+              </div>
+            </div>
+          ) : displaySlots.length === 0 ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <p className="text-lg font-medium text-muted-foreground">Sem Horários Disponíveis</p>
+                <p className="text-sm text-muted-foreground">Não há horários disponíveis para agendamento hoje.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <div 
+                className="grid gap-0 border"
+                style={{
+                  gridTemplateColumns: `80px repeat(${filteredBarbers.length}, minmax(200px, 1fr))`,
+                  minWidth: `${80 + filteredBarbers.length * 200}px`
+                }}
+              >
               {/* Cabeçalho */}
               <div className="p-2 border-b bg-muted font-medium text-center">
                 Horário
@@ -270,8 +284,9 @@ export const GridScheduleView = ({
                   })}
                 </>
               ))}
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
+import { useBarbershopSettings } from './useBarbershopSettings';
 
 export interface Appointment {
   id: string;
@@ -53,6 +54,7 @@ export const useAppointments = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const [lastFetchKey, setLastFetchKey] = useState<string>('');
+  const { isTimeSlotAvailable, isOpenOnDate, generateTimeSlots } = useBarbershopSettings();
 
   const fetchAppointments = async (barberId?: string, date?: string, mode: 'day' | 'week' = 'day') => {
     if (!profile?.barbershop_id) return;
@@ -144,15 +146,23 @@ export const useAppointments = () => {
     if (!profile?.barbershop_id) return false;
 
     try {
-      // Validar se o horário não está no passado
-      const appointmentDateTime = new Date(`${appointmentData.appointment_date}T${appointmentData.start_time}`);
-      const now = new Date();
-      const safetyMargin = 30 * 60000; // 30 minutos em ms
+      const appointmentDate = new Date(appointmentData.appointment_date);
       
-      if (appointmentDateTime <= new Date(now.getTime() + safetyMargin)) {
+      // Verificar se a barbearia está aberta no dia
+      if (!isOpenOnDate(appointmentDate)) {
         toast({
-          title: "Horário inválido",
-          description: "Não é possível agendar para um horário que já passou.",
+          title: "Barbearia fechada",
+          description: "A barbearia está fechada no dia selecionado.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // Verificar se o horário está disponível
+      if (!isTimeSlotAvailable(appointmentDate, appointmentData.start_time)) {
+        toast({
+          title: "Horário indisponível",
+          description: "Este horário não está disponível para agendamento.",
           variant: "destructive",
         });
         return false;
@@ -357,21 +367,21 @@ export const useAppointments = () => {
 
   // Buscar horários disponíveis para um barbeiro em uma data específica
   const getAvailableTimeSlots = (barberId: string, date: string, serviceDuration: number = 15) => {
+    const appointmentDate = new Date(date);
+    
+    // Verificar se a barbearia está aberta no dia
+    if (!isOpenOnDate(appointmentDate)) {
+      return [];
+    }
+
     const dayAppointments = appointments.filter(
       apt => apt.barber_id === barberId && 
              apt.appointment_date === date && 
              apt.status !== 'cancelled'
     );
 
-    // TODO: Integrate with useBarbershopSettings to get dynamic time slots
-    // For now, using default slots but this should be updated to use barbershop's opening hours
-    const allTimeSlots = [
-      "09:00", "09:15", "09:30", "09:45", "10:00", "10:15", "10:30", "10:45",
-      "11:00", "11:15", "11:30", "11:45", "12:00", "12:15", "12:30", "12:45",
-      "13:00", "13:15", "13:30", "13:45", "14:00", "14:15", "14:30", "14:45",
-      "15:00", "15:15", "15:30", "15:45", "16:00", "16:15", "16:30", "16:45",
-      "17:00", "17:15", "17:30", "17:45", "18:00"
-    ];
+    // Usar horários dinâmicos da barbearia
+    const allTimeSlots = generateTimeSlots(appointmentDate);
 
     return allTimeSlots.filter(timeSlot => {
       const slotStart = new Date(`2000-01-01T${timeSlot}`);
