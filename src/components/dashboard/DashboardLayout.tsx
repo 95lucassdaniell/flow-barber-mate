@@ -21,6 +21,7 @@ import {
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useBarbershopBySlug } from "@/hooks/useBarbershopBySlug";
 import logo from "@/assets/barberflow-logo.png";
 
 interface DashboardLayoutProps {
@@ -32,6 +33,10 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { slug } = useParams();
   const { profile, signOut } = useAuth();
+  
+  // Use slug-based fallback for immediate barbershop data
+  const { barbershop: barbershopBySlug, loading: slugLoading } = useBarbershopBySlug(slug || '');
+  
   const [barbershopData, setBarbershopData] = useState<{
     name: string;
     logo_url: string;
@@ -56,11 +61,34 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
     { id: "settings", name: "Configurações", icon: Settings, href: `/app/${slug}/settings` },
   ];
 
+  // Debug logs for troubleshooting
+  useEffect(() => {
+    console.log('🏪 DashboardLayout state:', {
+      slug,
+      profile: profile?.barbershop_id,
+      barbershopBySlug: barbershopBySlug?.name,
+      slugLoading,
+      currentData: barbershopData
+    });
+  }, [slug, profile, barbershopBySlug, slugLoading, barbershopData]);
+
+  // Primary effect: Use profile-based data when available
   useEffect(() => {
     if (profile?.barbershop_id) {
       fetchBarbershopData();
     }
   }, [profile]);
+
+  // Fallback effect: Use slug-based data immediately
+  useEffect(() => {
+    if (barbershopBySlug && !profile?.barbershop_id) {
+      console.log('🔄 Using slug-based barbershop data:', barbershopBySlug);
+      setBarbershopData({
+        name: barbershopBySlug.name || "Barbearia",
+        logo_url: barbershopBySlug.logo_url || ""
+      });
+    }
+  }, [barbershopBySlug, profile]);
 
   const fetchBarbershopData = async () => {
     try {
