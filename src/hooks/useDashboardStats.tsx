@@ -94,17 +94,20 @@ export const useDashboardStats = () => {
       const sixtyDaysAgo = new Date();
       sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
       
-      const { data: activeClients } = await supabase
+      const { data: activeClientsData } = await supabase
         .from('appointments')
         .select('client_id')
         .eq('barbershop_id', profile.barbershop_id)
-        .gte('created_at', sixtyDaysAgo.toISOString())
-        .single();
+        .gte('created_at', sixtyDaysAgo.toISOString());
 
       const { data: allClients } = await supabase
         .from('clients')
         .select('id')
         .eq('barbershop_id', profile.barbershop_id);
+
+      // Calcular clientes ativos únicos
+      const activeClientIds = new Set(activeClientsData?.map(a => a.client_id) || []);
+      const activeClients = activeClientIds.size;
 
       // Buscar mensagens WhatsApp do mês
       const { count: messagesCount } = await supabase
@@ -137,7 +140,7 @@ export const useDashboardStats = () => {
         todayAppointments: todayAppointmentsData?.length || 0,
         weekAppointments: weekAppointmentsData?.length || 0,
         totalClients: totalClientsCount || 0,
-        inactiveClients: Math.max(0, (totalClientsCount || 0) - (activeClients ? 1 : 0)),
+        inactiveClients: Math.max(0, (totalClientsCount || 0) - activeClients),
         messagesThisMonth: messagesCount || 0,
         averageTicket,
       });
