@@ -48,7 +48,7 @@ function App() {
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <NavigationDebugger />
+        {/* <NavigationDebugger /> */}
         <Routes>
           {/* Redirect invalid /dashboard route */}
           <Route path="/dashboard" element={<DashboardRedirect />} />
