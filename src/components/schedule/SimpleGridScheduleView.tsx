@@ -35,6 +35,18 @@ export const SimpleGridScheduleView = ({
     setSelectedBarbers(barbers);
   }, [barbers]);
 
+  // Debug logs
+  useEffect(() => {
+    console.log("🗓️ Data selecionada:", format(date, "yyyy-MM-dd"));
+    console.log("📅 Total appointments recebidos:", appointments.length);
+    console.log("📅 Appointments para debug:", appointments);
+    
+    // Filter appointments for selected date
+    const selectedDateStr = format(date, "yyyy-MM-dd");
+    const appointmentsForDate = appointments.filter(apt => apt.appointment_date === selectedDateStr);
+    console.log("📅 Appointments para a data selecionada:", appointmentsForDate.length, appointmentsForDate);
+  }, [date, appointments]);
+
   // Generate 15-minute time slots from 8:00 to 18:45
   const timeSlots = [
     "08:00", "08:15", "08:30", "08:45",
@@ -84,19 +96,47 @@ export const SimpleGridScheduleView = ({
     setSelectedBarbers(checked ? barbers : []);
   };
 
+  // Normalize time format (remove seconds if present)
+  const normalizeTime = (time: string) => {
+    return time.substring(0, 5); // Gets HH:MM format
+  };
+
+  const timeToMinutes = (time: string) => {
+    const normalizedTime = normalizeTime(time);
+    const [hours, minutes] = normalizedTime.split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+
   const getAppointmentForSlot = (time: string, barberId: string) => {
-    return appointments.find((apt) => {
+    // Filter appointments for selected date first
+    const selectedDateStr = format(date, "yyyy-MM-dd");
+    const appointmentsForDate = appointments.filter(apt => apt.appointment_date === selectedDateStr);
+    
+    const appointment = appointmentsForDate.find((apt) => {
       const aptStartMinutes = timeToMinutes(apt.start_time);
       const aptEndMinutes = timeToMinutes(apt.end_time);
       const slotMinutes = timeToMinutes(time);
 
-      return apt.barber_id === barberId && slotMinutes >= aptStartMinutes && slotMinutes < aptEndMinutes;
+      const isMatch = apt.barber_id === barberId && slotMinutes >= aptStartMinutes && slotMinutes < aptEndMinutes;
+      
+      // Debug log for first few slots
+      if (time === "08:00" || time === "09:00" || time === "10:00") {
+        console.log(`🔍 Checking slot ${time} for barber ${barberId}:`, {
+          aptStartTime: apt.start_time,
+          aptEndTime: apt.end_time,
+          aptStartMinutes,
+          aptEndMinutes,
+          slotMinutes,
+          barberMatch: apt.barber_id === barberId,
+          timeMatch: slotMinutes >= aptStartMinutes && slotMinutes < aptEndMinutes,
+          isMatch
+        });
+      }
+      
+      return isMatch;
     });
-  };
 
-  const timeToMinutes = (time: string) => {
-    const [hours, minutes] = time.split(":").map(Number);
-    return hours * 60 + minutes;
+    return appointment;
   };
 
   const getAppointmentHeight = (appointment: Appointment) => {
@@ -108,7 +148,7 @@ export const SimpleGridScheduleView = ({
   };
 
   const isAppointmentStart = (time: string, appointment: Appointment) => {
-    return appointment.start_time === time;
+    return normalizeTime(appointment.start_time) === time;
   };
 
   const getBarberColor = (index: number) => {
