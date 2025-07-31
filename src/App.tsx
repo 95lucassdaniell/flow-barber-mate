@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useNavigationDebug } from "@/hooks/useNavigationDebug";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -34,14 +35,18 @@ import ProviderProtectedRoute from "./components/providers/ProviderProtectedRout
 import ProviderDashboard from "./components/providers/dashboard/ProviderDashboard";
 import ProviderDashboardLayout from "./components/providers/dashboard/ProviderDashboardLayout";
 
-const queryClient = new QueryClient();
+// Debug component to monitor navigation issues
+const NavigationDebugger = () => {
+  useNavigationDebug();
+  return null;
+};
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+  <TooltipProvider>
+    <Toaster />
+    <Sonner />
+    <BrowserRouter>
+      <NavigationDebugger />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<LoginPage />} />
@@ -144,7 +149,6 @@ const App = () => (
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
-  </QueryClientProvider>
 );
 
 export default App;

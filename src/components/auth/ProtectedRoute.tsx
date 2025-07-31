@@ -53,7 +53,8 @@ const ProtectedRoute = ({ children, requiresRole }: ProtectedRouteProps) => {
               (requiresRole === 'receptionist' && profile.role === 'admin');
             
             if (!hasRequiredRole) {
-              navigate('/dashboard');
+              console.warn('ProtectedRoute: Insufficient role, redirecting to login');
+              navigate('/login');
             }
           }
         } catch (error) {
