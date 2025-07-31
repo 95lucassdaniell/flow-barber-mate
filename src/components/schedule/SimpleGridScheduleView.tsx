@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronLeft, ChevronRight, Calendar, Plus, User, Clock } from "lucide-react";
@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Appointment, Barber } from "@/types/appointment";
+import { useBarbershopSettings } from "@/hooks/useBarbershopSettings";
 
 interface SimpleGridScheduleViewProps {
   date: Date;
@@ -29,6 +30,7 @@ export const SimpleGridScheduleView = ({
   onNewAppointment
 }: SimpleGridScheduleViewProps) => {
   const [selectedBarbers, setSelectedBarbers] = useState<Barber[]>([]);
+  const { generateAllTimeSlots, isOpenOnDate, loading } = useBarbershopSettings();
 
   // Initialize selected barbers when barbers prop changes
   useEffect(() => {
@@ -47,20 +49,20 @@ export const SimpleGridScheduleView = ({
     console.log("📅 Appointments para a data selecionada:", appointmentsForDate.length, appointmentsForDate);
   }, [date, appointments]);
 
-  // Generate 15-minute time slots from 8:00 to 18:45
-  const timeSlots = [
-    "08:00", "08:15", "08:30", "08:45",
-    "09:00", "09:15", "09:30", "09:45", 
-    "10:00", "10:15", "10:30", "10:45",
-    "11:00", "11:15", "11:30", "11:45",
-    "12:00", "12:15", "12:30", "12:45",
-    "13:00", "13:15", "13:30", "13:45",
-    "14:00", "14:15", "14:30", "14:45",
-    "15:00", "15:15", "15:30", "15:45",
-    "16:00", "16:15", "16:30", "16:45",
-    "17:00", "17:15", "17:30", "17:45",
-    "18:00", "18:15", "18:30", "18:45"
-  ];
+  // Generate 5-minute time slots based on barbershop opening hours
+  const timeSlots = useMemo(() => {
+    if (loading || !isOpenOnDate(date)) return [];
+    
+    const slots = generateAllTimeSlots(date, 5); // 5 minute intervals
+    console.log("⏰ Generated time slots:", {
+      date: format(date, "yyyy-MM-dd"),
+      totalSlots: slots.length,
+      firstFew: slots.slice(0, 10),
+      lastFew: slots.slice(-10)
+    });
+    
+    return slots;
+  }, [date, generateAllTimeSlots, isOpenOnDate, loading]);
 
   // Barber colors using semantic design tokens
   const barberColors = [
@@ -143,8 +145,8 @@ export const SimpleGridScheduleView = ({
     const startMinutes = timeToMinutes(appointment.start_time);
     const endMinutes = timeToMinutes(appointment.end_time);
     const durationMinutes = endMinutes - startMinutes;
-    const slots = durationMinutes / 15; // cada slot tem 15 minutos
-    return slots * 48 - 4; // 48px por slot menos 4px de padding
+    const slots = durationMinutes / 5; // cada slot tem 5 minutos
+    return slots * 16 - 2; // 16px por slot menos 2px de padding
   };
 
   const isAppointmentStart = (time: string, appointment: Appointment) => {
@@ -156,6 +158,36 @@ export const SimpleGridScheduleView = ({
   };
 
   const visibleBarbers = selectedBarbers;
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando configurações da barbearia...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Closed barbershop state
+  if (!isOpenOnDate(date)) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <p className="text-muted-foreground text-lg">Barbearia fechada neste dia</p>
+            <Button variant="outline" onClick={onGoToToday} className="mt-4">
+              Voltar para hoje
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -247,11 +279,22 @@ export const SimpleGridScheduleView = ({
               {/* Time Column */}
               <div className="border-r bg-muted">
                 <div className="h-16 border-b flex items-center justify-center font-medium text-muted-foreground">Horário</div>
-                {timeSlots.map((time) => (
-                  <div key={time} className="h-12 border-b flex items-center justify-center text-sm text-muted-foreground">
-                    {time}
-                  </div>
-                ))}
+                {timeSlots.map((time, index) => {
+                  // Show time label only every 15 minutes (every 3rd slot for 5-min intervals)
+                  const shouldShowLabel = index % 3 === 0;
+                  const isHourMark = time.endsWith(':00');
+                  
+                  return (
+                    <div 
+                      key={time} 
+                      className={`h-4 border-b flex items-center justify-start text-xs text-muted-foreground pl-2 ${
+                        isHourMark ? 'border-b-2 border-border' : 'border-b border-border/30'
+                      }`}
+                    >
+                      {shouldShowLabel && <span className={isHourMark ? 'font-medium' : ''}>{time}</span>}
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Barbers Columns */}
@@ -276,7 +319,7 @@ export const SimpleGridScheduleView = ({
                       return (
                         <div 
                           key={`${barber.id}-${time}`} 
-                          className="h-12 border-b p-1 relative hover:bg-muted/50 cursor-pointer"
+                          className="h-4 border-b border-border/30 relative hover:bg-muted/50 cursor-pointer"
                           onClick={() => !appointment && onTimeSlotClick?.(barber.id, time)}
                         >
                           {isStart && (
