@@ -50,13 +50,12 @@ export const useBarbershopSettings = () => {
     }
   };
 
-  // Check if a time slot is in the past
-  const isTimeSlotInPast = (date: Date, timeSlot: string, safetyMarginMinutes: number = 2): boolean => {
-    // Create dates in local timezone to avoid UTC confusion
+  // Check if a time slot is in the past - TIMEZONE SAFE VERSION
+  const isTimeSlotInPast = (date: Date, timeSlot: string, safetyMarginMinutes: number = 1): boolean => {
     const now = new Date();
     const [hours, minutes] = timeSlot.split(':').map(Number);
     
-    // Create appointment date in local timezone
+    // Garantir que estamos usando sempre o fuso horário local brasileiro
     const appointmentDateTime = new Date(
       date.getFullYear(),
       date.getMonth(),
@@ -67,27 +66,22 @@ export const useBarbershopSettings = () => {
       0
     );
     
-    // For today, use minimal safety margin (2 minutes)
-    // For future dates, no safety margin needed
-    const isToday = date.toDateString() === now.toDateString();
-    const actualMargin = isToday ? safetyMarginMinutes : 0;
-    
-    const safetyTime = new Date(now.getTime() + actualMargin * 60000);
+    // Reduzir margem de segurança para 1 minuto apenas
+    const safetyTime = new Date(now.getTime() + safetyMarginMinutes * 60000);
     const isPastTime = appointmentDateTime <= safetyTime;
     
-    console.log('🕒 Time validation (LOCAL TIMEZONE):', {
+    // Log detalhado para debug do fuso horário
+    console.log('🕒 TIMEZONE DEBUG - Validação de horário:', {
       timeSlot,
-      date: date.toISOString().split('T')[0],
+      inputDate: date.toLocaleDateString('pt-BR'),
       appointmentDateTime: appointmentDateTime.toLocaleString('pt-BR'),
       now: now.toLocaleString('pt-BR'),
       safetyTime: safetyTime.toLocaleString('pt-BR'),
-      isToday,
-      actualMargin,
       isPast: isPastTime,
-      // Additional debug info
+      timeDiffMinutes: Math.round((appointmentDateTime.getTime() - safetyTime.getTime()) / 60000),
+      // Timestamps para verificação
       appointmentTimestamp: appointmentDateTime.getTime(),
-      safetyTimestamp: safetyTime.getTime(),
-      timeDiffMinutes: Math.round((appointmentDateTime.getTime() - safetyTime.getTime()) / 60000)
+      safetyTimestamp: safetyTime.getTime()
     });
     
     return isPastTime;
