@@ -163,7 +163,10 @@ export const SimpleGridScheduleView = ({
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-foreground mb-6">Agenda</h1>
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-semibold text-foreground">Agenda</h1>
+            <LiveClock />
+          </div>
 
           {/* Navigation Bar */}
           <div className="flex items-center justify-between bg-card rounded-lg shadow-sm border p-4">
@@ -240,15 +243,6 @@ export const SimpleGridScheduleView = ({
             </div>
           </CardContent>
         </Card>
-
-        {/* Live Clock */}
-        <div className="flex justify-end mb-4">
-          <Card className="w-fit">
-            <CardContent className="p-3">
-              <LiveClock />
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Schedule Grid */}
         <Card>
