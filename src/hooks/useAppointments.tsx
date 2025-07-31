@@ -489,24 +489,72 @@ export const useAppointments = () => {
 
   const deleteAppointment = async (appointmentId: string): Promise<boolean> => {
     try {
-      console.log('🗑️ DELETE APPOINTMENT - START:', { appointmentId });
+      console.log('🗑️ DELETE APPOINTMENT - START:', { appointmentId, userId: profile?.user_id, userRole: profile?.role });
       
-      const { error } = await supabase
-        .from('appointments')
-        .delete()
-        .eq('id', appointmentId);
-
-      if (error) {
-        console.error('🗑️ DELETE APPOINTMENT - ERROR:', error);
+      // Check user permissions first
+      if (!profile) {
+        console.error('🗑️ DELETE APPOINTMENT - No user profile found');
         toast({
-          title: "Erro ao deletar agendamento",
-          description: error.message,
+          title: "Erro de permissão",
+          description: "Perfil de usuário não encontrado. Faça login novamente.",
           variant: "destructive",
         });
         return false;
       }
 
-      console.log('🗑️ DELETE APPOINTMENT - SUCCESS:', { appointmentId });
+      if (!['admin', 'receptionist'].includes(profile.role) && !profile.barbershop_id) {
+        console.error('🗑️ DELETE APPOINTMENT - Insufficient permissions:', { role: profile.role, barbershopId: profile.barbershop_id });
+        toast({
+          title: "Permissão negada",
+          description: "Você não tem permissão para excluir agendamentos.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // Perform the deletion
+      const { data, error, count } = await supabase
+        .from('appointments')
+        .delete()
+        .eq('id', appointmentId)
+        .select('id');
+
+      console.log('🗑️ DELETE APPOINTMENT - Response:', { data, error, count });
+
+      if (error) {
+        console.error('🗑️ DELETE APPOINTMENT - Supabase error:', error);
+        
+        // Handle specific RLS errors
+        if (error.code === '42501' || error.message.includes('policy')) {
+          toast({
+            title: "Permissão negada",
+            description: "Você não tem permissão para excluir este agendamento. Entre em contato com o administrador.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Erro ao deletar agendamento",
+            description: `Erro: ${error.message}`,
+            variant: "destructive",
+          });
+        }
+        return false;
+      }
+
+      // Check if any record was actually deleted
+      if (count === 0) {
+        console.warn('🗑️ DELETE APPOINTMENT - No records deleted');
+        toast({
+          title: "Agendamento não encontrado",
+          description: "O agendamento pode já ter sido excluído ou você não tem permissão para acessá-lo.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      console.log('🗑️ DELETE APPOINTMENT - SUCCESS:', { appointmentId, deletedCount: count });
+      
+      // Remove from local state
       setAppointments(prev => prev.filter(appointment => appointment.id !== appointmentId));
       
       toast({
@@ -517,8 +565,8 @@ export const useAppointments = () => {
     } catch (error: any) {
       console.error('🗑️ DELETE APPOINTMENT - UNEXPECTED ERROR:', error);
       toast({
-        title: "Erro ao deletar agendamento",
-        description: "Ocorreu um erro inesperado.",
+        title: "Erro inesperado",
+        description: "Ocorreu um erro inesperado ao excluir o agendamento.",
         variant: "destructive",
       });
       return false;
