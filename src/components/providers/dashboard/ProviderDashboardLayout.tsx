@@ -27,34 +27,34 @@ const ProviderDashboardLayout = ({ children, activeTab }: ProviderDashboardLayou
 
   const navigation = [
     {
-      name: 'Dashboard',
-      href: `/provider/${slug}/dashboard`,
+      name: 'Painel',
+      href: `/prestador/${slug}/painel`,
       icon: BarChart3,
-      current: activeTab === 'dashboard' || location.pathname === `/provider/${slug}/dashboard`
+      current: activeTab === 'painel' || location.pathname === `/prestador/${slug}/painel`
     },
     {
       name: 'Agenda',
-      href: `/provider/${slug}/schedule`,
+      href: `/prestador/${slug}/agenda`,
       icon: Calendar,
-      current: activeTab === 'schedule'
+      current: activeTab === 'agenda'
     },
     {
       name: 'Comissões',
-      href: `/provider/${slug}/commissions`,
+      href: `/prestador/${slug}/comissoes`,
       icon: DollarSign,
-      current: activeTab === 'commissions'
+      current: activeTab === 'comissoes'
     },
     {
       name: 'Metas',
-      href: `/provider/${slug}/goals`,
+      href: `/prestador/${slug}/metas`,
       icon: Target,
-      current: activeTab === 'goals'
+      current: activeTab === 'metas'
     },
     {
       name: 'Clientes',
-      href: `/provider/${slug}/clients`,
+      href: `/prestador/${slug}/clientes`,
       icon: Users,
-      current: activeTab === 'clients'
+      current: activeTab === 'clientes'
     }
   ];
 

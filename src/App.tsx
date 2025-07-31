@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import SessionGuard from "./components/auth/SessionGuard";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Index from "./pages/Index";
@@ -36,6 +36,7 @@ import ProviderProtectedRoute from "./components/providers/ProviderProtectedRout
 import ProviderDashboard from "./components/providers/dashboard/ProviderDashboard";
 import ProviderDashboardLayout from "./components/providers/dashboard/ProviderDashboardLayout";
 import ProviderSchedulePage from "./components/providers/schedule/ProviderSchedulePage";
+import ProviderGoalsManagement from "./components/providers/goals/ProviderGoalsManagement";
 
 
 function App() {
@@ -126,22 +127,33 @@ function App() {
             </ProtectedRoute>
           } />
           
-          {/* Provider Routes */}
-          <Route path="/provider/:slug/login" element={<ProviderLoginPage />} />
-          <Route path="/provider/:slug/dashboard" element={
+          {/* Provider Routes - Portuguese */}
+          <Route path="/prestador/:slug/login" element={<ProviderLoginPage />} />
+          <Route path="/prestador/:slug/painel" element={
             <ProviderProtectedRoute>
-              <ProviderDashboardLayout activeTab="dashboard">
+              <ProviderDashboardLayout activeTab="painel">
                 <ProviderDashboard />
               </ProviderDashboardLayout>
             </ProviderProtectedRoute>
           } />
-          <Route path="/provider/:slug/schedule" element={
+          <Route path="/prestador/:slug/agenda" element={
             <ProviderProtectedRoute>
-              <ProviderDashboardLayout activeTab="schedule">
+              <ProviderDashboardLayout activeTab="agenda">
                 <ProviderSchedulePage />
               </ProviderDashboardLayout>
             </ProviderProtectedRoute>
           } />
+          <Route path="/prestador/:slug/metas" element={
+            <ProviderProtectedRoute>
+              <ProviderDashboardLayout activeTab="metas">
+                <ProviderGoalsManagement />
+              </ProviderDashboardLayout>
+            </ProviderProtectedRoute>
+          } />
+
+          {/* Legacy Provider Routes - Redirect to Portuguese */}
+          <Route path="/provider/:slug/login" element={<Navigate to="/prestador/:slug/login" replace />} />
+          <Route path="/provider/:slug/*" element={<Navigate to="/prestador/:slug/painel" replace />} />
           
           {/* Super Admin Routes */}
           <Route path="/super-admin" element={<SuperAdminPage />} />

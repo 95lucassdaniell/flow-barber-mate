@@ -15,7 +15,7 @@ const ProviderProtectedRoute = ({ children }: ProviderProtectedRouteProps) => {
   useEffect(() => {
     if (!loading) {
       if (!user || !isProvider || !profile) {
-        navigate(`/provider/${slug}/login`);
+        navigate(`/prestador/${slug}/login`);
         return;
       }
     }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { format, addDays, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useProviderAuth } from "@/hooks/useProviderAuth";
@@ -20,6 +20,7 @@ const ProviderSchedulePage = () => {
   const { profile, isAuthenticated } = useProviderAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { slug } = useParams();
 
   const {
     appointments,
@@ -34,10 +35,10 @@ const ProviderSchedulePage = () => {
   // Redirect if not authenticated
   useEffect(() => {
     if (!isAuthenticated || !profile) {
-      navigate('/provider/login');
+      navigate(`/prestador/${slug}/login`);
       return;
     }
-  }, [isAuthenticated, profile, navigate]);
+  }, [isAuthenticated, profile, navigate, slug]);
 
   // Fetch appointments for the provider and selected date
   useEffect(() => {
