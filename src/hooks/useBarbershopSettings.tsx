@@ -209,11 +209,21 @@ export const useBarbershopSettings = () => {
 
   // Check if barbershop is open on a specific date
   const isOpenOnDate = (date: Date): boolean => {
-    if (!settings?.opening_hours) return false;
+    if (!settings?.opening_hours) {
+      console.log('🚨 SETTINGS NOT LOADED - assuming open:', { hasSettings: !!settings, hasOpeningHours: !!settings?.opening_hours });
+      return true; // Se settings não carregaram ainda, assumir que está aberto para evitar bloqueio
+    }
 
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const dayName = dayNames[date.getDay()];
     const dayHours = settings.opening_hours[dayName];
+    
+    console.log('🏪 OPENING HOURS CHECK:', {
+      date: date.toLocaleDateString('pt-BR'),
+      dayName,
+      dayHours,
+      isOpen: !!(dayHours?.open && dayHours?.close)
+    });
 
     return !!(dayHours?.open && dayHours?.close);
   };
