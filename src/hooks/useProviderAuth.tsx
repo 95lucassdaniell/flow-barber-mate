@@ -58,12 +58,10 @@ export const useProviderAuth = () => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          setTimeout(async () => {
-            const providerProfile = await fetchProfile(session.user.id);
-            setProfile(providerProfile);
-            setIsProvider(!!providerProfile);
-            setLoading(false);
-          }, 0);
+          const providerProfile = await fetchProfile(session.user.id);
+          setProfile(providerProfile);
+          setIsProvider(!!providerProfile);
+          setLoading(false);
         } else {
           setProfile(null);
           setIsProvider(false);

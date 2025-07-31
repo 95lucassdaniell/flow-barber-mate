@@ -32,13 +32,6 @@ const ProviderSchedulePage = () => {
     fetchAppointments
   } = useAppointments();
 
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!isAuthenticated || !profile) {
-      navigate(`/prestador/${slug}/login`);
-      return;
-    }
-  }, [isAuthenticated, profile, navigate, slug]);
 
   // Fetch appointments for the provider and selected date
   useEffect(() => {
