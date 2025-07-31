@@ -369,6 +369,12 @@ export const useAppointments = () => {
     }
   };
 
+  // Função para converter horário em minutos
+  const timeToMinutes = (timeString: string): number => {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
   // Buscar horários disponíveis para um barbeiro em uma data específica
   const getAvailableTimeSlots = (barberId: string, date: string, serviceDuration: number = 15) => {
     const appointmentDate = new Date(date);
@@ -384,6 +390,25 @@ export const useAppointments = () => {
              apt.status !== 'cancelled'
     );
 
+    // Filtrar e logar agendamentos corrompidos
+    const validAppointments = dayAppointments.filter(apt => {
+      const startMinutes = timeToMinutes(apt.start_time);
+      const endMinutes = timeToMinutes(apt.end_time);
+      
+      if (endMinutes <= startMinutes) {
+        console.warn(`⚠️ Agendamento com horários inválidos ignorado:`, {
+          appointmentId: apt.id,
+          start_time: apt.start_time,
+          end_time: apt.end_time,
+          client: apt.client?.name,
+          barber: apt.barber?.full_name,
+          date: apt.appointment_date
+        });
+        return false;
+      }
+      return true;
+    });
+
     // Usar horários dinâmicos da barbearia considerando duração do serviço
     const allTimeSlots = generateTimeSlots(appointmentDate, 15, serviceDuration);
 
@@ -391,12 +416,32 @@ export const useAppointments = () => {
       const slotStart = new Date(`2000-01-01T${timeSlot}`);
       const slotEnd = new Date(slotStart.getTime() + serviceDuration * 60000);
 
-      return !dayAppointments.some(apt => {
+      const hasConflict = validAppointments.some(apt => {
         const aptStart = new Date(`2000-01-01T${apt.start_time}`);
         const aptEnd = new Date(`2000-01-01T${apt.end_time}`);
         
         return (slotStart < aptEnd && slotEnd > aptStart);
       });
+
+      if (hasConflict) {
+        const conflictingAppointment = validAppointments.find(apt => {
+          const aptStart = new Date(`2000-01-01T${apt.start_time}`);
+          const aptEnd = new Date(`2000-01-01T${apt.end_time}`);
+          return (slotStart < aptEnd && slotEnd > aptStart);
+        });
+
+        console.log(`❌ Slot ${timeSlot} indisponível devido a conflito:`, {
+          slot: { start: timeSlot, duration: `${serviceDuration}min` },
+          conflictingAppointment: conflictingAppointment ? {
+            id: conflictingAppointment.id,
+            start: conflictingAppointment.start_time,
+            end: conflictingAppointment.end_time,
+            client: conflictingAppointment.client?.name
+          } : 'desconhecido'
+        });
+      }
+
+      return !hasConflict;
     });
   };
 
