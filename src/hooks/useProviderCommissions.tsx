@@ -53,7 +53,9 @@ export function useProviderCommissions(
       providerId: profile.id,
       barbershopId: profile.barbershop_id,
       startDate,
-      endDate
+      endDate,
+      startDateFilter: startDate ? `${startDate} 00:00:00` : 'none',
+      endDateFilter: endDate ? `${endDate} 23:59:59` : 'none'
     });
 
     try {
@@ -79,12 +81,16 @@ export function useProviderCommissions(
         .eq('commands.status', 'closed')
         .gt('commission_amount', 0); // Only include items with commissions
 
-      // Apply date filters
+      // Apply date filters with proper formatting
       if (startDate) {
-        query = query.gte('commands.created_at', startDate);
+        const startDateTime = `${startDate} 00:00:00`;
+        query = query.gte('commands.created_at', startDateTime);
+        console.log('Applied start date filter:', startDateTime);
       }
       if (endDate) {
-        query = query.lte('commands.created_at', endDate + ' 23:59:59');
+        const endDateTime = `${endDate} 23:59:59`;
+        query = query.lte('commands.created_at', endDateTime);
+        console.log('Applied end date filter:', endDateTime);
       }
 
       const { data: commandItems, error: commandItemsError } = await query;
@@ -96,8 +102,41 @@ export function useProviderCommissions(
       }
 
       console.log('useProviderCommissions: Found command items:', commandItems?.length || 0);
+      if (commandItems && commandItems.length > 0) {
+        console.log('Sample command dates:', commandItems.slice(0, 3).map(item => ({
+          id: item.id,
+          created_at: item.commands.created_at,
+          date_only: item.commands.created_at.split('T')[0]
+        })));
+      }
 
       if (!commandItems || commandItems.length === 0) {
+        console.log('No command items found for the specified filters');
+        console.log('Filter details:', { startDate, endDate, providerId: profile.id });
+        
+        // Check if there are any commands at all for this provider
+        const { data: allCommands } = await supabase
+          .from('command_items')
+          .select(`
+            id,
+            commands!inner(
+              id,
+              created_at,
+              barber_id,
+              barbershop_id,
+              status
+            )
+          `)
+          .eq('commands.barbershop_id', profile.barbershop_id)
+          .eq('commands.barber_id', profile.id)
+          .eq('commands.status', 'closed')
+          .gt('commission_amount', 0)
+          .limit(5);
+        
+        console.log('Total commands for provider (any date):', allCommands?.length || 0);
+        if (allCommands && allCommands.length > 0) {
+          console.log('Sample dates from all commands:', allCommands.map(item => item.commands.created_at.split('T')[0]));
+        }
         setCommissions([]);
         setStats({
           totalCommissions: 0,

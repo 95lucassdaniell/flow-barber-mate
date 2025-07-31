@@ -12,10 +12,10 @@ import FinancialFilters from "@/components/financial/FinancialFilters";
 export default function ProviderCommissionsPage() {
   const { profile } = useProviderAuth();
   
-  // Date range state - default to current month
+  // Date range state - default to last 30 days to capture existing data
   const [dateRange, setDateRange] = useState({
-    startDate: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
-    endDate: format(endOfMonth(new Date()), 'yyyy-MM-dd')
+    startDate: format(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    endDate: format(new Date(), 'yyyy-MM-dd')
   });
 
   // Fetch commission data for the current provider
