@@ -61,8 +61,8 @@ const SchedulePage = () => {
     setIsAppointmentModalOpen(true);
   };
 
-  // Generate time slots based on barbershop settings
-  const timeSlots = generateTimeSlots(selectedDate);
+  // Generate time slots based on barbershop settings (using default 15 min duration)
+  const timeSlots = generateTimeSlots(selectedDate, 15, 15);
   
   // Check if barbershop is open on selected date
   const isOpen = isOpenOnDate(selectedDate);

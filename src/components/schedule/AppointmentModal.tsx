@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,8 +137,14 @@ export const AppointmentModal = ({
     ? servicesWithPrices.filter(s => s.is_active && s.price)
     : services.filter(s => s.is_active);
 
-  // Generate dynamic time slots based on barbershop settings
-  const timeSlots = generateTimeSlots(selectedDate);
+  const selectedService = availableServices.find(s => s.id === appointmentData.serviceId);
+
+  // Generate dynamic time slots based on barbershop settings and selected service
+  const timeSlots = useMemo(() => {
+    if (!selectedDate) return [];
+    const serviceDuration = selectedService ? parseInt(selectedService.duration_minutes?.toString() || '15') : 15;
+    return generateTimeSlots(selectedDate, 15, serviceDuration);
+  }, [selectedDate, selectedService, generateTimeSlots]);
 
   const handleClientSelect = (client: any) => {
     setSelectedClient(client);
@@ -238,7 +244,6 @@ export const AppointmentModal = ({
     setLoading(false);
   };
 
-  const selectedService = availableServices.find(s => s.id === appointmentData.serviceId);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

@@ -75,8 +75,8 @@ export const GridScheduleView = ({
   const filteredBarbers = barbers.filter(b => selectedBarbers.includes(b.id));
   const dateString = format(date, 'yyyy-MM-dd');
   
-  // Use barbershop settings for time slots
-  const barbershopTimeSlots = generateTimeSlots(date);
+  // Use barbershop settings for time slots (using default 15 min duration)
+  const barbershopTimeSlots = generateTimeSlots(date, 15, 15);
   const isOpen = isOpenOnDate(date);
 
   // Calcular quantos slots um agendamento ocupa (baseado na duração)

@@ -158,8 +158,19 @@ export const useAppointments = () => {
         return false;
       }
 
-      // Verificar se o horário está disponível
-      if (!isTimeSlotAvailable(appointmentDate, appointmentData.start_time)) {
+      // Buscar duração do serviço antes da validação
+      const { data: serviceData, error: serviceError } = await supabase
+        .from('services')
+        .select('duration_minutes')
+        .eq('id', appointmentData.service_id)
+        .single();
+
+      if (serviceError) throw serviceError;
+      
+      const serviceDuration = serviceData.duration_minutes || 15;
+
+      // Verificar se o horário está disponível considerando a duração do serviço
+      if (!isTimeSlotAvailable(appointmentDate, appointmentData.start_time, serviceDuration)) {
         toast({
           title: "Horário indisponível",
           description: "Este horário não está disponível para agendamento.",
@@ -168,14 +179,7 @@ export const useAppointments = () => {
         return false;
       }
 
-      // Calcular horário de fim baseado na duração do serviço
-      const { data: serviceData, error: serviceError } = await supabase
-        .from('services')
-        .select('duration_minutes')
-        .eq('id', appointmentData.service_id)
-        .single();
-
-      if (serviceError) throw serviceError;
+      // Usar dados do serviço já obtidos anteriormente
 
       // Calcular end_time
       const startTime = new Date(`2000-01-01T${appointmentData.start_time}`);
@@ -380,8 +384,8 @@ export const useAppointments = () => {
              apt.status !== 'cancelled'
     );
 
-    // Usar horários dinâmicos da barbearia
-    const allTimeSlots = generateTimeSlots(appointmentDate);
+    // Usar horários dinâmicos da barbearia considerando duração do serviço
+    const allTimeSlots = generateTimeSlots(appointmentDate, 15, serviceDuration);
 
     return allTimeSlots.filter(timeSlot => {
       const slotStart = new Date(`2000-01-01T${timeSlot}`);
