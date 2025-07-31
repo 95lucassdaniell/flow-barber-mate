@@ -42,12 +42,13 @@ const NavigationDebugger = () => {
   return null;
 };
 
-const App = () => (
-  <TooltipProvider>
-    <Toaster />
-    <Sonner />
-    <BrowserRouter>
-      <NavigationDebugger />
+function App() {
+  return (
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <NavigationDebugger />
         <Routes>
           {/* Redirect invalid /dashboard route */}
           <Route path="/dashboard" element={<DashboardRedirect />} />
@@ -154,6 +155,7 @@ const App = () => (
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
-);
+  );
+}
 
 export default App;
