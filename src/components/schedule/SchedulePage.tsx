@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Loader2, Users } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useBarberSelection } from '@/hooks/useBarberSelection';
 import { useAppointments } from '@/hooks/useAppointments';
@@ -11,17 +8,16 @@ import { AppointmentModal } from './AppointmentModal';
 import { AppointmentDetailsModal } from './AppointmentDetailsModal';
 import { useScheduleUrl } from '@/hooks/useScheduleUrl';
 import { useDebounce } from '@/hooks/useDebounce';
-import { HorizontalGridSchedule } from './HorizontalGridSchedule';
-import { CompactCalendar } from './CompactCalendar';
+import { SimpleGridScheduleView } from './SimpleGridScheduleView';
 import { useBarbershopSettings } from '@/hooks/useBarbershopSettings';
 import { toast } from "sonner";
 
 const SchedulePage = () => {
   const { profile } = useAuth();
-  const { selectedDate, navigateToDate } = useScheduleUrl();
+  const { selectedDate, navigateToDate, navigateToToday } = useScheduleUrl();
   const { barbers, loading: barbersLoading } = useBarberSelection();
   const { appointments, loading: appointmentsLoading, fetchAppointments } = useAppointments();
-  const { settings: barbershopSettings, generateTimeSlots, isOpenOnDate } = useBarbershopSettings();
+  const { isOpenOnDate } = useBarbershopSettings();
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
@@ -61,9 +57,19 @@ const SchedulePage = () => {
     setIsAppointmentModalOpen(true);
   };
 
-  // Generate time slots based on barbershop settings (using default 15 min duration)
-  const timeSlots = generateTimeSlots(selectedDate, 15, 15);
-  
+  const handleNavigateDate = (direction: "prev" | "next") => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(selectedDate.getDate() + (direction === "next" ? 1 : -1));
+    navigateToDate(newDate);
+  };
+
+  const handleNewAppointment = () => {
+    setSelectedTimeSlot('');
+    setSelectedBarberId_('');
+    setSelectedAppointment(null);
+    setIsAppointmentModalOpen(true);
+  };
+
   // Check if barbershop is open on selected date
   const isOpen = isOpenOnDate(selectedDate);
 
@@ -87,70 +93,33 @@ const SchedulePage = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl space-y-6">
-      {/* Header com calendário e controles */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Agenda - {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
-            </CardTitle>
-            
-            <div className="flex items-center gap-4">
-              <CompactCalendar
-                selectedDate={selectedDate}
-                onDateSelect={navigateToDate}
-              />
-              
-              <Button 
-                onClick={() => setIsAppointmentModalOpen(true)} 
-                className="flex items-center gap-2"
-              >
-                <Users className="h-4 w-4" />
-                Novo Agendamento
-              </Button>
-            </div>
+    <div>
+      {!isOpen ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className="text-lg font-medium text-muted-foreground">Barbearia Fechada</p>
+            <p className="text-sm text-muted-foreground">A barbearia está fechada no dia selecionado.</p>
           </div>
-        </CardHeader>
-      </Card>
-
-      {/* Grid Schedule */}
-      <Card>
-        <CardContent className="pt-6">
-          {!isOpen ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <p className="text-lg font-medium text-muted-foreground">Barbearia Fechada</p>
-                <p className="text-sm text-muted-foreground">A barbearia está fechada no dia selecionado.</p>
-              </div>
-            </div>
-          ) : appointmentsLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Carregando agendamentos...</p>
-              </div>
-            </div>
-          ) : timeSlots.length === 0 ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <p className="text-lg font-medium text-muted-foreground">Sem Horários Disponíveis</p>
-                <p className="text-sm text-muted-foreground">Não há horários disponíveis para agendamento hoje.</p>
-              </div>
-            </div>
-          ) : (
-            <HorizontalGridSchedule
-              date={selectedDate}
-              barbers={barbers}
-              appointments={appointments}
-              timeSlots={timeSlots}
-              onTimeSlotClick={handleTimeSlotClick}
-              onAppointmentClick={handleAppointmentClick}
-            />
-          )}
-        </CardContent>
-      </Card>
+        </div>
+      ) : appointmentsLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Carregando agendamentos...</p>
+          </div>
+        </div>
+      ) : (
+        <SimpleGridScheduleView
+          date={selectedDate}
+          barbers={barbers}
+          appointments={appointments}
+          onAppointmentClick={handleAppointmentClick}
+          onTimeSlotClick={handleTimeSlotClick}
+          onNavigateDate={handleNavigateDate}
+          onGoToToday={navigateToToday}
+          onNewAppointment={handleNewAppointment}
+        />
+      )}
 
       {/* Appointment Modal */}
       <AppointmentModal
