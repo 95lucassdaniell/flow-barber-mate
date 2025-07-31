@@ -70,7 +70,7 @@ export const useAppointments = () => {
       setLoading(true);
       setLastFetchKey(fetchKey);
       
-      console.log('🔄 Buscando agendamentos:', { barberId, date, mode, fetchKey });
+      // Removed excessive logging for performance
       
       // Para modo "day", limpar agendamentos antes da busca
       if (mode === 'day') {
@@ -93,10 +93,15 @@ export const useAppointments = () => {
 
       if (date) {
         query = query.eq('appointment_date', date);
+      } else {
+        // Se não especificar data, usar data atual por padrão para melhorar performance
+        const today = format(new Date(), 'yyyy-MM-dd');
+        query = query.eq('appointment_date', today);
       }
 
       const { data, error } = await query.order('appointment_date', { ascending: true })
-                                    .order('start_time', { ascending: true });
+                                    .order('start_time', { ascending: true })
+                                    .limit(1000); // Adicionar limite para melhorar performance
 
       if (error) {
         console.error('❌ Erro ao buscar agendamentos:', error);
@@ -108,17 +113,13 @@ export const useAppointments = () => {
         return;
       }
 
-      console.log('✅ Agendamentos carregados:', data?.length || 0, 'para', { barberId, date, mode });
-      
       if (mode === 'day') {
         // No modo "day", sempre substituir todos os agendamentos
-        console.log('🔄 Modo DAY: Substituindo agendamentos');
         setAppointments((data || []) as Appointment[]);
       } else {
         // No modo "week", verificar se já temos agendamentos desta data
         setAppointments(prev => {
           const newAppointments = (data || []) as Appointment[];
-          console.log('🔄 Modo WEEK: Verificando agendamentos existentes');
           
           // Remover agendamentos da mesma data para evitar duplicatas
           const filteredPrev = prev.filter(app => {
@@ -126,7 +127,6 @@ export const useAppointments = () => {
             return appDate !== date;
           });
           
-          console.log('📊 Agendamentos filtrados:', filteredPrev.length, 'novos:', newAppointments.length);
           return [...filteredPrev, ...newAppointments];
         });
       }

@@ -64,16 +64,7 @@ export const useBarbershopSettings = () => {
     
     const safetyTime = new Date(now.getTime() + actualMargin * 60000);
     
-    // Debug logging
-    console.log('Time slot validation:', {
-      timeSlot,
-      appointmentDateTime: appointmentDateTime.toLocaleString('pt-BR'),
-      now: now.toLocaleString('pt-BR'),
-      safetyTime: safetyTime.toLocaleString('pt-BR'),
-      isToday,
-      actualMargin,
-      isPast: appointmentDateTime <= safetyTime
-    });
+    // Removed excessive logging for performance
     
     return appointmentDateTime <= safetyTime;
   };
@@ -134,15 +125,7 @@ export const useBarbershopSettings = () => {
       }
     }
 
-    console.log('Generated time slots:', {
-      date: date.toLocaleDateString('pt-BR'),
-      dayName,
-      openTime: dayHours.open,
-      closeTime: dayHours.close,
-      serviceDuration: serviceDurationMinutes,
-      totalSlots: slots.length,
-      slots: slots.slice(0, 10) // Show first 10 for debugging
-    });
+    // Removed excessive logging for performance
 
     return slots;
   };
@@ -150,12 +133,10 @@ export const useBarbershopSettings = () => {
   // Check if a time slot is available for booking considering service duration
   const isTimeSlotAvailable = (date: Date, timeSlot: string, serviceDurationMinutes: number = 15): boolean => {
     if (!isOpenOnDate(date)) {
-      console.log('Time slot unavailable: barbershop closed on this date');
       return false;
     }
     
     if (isTimeSlotInPast(date, timeSlot)) {
-      console.log('Time slot unavailable: slot is in the past');
       return false;
     }
 
@@ -165,7 +146,6 @@ export const useBarbershopSettings = () => {
     const dayHours = settings?.opening_hours?.[dayName];
 
     if (!dayHours?.close) {
-      console.log('Time slot unavailable: no closing time defined');
       return false;
     }
 
@@ -177,19 +157,8 @@ export const useBarbershopSettings = () => {
     const serviceEndTime = slotTimeInMinutes + serviceDurationMinutes;
 
     const canFinishBeforeClosing = serviceEndTime <= closeTimeInMinutes;
-    
-    console.log('Service timing validation:', {
-      timeSlot,
-      serviceDuration: serviceDurationMinutes,
-      closeTime: dayHours.close,
-      slotTimeInMinutes,
-      closeTimeInMinutes,
-      serviceEndTime,
-      canFinishBeforeClosing
-    });
 
     if (!canFinishBeforeClosing) {
-      console.log('Time slot unavailable: service would finish after closing time');
       return false;
     }
 

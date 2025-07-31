@@ -37,30 +37,13 @@ export const SimpleGridScheduleView = ({
     setSelectedBarbers(barbers);
   }, [barbers]);
 
-  // Debug logs
-  useEffect(() => {
-    console.log("🗓️ Data selecionada:", format(date, "yyyy-MM-dd"));
-    console.log("📅 Total appointments recebidos:", appointments.length);
-    console.log("📅 Appointments para debug:", appointments);
-    
-    // Filter appointments for selected date
-    const selectedDateStr = format(date, "yyyy-MM-dd");
-    const appointmentsForDate = appointments.filter(apt => apt.appointment_date === selectedDateStr);
-    console.log("📅 Appointments para a data selecionada:", appointmentsForDate.length, appointmentsForDate);
-  }, [date, appointments]);
+  // Removed excessive debug logs for performance
 
   // Generate 5-minute time slots based on barbershop opening hours
   const timeSlots = useMemo(() => {
     if (loading || !isOpenOnDate(date)) return [];
     
     const slots = generateAllTimeSlots(date, 5); // 5 minute intervals
-    console.log("⏰ Generated time slots:", {
-      date: format(date, "yyyy-MM-dd"),
-      totalSlots: slots.length,
-      firstFew: slots.slice(0, 10),
-      lastFew: slots.slice(-10)
-    });
-    
     return slots;
   }, [date, generateAllTimeSlots, isOpenOnDate, loading]);
 
@@ -120,21 +103,6 @@ export const SimpleGridScheduleView = ({
       const slotMinutes = timeToMinutes(time);
 
       const isMatch = apt.barber_id === barberId && slotMinutes >= aptStartMinutes && slotMinutes < aptEndMinutes;
-      
-      // Debug log for first few slots
-      if (time === "08:00" || time === "09:00" || time === "10:00") {
-        console.log(`🔍 Checking slot ${time} for barber ${barberId}:`, {
-          aptStartTime: apt.start_time,
-          aptEndTime: apt.end_time,
-          aptStartMinutes,
-          aptEndMinutes,
-          slotMinutes,
-          barberMatch: apt.barber_id === barberId,
-          timeMatch: slotMinutes >= aptStartMinutes && slotMinutes < aptEndMinutes,
-          isMatch
-        });
-      }
-      
       return isMatch;
     });
 
