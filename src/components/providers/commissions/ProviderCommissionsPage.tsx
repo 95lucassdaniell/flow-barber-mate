@@ -5,7 +5,7 @@ import { TrendingUp, DollarSign, BarChart3, Calendar } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useProviderAuth } from "@/hooks/useProviderAuth";
-import { useFinancialData } from "@/hooks/useFinancialData";
+import { useProviderCommissions } from "@/hooks/useProviderCommissions";
 import CommissionHistory from "@/components/financial/CommissionHistory";
 import FinancialFilters from "@/components/financial/FinancialFilters";
 
@@ -18,15 +18,15 @@ export default function ProviderCommissionsPage() {
     endDate: format(endOfMonth(new Date()), 'yyyy-MM-dd')
   });
 
-  // Fetch financial data filtered by the current provider
+  // Fetch commission data for the current provider
   const {
     stats,
     commissions,
-    loading
-  } = useFinancialData(
+    loading,
+    error
+  } = useProviderCommissions(
     dateRange.startDate,
-    dateRange.endDate,
-    profile?.id // Filter by current provider ID
+    dateRange.endDate
   );
 
   const formatCurrency = (amount: number) => {
@@ -48,6 +48,17 @@ export default function ProviderCommissionsPage() {
             ))}
           </div>
           <div className="h-96 bg-muted rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="text-center text-destructive py-8">
+          <h3 className="text-lg font-medium mb-2">Erro ao carregar dados</h3>
+          <p className="text-sm">{error}</p>
         </div>
       </div>
     );
