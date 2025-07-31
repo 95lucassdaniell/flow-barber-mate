@@ -52,29 +52,45 @@ export const useBarbershopSettings = () => {
 
   // Check if a time slot is in the past
   const isTimeSlotInPast = (date: Date, timeSlot: string, safetyMarginMinutes: number = 2): boolean => {
+    // Create dates in local timezone to avoid UTC confusion
     const now = new Date();
-    const appointmentDateTime = new Date(date);
     const [hours, minutes] = timeSlot.split(':').map(Number);
-    appointmentDateTime.setHours(hours, minutes, 0, 0);
+    
+    // Create appointment date in local timezone
+    const appointmentDateTime = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      hours,
+      minutes,
+      0,
+      0
+    );
     
     // For today, use minimal safety margin (2 minutes)
     // For future dates, no safety margin needed
-    const isToday = appointmentDateTime.toDateString() === now.toDateString();
+    const isToday = date.toDateString() === now.toDateString();
     const actualMargin = isToday ? safetyMarginMinutes : 0;
     
     const safetyTime = new Date(now.getTime() + actualMargin * 60000);
+    const isPastTime = appointmentDateTime <= safetyTime;
     
-    console.log('🕒 Time validation:', {
+    console.log('🕒 Time validation (LOCAL TIMEZONE):', {
       timeSlot,
-      appointmentDateTime: appointmentDateTime.toLocaleTimeString(),
-      now: now.toLocaleTimeString(),
-      safetyTime: safetyTime.toLocaleTimeString(),
+      date: date.toISOString().split('T')[0],
+      appointmentDateTime: appointmentDateTime.toLocaleString('pt-BR'),
+      now: now.toLocaleString('pt-BR'),
+      safetyTime: safetyTime.toLocaleString('pt-BR'),
       isToday,
       actualMargin,
-      isPast: appointmentDateTime <= safetyTime
+      isPast: isPastTime,
+      // Additional debug info
+      appointmentTimestamp: appointmentDateTime.getTime(),
+      safetyTimestamp: safetyTime.getTime(),
+      timeDiffMinutes: Math.round((appointmentDateTime.getTime() - safetyTime.getTime()) / 60000)
     });
     
-    return appointmentDateTime <= safetyTime;
+    return isPastTime;
   };
 
   // Generate ALL time slots based on opening hours (including past ones)
