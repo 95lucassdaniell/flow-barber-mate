@@ -2,8 +2,9 @@ import { ReactNode, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useProviderAuth } from '@/hooks/useProviderAuth';
+import { useProviderBarbershop } from '@/hooks/useProviderBarbershop';
 import { 
   Menu, 
   Calendar, 
@@ -22,6 +23,7 @@ interface ProviderDashboardLayoutProps {
 const ProviderDashboardLayout = ({ children, activeTab }: ProviderDashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { profile, signOut } = useProviderAuth();
+  const { barbershop } = useProviderBarbershop();
   const location = useLocation();
   const { slug } = useParams();
 
@@ -65,10 +67,15 @@ const ProviderDashboardLayout = ({ children, activeTab }: ProviderDashboardLayou
   const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
     <div className={`flex flex-col h-full ${mobile ? 'w-full' : 'w-64'}`}>
       <div className="flex items-center gap-2 p-6 border-b">
-        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-          <span className="text-primary-foreground font-bold text-sm">P</span>
-        </div>
-        <span className="font-bold text-lg">Portal do Prestador</span>
+        <Avatar className="w-8 h-8">
+          {barbershop?.logo_url ? (
+            <AvatarImage src={barbershop.logo_url} alt={barbershop.name} />
+          ) : null}
+          <AvatarFallback className="bg-primary text-primary-foreground font-bold text-sm">
+            {barbershop?.name?.charAt(0).toUpperCase() || 'P'}
+          </AvatarFallback>
+        </Avatar>
+        <span className="font-bold text-lg">{barbershop?.name || 'Portal do Prestador'}</span>
       </div>
 
       <nav className="flex-1 p-6 space-y-2">
@@ -137,10 +144,15 @@ const ProviderDashboardLayout = ({ children, activeTab }: ProviderDashboardLayou
         <div className="lg:hidden">
           <div className="flex items-center justify-between p-4 border-b bg-card">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">P</span>
-              </div>
-              <span className="font-bold">Portal do Prestador</span>
+              <Avatar className="w-8 h-8">
+                {barbershop?.logo_url ? (
+                  <AvatarImage src={barbershop.logo_url} alt={barbershop.name} />
+                ) : null}
+                <AvatarFallback className="bg-primary text-primary-foreground font-bold text-sm">
+                  {barbershop?.name?.charAt(0).toUpperCase() || 'P'}
+                </AvatarFallback>
+              </Avatar>
+              <span className="font-bold">{barbershop?.name || 'Portal do Prestador'}</span>
             </div>
             <SheetTrigger asChild>
               <Button variant="ghost" size="sm">
