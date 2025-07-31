@@ -161,15 +161,22 @@ export const useBarbershopSettings = () => {
     console.log('🔍 isTimeSlotAvailable checking:', { 
       date: date.toISOString().split('T')[0], 
       timeSlot, 
-      serviceDurationMinutes 
+      serviceDurationMinutes,
+      hasSettings: !!settings 
     });
 
-    if (!isOpenOnDate(date)) {
+    const isOpen = isOpenOnDate(date);
+    console.log('🏪 isOpenOnDate result:', { date: date.toISOString().split('T')[0], isOpen });
+    
+    if (!isOpen) {
       console.log('❌ Barbershop closed on this date');
       return false;
     }
     
-    if (isTimeSlotInPast(date, timeSlot)) {
+    const isPast = isTimeSlotInPast(date, timeSlot);
+    console.log('⏰ isTimeSlotInPast result:', { timeSlot, isPast });
+    
+    if (isPast) {
       console.log('❌ Time slot is in the past');
       return false;
     }
