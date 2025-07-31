@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { globalState, cacheManager } from '@/lib/globalState';
@@ -18,22 +18,15 @@ export const useAuth = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
-  
-  // Refs para controle de inicialização e montagem
-  const initializingRef = useRef(false);
-  const mountedRef = useRef(true);
-  const timeoutRef = useRef<NodeJS.Timeout>();
 
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     if (globalState.isEmergencyStopActive()) return null;
 
-    const operationKey = `profile-${userId}`;
+    const cacheKey = `profile-${userId}`;
     
     // Verificar cache primeiro
-    const cached = cacheManager.get<Profile>(operationKey);
+    const cached = cacheManager.get<Profile>(cacheKey);
     if (cached) return cached;
-
-    if (!await globalState.acquireLock(operationKey)) return null;
 
     try {
       const { data: profileData, error } = await supabase
@@ -45,33 +38,31 @@ export const useAuth = () => {
       if (error) throw error;
       
       const profile = profileData as Profile;
-      cacheManager.set(operationKey, profile, 300000); // 5 min cache
+      cacheManager.set(cacheKey, profile, 300000); // 5 min cache
       return profile;
     } catch (error) {
       console.error('Profile fetch error:', error);
       return null;
-    } finally {
-      globalState.releaseLock(operationKey);
     }
   }, []);
 
   useEffect(() => {
-    if (initializingRef.current) return;
-    initializingRef.current = true;
-
-    const operationKey = 'auth-init';
+    let mounted = true;
     
-    const initializeAuth = async () => {
-      if (!await globalState.acquireLock(operationKey)) {
-        initializingRef.current = false;
-        return;
+    // Timeout de segurança para loading
+    globalState.setOperationTimeout('auth-loading', () => {
+      if (mounted) {
+        setLoading(false);
+        console.warn('useAuth: Loading timeout - forçando false');
       }
+    }, 3000);
 
+    const initializeAuth = async () => {
       try {
         // Set up auth state listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, session) => {
-            if (!mountedRef.current) return;
+            if (!mounted) return;
             
             setAuthError(null);
             setSession(session);
@@ -79,31 +70,24 @@ export const useAuth = () => {
             
             if (session?.user) {
               const profileData = await fetchProfile(session.user.id);
-              if (mountedRef.current) setProfile(profileData);
+              if (mounted) setProfile(profileData);
             } else {
-              if (mountedRef.current) setProfile(null);
+              if (mounted) setProfile(null);
             }
             
-            if (mountedRef.current) setLoading(false);
+            if (mounted) {
+              setLoading(false);
+              globalState.clearOperationTimeout('auth-loading');
+            }
           }
         );
 
-        // Check existing session with timeout
-        timeoutRef.current = setTimeout(() => {
-          if (mountedRef.current) {
-            setLoading(false);
-            console.warn('useAuth: Session check timeout');
-          }
-        }, 3000);
-
+        // Check existing session
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
-
-        if (!session && mountedRef.current) {
+        if (!session && mounted) {
           setLoading(false);
+          globalState.clearOperationTimeout('auth-loading');
         }
 
         return () => {
@@ -111,21 +95,20 @@ export const useAuth = () => {
         };
       } catch (error) {
         console.error('Auth initialization error:', error);
-        if (mountedRef.current) setLoading(false);
-      } finally {
-        globalState.releaseLock(operationKey);
+        if (mounted) {
+          setLoading(false);
+          globalState.clearOperationTimeout('auth-loading');
+        }
       }
     };
 
     initializeAuth();
 
     return () => {
-      mountedRef.current = false;
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      mounted = false;
+      globalState.clearOperationTimeout('auth-loading');
     };
-  }, []); // Dependency array empty to run only once
+  }, [fetchProfile]);
 
   const signOut = async () => {
     try {

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,11 +7,10 @@ import { useAppointments } from '@/hooks/useAppointments';
 import { AppointmentModal } from './AppointmentModal';
 import { AppointmentDetailsModal } from './AppointmentDetailsModal';
 import { useScheduleUrl } from '@/hooks/useScheduleUrl';
-import { useDebounce } from '@/hooks/useDebounce';
 import { SimpleGridScheduleView } from './SimpleGridScheduleView';
 import { useBarbershopSettings } from '@/hooks/useBarbershopSettings';
 import { toast } from "sonner";
-import { globalState } from '@/lib/globalState';
+import { useLoadingContext } from '@/contexts/LoadingContext';
 import { EmergencyStopUI } from '@/components/debug/EmergencyStopUI';
 
 const SchedulePage = () => {
@@ -20,60 +19,39 @@ const SchedulePage = () => {
   const { barbers, loading: barbersLoading } = useBarberSelection();
   const { appointments, loading: appointmentsLoading, fetchAppointments } = useAppointments();
   const { isOpenOnDate } = useBarbershopSettings();
+  const { setLoading, isLoading } = useLoadingContext();
+  
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
   const [selectedBarberId_, setSelectedBarberId_] = useState<string>('');
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
-  
-  // Refs para controle de execução
-  const lastFetchDateRef = useRef<string>('');
-  const fetchTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // Debounce mais agressivo e memoização da data
-  const debouncedDate = useDebounce(selectedDate, 500);
-  const formattedDate = useMemo(() => format(debouncedDate, 'yyyy-MM-dd'), [debouncedDate]);
+  const formattedDate = useMemo(() => format(selectedDate, 'yyyy-MM-dd'), [selectedDate]);
 
-  // Loading timeout to prevent infinite loading
+  // Controlar loading no contexto centralizado
   useEffect(() => {
-    if (barbersLoading || appointmentsLoading) {
-      const timer = setTimeout(() => {
-        setLoadingTimeout(true);
-        console.warn('SchedulePage: Loading timeout reached');
-        toast.error('Carregamento demorou muito. Tente recarregar a página.');
-      }, 10000); // 10 seconds
-
-      return () => clearTimeout(timer);
-    } else {
-      setLoadingTimeout(false);
-    }
-  }, [barbersLoading, appointmentsLoading]);
-
-  // Fetch appointments com controle anti-loop
-  useEffect(() => {
-    if (globalState.isEmergencyStopActive()) return;
+    const isPageLoading = barbersLoading || appointmentsLoading;
+    setLoading('schedule', isPageLoading);
     
-    if (!profile?.barbershop_id || barbersLoading || formattedDate === lastFetchDateRef.current) {
-      return;
+    // Timeout de emergência de 4 segundos
+    if (isPageLoading) {
+      const timer = setTimeout(() => {
+        setLoading('schedule', false);
+        toast.error('Carregamento demorou muito. Dados podem estar desatualizados.');
+      }, 4000);
+      return () => clearTimeout(timer);
     }
+  }, [barbersLoading, appointmentsLoading, setLoading]);
 
-    // Clear any existing timeout
-    if (fetchTimeoutRef.current) {
-      clearTimeout(fetchTimeoutRef.current);
+  // Fetch appointments simplificado
+  useEffect(() => {
+    if (profile?.barbershop_id && !barbersLoading) {
+      const timer = setTimeout(() => {
+        fetchAppointments(undefined, formattedDate, 'day');
+      }, 200);
+      return () => clearTimeout(timer);
     }
-
-    // Debounce the fetch
-    fetchTimeoutRef.current = setTimeout(() => {
-      lastFetchDateRef.current = formattedDate;
-      fetchAppointments(undefined, formattedDate, 'day');
-    }, 200);
-
-    return () => {
-      if (fetchTimeoutRef.current) {
-        clearTimeout(fetchTimeoutRef.current);
-      }
-    };
   }, [profile?.barbershop_id, formattedDate, barbersLoading, fetchAppointments]);
 
   const handleTimeSlotClick = (barberId: string, timeSlot: string) => {
@@ -83,7 +61,6 @@ const SchedulePage = () => {
   };
 
   const handleAppointmentClick = (appointment: any) => {
-    console.log('Appointment clicked:', appointment);
     setSelectedAppointment(appointment);
     setIsDetailsModalOpen(true);
   };
@@ -107,23 +84,44 @@ const SchedulePage = () => {
     setIsAppointmentModalOpen(true);
   };
 
-  // Check if barbershop is open on selected date
-  const isOpen = isOpenOnDate(selectedDate);
+  const handleRefreshAppointments = () => {
+    fetchAppointments(undefined, formattedDate, 'day');
+  };
 
+  // Loading states simplificados
   if (!profile) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (barbersLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">Carregando barbeiros...</p>
+          <p className="text-sm text-muted-foreground">Carregando perfil...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading('schedule')) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Carregando agenda...</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            {barbersLoading ? 'Buscando barbeiros...' : 'Buscando agendamentos...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const isOpen = isOpenOnDate(selectedDate);
+
+  if (!isOpen) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-lg font-medium text-muted-foreground">Barbearia Fechada</p>
+          <p className="text-sm text-muted-foreground">A barbearia está fechada no dia selecionado.</p>
         </div>
       </div>
     );
@@ -133,47 +131,17 @@ const SchedulePage = () => {
     <>
       <EmergencyStopUI />
       <div>
-        {loadingTimeout ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <p className="text-lg font-medium text-destructive">Timeout de Carregamento</p>
-              <p className="text-sm text-muted-foreground">O carregamento demorou muito. Tente recarregar.</p>
-              <button 
-                onClick={() => window.location.reload()}
-                className="mt-2 px-4 py-2 bg-primary text-white rounded"
-              >
-                Recarregar Página
-              </button>
-            </div>
-          </div>
-        ) : !isOpen ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <p className="text-lg font-medium text-muted-foreground">Barbearia Fechada</p>
-              <p className="text-sm text-muted-foreground">A barbearia está fechada no dia selecionado.</p>
-            </div>
-          </div>
-        ) : appointmentsLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Carregando agendamentos...</p>
-            </div>
-          </div>
-        ) : (
-          <SimpleGridScheduleView
-            date={selectedDate}
-            barbers={barbers}
-            appointments={appointments}
-            onAppointmentClick={handleAppointmentClick}
-            onTimeSlotClick={handleTimeSlotClick}
-            onNavigateDate={handleNavigateDate}
-            onGoToToday={navigateToToday}
-            onNewAppointment={handleNewAppointment}
-          />
-        )}
+        <SimpleGridScheduleView
+          date={selectedDate}
+          barbers={barbers}
+          appointments={appointments}
+          onAppointmentClick={handleAppointmentClick}
+          onTimeSlotClick={handleTimeSlotClick}
+          onNavigateDate={handleNavigateDate}
+          onGoToToday={navigateToToday}
+          onNewAppointment={handleNewAppointment}
+        />
 
-        {/* Appointment Modal */}
         <AppointmentModal
           isOpen={isAppointmentModalOpen}
           onClose={() => {
@@ -185,7 +153,7 @@ const SchedulePage = () => {
           selectedBarberId={selectedBarberId_}
           appointment={selectedAppointment}
           onAppointmentCreated={() => {
-            fetchAppointments(undefined, formattedDate, 'day');
+            handleRefreshAppointments();
             setIsAppointmentModalOpen(false);
             setSelectedAppointment(null);
           }}
@@ -199,7 +167,7 @@ const SchedulePage = () => {
             setSelectedAppointment(null);
           }}
           onEdit={handleEditAppointment}
-          onRefresh={() => fetchAppointments(undefined, formattedDate, 'day')}
+          onRefresh={handleRefreshAppointments}
         />
       </div>
     </>

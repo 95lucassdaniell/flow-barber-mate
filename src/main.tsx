@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App.tsx'
 import './index.css'
+import { LoadingProvider } from './contexts/LoadingContext'
 
 // Configure React Query with aggressive anti-loop settings
 const queryClient = new QueryClient({
@@ -25,6 +26,8 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
-    <App />
+    <LoadingProvider>
+      <App />
+    </LoadingProvider>
   </QueryClientProvider>
 );

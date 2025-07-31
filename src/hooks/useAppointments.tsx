@@ -76,10 +76,6 @@ export const useAppointments = () => {
       return;
     }
 
-    if (!await globalState.acquireLock(fetchKey)) {
-      return;
-    }
-
     try {
       // Cancelar requisição anterior se existe
       if (abortControllerRef.current) {
@@ -154,7 +150,6 @@ export const useAppointments = () => {
       });
     } finally {
       setLoading(false);
-      globalState.releaseLock(fetchKey);
     }
   }, [profile?.barbershop_id, toast]);
 

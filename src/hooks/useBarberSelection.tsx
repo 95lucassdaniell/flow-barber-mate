@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { globalState } from '@/lib/globalState';
 
 interface Barber {
   id: string;
@@ -18,6 +19,16 @@ export const useBarberSelection = () => {
   useEffect(() => {
     if (!profile) return;
 
+    let mounted = true;
+
+    // Timeout de segurança para loading
+    globalState.setOperationTimeout('barber-selection-loading', () => {
+      if (mounted) {
+        setLoading(false);
+        console.warn('useBarberSelection: Loading timeout - forçando false');
+      }
+    }, 2000);
+
     const fetchBarbers = async () => {
       try {
         const { data } = await supabase
@@ -27,6 +38,8 @@ export const useBarberSelection = () => {
           .eq('is_active', true)
           .eq('role', 'barber')
           .order('full_name');
+
+        if (!mounted) return;
 
         setBarbers(data || []);
 
@@ -46,11 +59,19 @@ export const useBarberSelection = () => {
       } catch (error) {
         console.error('Error fetching barbers:', error);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          globalState.clearOperationTimeout('barber-selection-loading');
+        }
       }
     };
 
     fetchBarbers();
+
+    return () => {
+      mounted = false;
+      globalState.clearOperationTimeout('barber-selection-loading');
+    };
   }, [profile, canManageAll]);
 
   const handleBarberChange = (barberId: string) => {

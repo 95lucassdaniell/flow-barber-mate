@@ -11,7 +11,7 @@ export const EmergencyStopUI = () => {
   useEffect(() => {
     const handleEmergencyStop = () => {
       setIsVisible(true);
-      setDebugInfo(globalState.getDebugReport());
+    setDebugInfo({ emergencyStopActive: true });
     };
 
     window.addEventListener('emergency-stop-activated', handleEmergencyStop);
@@ -19,7 +19,7 @@ export const EmergencyStopUI = () => {
     // Verificar se já está ativo
     if (globalState.isEmergencyStopActive()) {
       setIsVisible(true);
-      setDebugInfo(globalState.getDebugReport());
+      setDebugInfo({ emergencyStopActive: true });
     }
 
     return () => {
