@@ -1,7 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Clock, User, Scissors, Phone } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { SLOT_HEIGHT_PX, calculateSlotsCount } from "@/lib/utils";
 
 interface Appointment {
   id: string;
@@ -42,7 +41,9 @@ interface AppointmentBlockProps {
   slotsCount?: number;
 }
 
-export const AppointmentBlock = ({ appointment, onClick, slotsCount = 1 }: AppointmentBlockProps) => {
+export const AppointmentBlock = ({ appointment, onClick, slotsCount }: AppointmentBlockProps) => {
+  // Calculate slots based on service duration if not provided
+  const actualSlotsCount = slotsCount || (appointment.service ? calculateSlotsCount(appointment.service.duration_minutes) : 1);
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed':
@@ -80,8 +81,8 @@ export const AppointmentBlock = ({ appointment, onClick, slotsCount = 1 }: Appoi
         ${getStatusColor(appointment.status)}
       `}
       style={{
-        minHeight: `${slotsCount * 60}px`, // 60px per slot
-        zIndex: slotsCount > 1 ? 10 : 1
+        minHeight: `${actualSlotsCount * SLOT_HEIGHT_PX}px`,
+        zIndex: actualSlotsCount > 1 ? 10 : 1
       }}
       onClick={onClick}
     >
@@ -124,9 +125,9 @@ export const AppointmentBlock = ({ appointment, onClick, slotsCount = 1 }: Appoi
         </div>
       )}
 
-      {slotsCount > 1 && (
+      {actualSlotsCount > 1 && (
         <div className="absolute bottom-1 left-1 text-xs opacity-60">
-          {slotsCount * 15}min
+          {appointment.service?.duration_minutes || actualSlotsCount * 15}min
         </div>
       )}
     </div>

@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AppointmentBlock } from "./AppointmentBlock";
 import { useBarbershopSettings } from "@/hooks/useBarbershopSettings";
+import { SLOT_HEIGHT_PX, calculateSlotsCount, isTimeInRange } from "@/lib/utils";
 
 interface Appointment {
   id: string;
@@ -80,28 +81,17 @@ export const GridScheduleView = ({
   const isOpen = isOpenOnDate(date);
 
   // Calcular quantos slots um agendamento ocupa (baseado na duração)
-  const calculateSlotsCount = (appointment: Appointment): number => {
+  const getAppointmentSlotsCount = (appointment: Appointment): number => {
     const duration = appointment.service?.duration_minutes || 30;
-    return Math.ceil(duration / 15); // 15 minutos por slot
+    return calculateSlotsCount(duration);
   };
 
   // Verificar se um agendamento ocupa um slot específico
   const isAppointmentInSlot = (appointment: Appointment, timeSlot: string): boolean => {
-    const appointmentTime = appointment.start_time;
-    const slotsCount = calculateSlotsCount(appointment);
+    const normalizedStartTime = appointment.start_time.slice(0, 5);
+    const normalizedEndTime = appointment.end_time.slice(0, 5);
     
-    // Converter horários para minutos para facilitar comparação
-    const timeToMinutes = (time: string) => {
-      const [hours, minutes] = time.split(':').map(Number);
-      return hours * 60 + minutes;
-    };
-
-    const appointmentMinutes = timeToMinutes(appointmentTime);
-    const slotMinutes = timeToMinutes(timeSlot);
-    const durationMinutes = slotsCount * 15;
-
-    return slotMinutes >= appointmentMinutes && 
-           slotMinutes < appointmentMinutes + durationMinutes;
+    return isTimeInRange(timeSlot, normalizedStartTime, normalizedEndTime);
   };
 
   // Obter agendamento para um barbeiro e horário específico
@@ -261,13 +251,14 @@ export const GridScheduleView = ({
                     return (
                       <div 
                         key={`${barber.id}-${timeSlot}`}
-                        className="border-b border-r min-h-[60px] relative"
+                        className="border-b border-r relative"
+                        style={{ minHeight: `${SLOT_HEIGHT_PX}px` }}
                       >
                         {appointment ? (
                           <AppointmentBlock
                             appointment={appointment}
                             onClick={() => onAppointmentClick?.(appointment)}
-                            slotsCount={calculateSlotsCount(appointment)}
+                            slotsCount={getAppointmentSlotsCount(appointment)}
                           />
                         ) : occupiedByPrevious ? (
                           <div className="h-full bg-gray-100 opacity-50" />

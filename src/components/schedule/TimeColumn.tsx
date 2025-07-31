@@ -1,3 +1,5 @@
+import { SLOT_HEIGHT_PX } from "@/lib/utils";
+
 interface TimeColumnProps {
   timeSlots: string[];
 }
@@ -15,7 +17,8 @@ export const TimeColumn = ({ timeSlots }: TimeColumnProps) => {
         {timeSlots.map((timeSlot) => (
           <div 
             key={timeSlot}
-            className="h-10 border-b border-border/50 flex items-center justify-center px-3"
+            className="border-b border-border/50 flex items-center justify-center px-3"
+            style={{ height: `${SLOT_HEIGHT_PX}px` }}
           >
             <span className="text-sm font-medium text-foreground">{timeSlot}</span>
           </div>

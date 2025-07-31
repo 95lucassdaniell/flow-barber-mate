@@ -1,5 +1,6 @@
 import { AppointmentCard } from "./AppointmentCard";
 import { Plus } from "lucide-react";
+import { SLOT_HEIGHT_PX, calculateSlotsCount, isTimeInRange } from "@/lib/utils";
 
 interface Appointment {
   id: string;
@@ -54,9 +55,9 @@ export const BarberColumn = ({
   onTimeSlotClick,
   onAppointmentClick
 }: BarberColumnProps) => {
-  const calculateSlotsCount = (appointment: Appointment): number => {
+  const getAppointmentSlotsCount = (appointment: Appointment): number => {
     if (!appointment.service?.duration_minutes) return 1;
-    return Math.ceil(appointment.service.duration_minutes / 15);
+    return calculateSlotsCount(appointment.service.duration_minutes);
   };
 
   const isAppointmentInSlot = (appointment: Appointment, timeSlot: string): boolean => {
@@ -64,15 +65,7 @@ export const BarberColumn = ({
     const normalizedStartTime = appointment.start_time.slice(0, 5);
     const normalizedEndTime = appointment.end_time.slice(0, 5);
     
-    const [startHour, startMinute] = normalizedStartTime.split(':').map(Number);
-    const [endHour, endMinute] = normalizedEndTime.split(':').map(Number);
-    const [slotHour, slotMinute] = timeSlot.split(':').map(Number);
-
-    const startTotalMinutes = startHour * 60 + startMinute;
-    const endTotalMinutes = endHour * 60 + endMinute;
-    const slotTotalMinutes = slotHour * 60 + slotMinute;
-
-    return slotTotalMinutes >= startTotalMinutes && slotTotalMinutes < endTotalMinutes;
+    return isTimeInRange(timeSlot, normalizedStartTime, normalizedEndTime);
   };
 
   const getAppointmentForSlot = (timeSlot: string): Appointment | null => {
@@ -128,7 +121,7 @@ export const BarberColumn = ({
 
           if (appointment && appointment.start_time.slice(0, 5) === timeSlot) {
             // Slot com agendamento (primeiro slot do agendamento)
-            const slotsCount = calculateSlotsCount(appointment);
+            const slotsCount = getAppointmentSlotsCount(appointment);
             return (
               <AppointmentCard
                 key={`${appointment.id}-${timeSlot}`}
@@ -143,7 +136,8 @@ export const BarberColumn = ({
             return (
               <div 
                 key={`occupied-${barber.id}-${timeSlot}`} 
-                className="h-10 border-b border-border/50 bg-muted/20"
+                className="border-b border-border/50 bg-muted/20"
+                style={{ height: `${SLOT_HEIGHT_PX}px` }}
               />
             );
           } else {
@@ -151,7 +145,8 @@ export const BarberColumn = ({
             return (
               <div
                 key={`slot-${barber.id}-${timeSlot}`}
-                className="h-10 border-b border-border/50 bg-background hover:bg-muted/30 cursor-pointer transition-colors flex items-center justify-center group"
+                className="border-b border-border/50 bg-background hover:bg-muted/30 cursor-pointer transition-colors flex items-center justify-center group"
+                style={{ height: `${SLOT_HEIGHT_PX}px` }}
                 onClick={() => onTimeSlotClick(barber.id, timeSlot)}
               >
                 <Plus className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />
