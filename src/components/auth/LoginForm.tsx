@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,8 +8,6 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/barberflow-logo.png";
 import usePageTitle from "@/hooks/usePageTitle";
-import { useAuth } from "@/hooks/useAuth";
-import { Loader2 } from "lucide-react";
 
 const LoginForm = () => {
   const [formData, setFormData] = useState({
@@ -17,67 +15,12 @@ const LoginForm = () => {
     password: "",
   });
   const [loading, setLoading] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
   
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, profile, loading: authLoading } = useAuth();
   
   usePageTitle({ title: "Login" });
-
-  // Check if user is already authenticated and redirect
-  useEffect(() => {
-    const checkAuthentication = async () => {
-      console.log('LoginForm - Checking auth:', { authLoading, user: !!user, profile: !!profile });
-      
-      if (authLoading) {
-        console.log('LoginForm - Auth still loading, waiting...');
-        return; // Wait for auth to load
-      }
-      
-      if (user && profile) {
-        console.log('LoginForm - User authenticated, fetching barbershop...');
-        try {
-          // Buscar dados da barbearia
-          const { data: barbershop, error: barbershopError } = await supabase
-            .from('barbershops')
-            .select('slug')
-            .eq('id', profile.barbershop_id)
-            .single();
-
-          if (!barbershopError && barbershop) {
-            // Check if there's a redirect location from ProtectedRoute
-            const state = location.state as { from?: string };
-            const redirectTo = state?.from || `/app/${barbershop.slug}`;
-            
-            console.log('LoginForm - Usuário já autenticado, redirecionando para:', redirectTo);
-            navigate(redirectTo, { replace: true });
-            return;
-          }
-        } catch (error) {
-          console.error('LoginForm - Erro ao verificar barbearia:', error);
-        }
-      }
-      
-      console.log('LoginForm - Auth check complete, showing login form');
-      setCheckingAuth(false);
-    };
-
-    checkAuthentication();
-  }, [user, profile, authLoading, navigate, location.state]);
-
-  // Show loading while checking authentication
-  if (checkingAuth || authLoading) {
-    return (
-      <div className="min-h-screen bg-secondary/30 flex items-center justify-center p-4">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Verificando autenticação...</p>
-        </div>
-      </div>
-    );
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
