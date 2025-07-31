@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, ChevronRight, Calendar, Plus, User, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Plus, User, Clock, AlertTriangle } from "lucide-react";
 import { LiveClock } from "@/components/ui/live-clock";
 import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Appointment, Barber } from "@/types/appointment";
 import { useBarbershopSettings } from "@/hooks/useBarbershopSettings";
+import { ConflictReport } from "./ConflictReport";
 
 interface SimpleGridScheduleViewProps {
   date: Date;
@@ -31,6 +32,7 @@ export const SimpleGridScheduleView = ({
   onNewAppointment
 }: SimpleGridScheduleViewProps) => {
   const [selectedBarbers, setSelectedBarbers] = useState<Barber[]>([]);
+  const [showConflictReport, setShowConflictReport] = useState(false);
   const { generateAllTimeSlots, isOpenOnDate, loading } = useBarbershopSettings();
 
   // Initialize selected barbers when barbers prop changes
@@ -93,12 +95,12 @@ export const SimpleGridScheduleView = ({
     return hours * 60 + minutes;
   };
 
-  const getAppointmentForSlot = (time: string, barberId: string) => {
+  const getAppointmentsForSlot = (time: string, barberId: string) => {
     // Filter appointments for selected date first
     const selectedDateStr = format(date, "yyyy-MM-dd");
     const appointmentsForDate = appointments.filter(apt => apt.appointment_date === selectedDateStr);
     
-    const appointment = appointmentsForDate.find((apt) => {
+    const appointmentsInSlot = appointmentsForDate.filter((apt) => {
       const aptStartMinutes = timeToMinutes(apt.start_time);
       const aptEndMinutes = timeToMinutes(apt.end_time);
       const slotMinutes = timeToMinutes(time);
@@ -107,7 +109,59 @@ export const SimpleGridScheduleView = ({
       return isMatch;
     });
 
-    return appointment;
+    return appointmentsInSlot;
+  };
+
+  const getAppointmentForSlot = (time: string, barberId: string) => {
+    const appointmentsInSlot = getAppointmentsForSlot(time, barberId);
+    return appointmentsInSlot[0]; // Return first appointment for backward compatibility
+  };
+
+  const getOverlappingAppointments = (barberId: string) => {
+    const selectedDateStr = format(date, "yyyy-MM-dd");
+    const barberAppointments = appointments.filter(apt => 
+      apt.appointment_date === selectedDateStr && apt.barber_id === barberId
+    );
+
+    const overlaps: Array<{appointments: Appointment[], timeRange: string}> = [];
+    
+    barberAppointments.forEach(apt => {
+      const conflicts = barberAppointments.filter(other => {
+        if (other.id === apt.id) return false;
+        
+        const thisStart = timeToMinutes(apt.start_time);
+        const thisEnd = timeToMinutes(apt.end_time);
+        const otherStart = timeToMinutes(other.start_time);
+        const otherEnd = timeToMinutes(other.end_time);
+        
+        return (thisStart < otherEnd && thisEnd > otherStart);
+      });
+
+      if (conflicts.length > 0) {
+        const allAppointments = [apt, ...conflicts];
+        const startTimes = allAppointments.map(a => timeToMinutes(a.start_time));
+        const endTimes = allAppointments.map(a => timeToMinutes(a.end_time));
+        const earliestStart = Math.min(...startTimes);
+        const latestEnd = Math.max(...endTimes);
+        
+        const startTime = `${Math.floor(earliestStart / 60).toString().padStart(2, '0')}:${(earliestStart % 60).toString().padStart(2, '0')}`;
+        const endTime = `${Math.floor(latestEnd / 60).toString().padStart(2, '0')}:${(latestEnd % 60).toString().padStart(2, '0')}`;
+        
+        // Check if this overlap group already exists
+        const existingOverlap = overlaps.find(o => 
+          o.appointments.some(a => allAppointments.find(b => b.id === a.id))
+        );
+        
+        if (!existingOverlap) {
+          overlaps.push({
+            appointments: allAppointments,
+            timeRange: `${startTime} - ${endTime}`
+          });
+        }
+      }
+    });
+
+    return overlaps;
   };
 
   const getAppointmentHeight = (appointment: Appointment) => {
@@ -127,6 +181,56 @@ export const SimpleGridScheduleView = ({
   };
 
   const visibleBarbers = selectedBarbers;
+
+  // Check for conflicts
+  const totalConflicts = useMemo(() => {
+    const selectedDateStr = format(date, "yyyy-MM-dd");
+    const appointmentsForDate = appointments.filter(apt => apt.appointment_date === selectedDateStr);
+    
+    let conflictCount = 0;
+    barbers.forEach(barber => {
+      const barberAppointments = appointmentsForDate.filter(apt => apt.barber_id === barber.id);
+      const processedIds = new Set<string>();
+      
+      barberAppointments.forEach(apt => {
+        if (processedIds.has(apt.id)) return;
+        
+        const conflicts = barberAppointments.filter(other => {
+          if (other.id === apt.id || processedIds.has(other.id)) return false;
+          
+          const thisStart = timeToMinutes(apt.start_time);
+          const thisEnd = timeToMinutes(apt.end_time);
+          const otherStart = timeToMinutes(other.start_time);
+          const otherEnd = timeToMinutes(other.end_time);
+          
+          return (thisStart < otherEnd && thisEnd > otherStart);
+        });
+        
+        if (conflicts.length > 0) {
+          conflictCount++;
+          [apt, ...conflicts].forEach(a => processedIds.add(a.id));
+        }
+      });
+    });
+    
+    return conflictCount;
+  }, [date, appointments, barbers]);
+
+  if (showConflictReport) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto">
+          <ConflictReport
+            date={date}
+            barbers={barbers}
+            appointments={appointments}
+            onAppointmentClick={onAppointmentClick || (() => {})}
+            onClose={() => setShowConflictReport(false)}
+          />
+        </div>
+      </div>
+    );
+  }
 
   // Loading state
   if (loading) {
@@ -200,6 +304,17 @@ export const SimpleGridScheduleView = ({
                 Hoje
               </Button>
 
+              {totalConflicts > 0 && (
+                <Button 
+                  variant="destructive" 
+                  onClick={() => setShowConflictReport(true)}
+                  className="mr-2"
+                >
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  {totalConflicts} Conflito(s)
+                </Button>
+              )}
+              
               <Button onClick={onNewAppointment}>
                 <Plus className="w-4 h-4 mr-2" />
                 Novo Agendamento
@@ -285,47 +400,89 @@ export const SimpleGridScheduleView = ({
 
                     {/* Time Slots */}
                     {timeSlots.map((time) => {
-                      const appointment = getAppointmentForSlot(time, barber.id);
-                      const isStart = appointment && isAppointmentStart(time, appointment);
+                      const appointmentsInSlot = getAppointmentsForSlot(time, barber.id);
+                      const primaryAppointment = appointmentsInSlot[0];
+                      const hasOverlap = appointmentsInSlot.length > 1;
+                      const isStart = primaryAppointment && isAppointmentStart(time, primaryAppointment);
 
                       return (
                         <div 
                           key={`${barber.id}-${time}`} 
                           className="h-4 border-b border-border/30 relative hover:bg-muted/50 cursor-pointer"
-                          onClick={() => !appointment && onTimeSlotClick?.(barber.id, time)}
+                          onClick={() => !primaryAppointment && onTimeSlotClick?.(barber.id, time)}
                         >
                           {isStart && (
-                            <div
-                              className="bg-card border-l-4 border-l-primary rounded-r shadow-sm absolute left-1 right-1 z-10 p-2 text-xs"
-                              style={{ height: `${getAppointmentHeight(appointment)}px` }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onAppointmentClick?.(appointment);
-                              }}
-                            >
-                              <div className="flex items-center gap-1 mb-1">
-                                <Clock className="w-3 h-3 text-muted-foreground" />
-                                <span className="font-semibold text-primary">
-                                  {appointment.start_time} - {appointment.end_time}
-                                </span>
+                            <div className="relative">
+                              {/* Primary appointment */}
+                              <div
+                                className={`bg-card border-l-4 ${hasOverlap ? 'border-l-red-500' : 'border-l-primary'} rounded-r shadow-sm absolute left-1 z-10 p-2 text-xs ${hasOverlap ? 'right-8' : 'right-1'}`}
+                                style={{ height: `${getAppointmentHeight(primaryAppointment)}px` }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onAppointmentClick?.(primaryAppointment);
+                                }}
+                              >
+                                <div className="flex items-center gap-1 mb-1">
+                                  <Clock className="w-3 h-3 text-muted-foreground" />
+                                  <span className="font-semibold text-primary">
+                                    {primaryAppointment.start_time} - {primaryAppointment.end_time}
+                                  </span>
+                                  {hasOverlap && (
+                                    <span className="bg-red-500 text-white text-xs px-1 rounded">!</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 mb-1">
+                                  <User className="w-3 h-3 text-muted-foreground" />
+                                  <span className="font-medium text-foreground truncate">
+                                    {primaryAppointment.client?.name}
+                                  </span>
+                                </div>
+                                <div className="text-muted-foreground text-xs">
+                                  ✂️ {primaryAppointment.service?.name}
+                                </div>
+                                <div className="mt-1">
+                                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                                    hasOverlap ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                                  }`}>
+                                    {primaryAppointment.status === 'scheduled' && 'Agendado'}
+                                    {primaryAppointment.status === 'confirmed' && 'Confirmado'}
+                                    {primaryAppointment.status === 'completed' && 'Concluído'}
+                                    {primaryAppointment.status === 'cancelled' && 'Cancelado'}
+                                  </span>
+                                </div>
+                                {hasOverlap && (
+                                  <div className="mt-1 text-xs text-red-600 font-medium">
+                                    +{appointmentsInSlot.length - 1} conflito(s)
+                                  </div>
+                                )}
                               </div>
-                              <div className="flex items-center gap-1 mb-1">
-                                <User className="w-3 h-3 text-muted-foreground" />
-                                <span className="font-medium text-foreground truncate">
-                                  {appointment.client?.name}
-                                </span>
-                              </div>
-                              <div className="text-muted-foreground text-xs">
-                                ✂️ {appointment.service?.name}
-                              </div>
-                              <div className="mt-1">
-                                <span className="inline-block bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                                  {appointment.status === 'scheduled' && 'Agendado'}
-                                  {appointment.status === 'confirmed' && 'Confirmado'}
-                                  {appointment.status === 'completed' && 'Concluído'}
-                                  {appointment.status === 'cancelled' && 'Cancelado'}
-                                </span>
-                              </div>
+
+                              {/* Overlapping appointments indicator */}
+                              {hasOverlap && appointmentsInSlot.slice(1).map((overlappingApt, index) => {
+                                const overlapIsStart = isAppointmentStart(time, overlappingApt);
+                                if (!overlapIsStart) return null;
+                                
+                                return (
+                                  <div
+                                    key={overlappingApt.id}
+                                    className="bg-red-100 border-l-4 border-l-red-500 rounded-r shadow-sm absolute z-20 p-1 text-xs cursor-pointer hover:bg-red-200"
+                                    style={{ 
+                                      height: `${getAppointmentHeight(overlappingApt)}px`,
+                                      right: `${1 + (index * 7)}px`,
+                                      width: '6px',
+                                      writingMode: 'vertical-rl',
+                                      textOrientation: 'mixed'
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onAppointmentClick?.(overlappingApt);
+                                    }}
+                                    title={`${overlappingApt.client?.name} - ${overlappingApt.service?.name} (${overlappingApt.start_time} - ${overlappingApt.end_time})`}
+                                  >
+                                    <span className="text-red-700 font-bold">!</span>
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </div>
