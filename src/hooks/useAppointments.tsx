@@ -201,6 +201,7 @@ export const useAppointments = () => {
           barber:profiles!appointments_barber_id_fkey(id, full_name)
         `)
         .eq('barbershop_id', profile.barbershop_id)
+        .neq('status', 'cancelled') // Filter out cancelled appointments from main schedule
         .abortSignal(abortControllerRef.current.signal);
 
       if (barberId) {
@@ -467,15 +468,12 @@ export const useAppointments = () => {
         return false;
       }
 
-      setAppointments(prev => prev.map(appointment => 
-        appointment.id === appointmentId 
-          ? { ...appointment, status: 'cancelled' as const }
-          : appointment
-      ));
+      // Remove cancelled appointments from main schedule view immediately
+      setAppointments(prev => prev.filter(appointment => appointment.id !== appointmentId));
       
       toast({
         title: "Agendamento cancelado",
-        description: "O agendamento foi cancelado com sucesso.",
+        description: "O agendamento foi cancelado e removido da agenda principal.",
       });
       return true;
     } catch (error: any) {
@@ -491,13 +489,15 @@ export const useAppointments = () => {
 
   const deleteAppointment = async (appointmentId: string): Promise<boolean> => {
     try {
+      console.log('🗑️ DELETE APPOINTMENT - START:', { appointmentId });
+      
       const { error } = await supabase
         .from('appointments')
         .delete()
         .eq('id', appointmentId);
 
       if (error) {
-        console.error('Erro ao deletar agendamento:', error);
+        console.error('🗑️ DELETE APPOINTMENT - ERROR:', error);
         toast({
           title: "Erro ao deletar agendamento",
           description: error.message,
@@ -506,14 +506,16 @@ export const useAppointments = () => {
         return false;
       }
 
+      console.log('🗑️ DELETE APPOINTMENT - SUCCESS:', { appointmentId });
       setAppointments(prev => prev.filter(appointment => appointment.id !== appointmentId));
+      
       toast({
-        title: "Agendamento removido",
-        description: "O agendamento foi removido com sucesso.",
+        title: "Agendamento excluído",
+        description: "O agendamento foi excluído permanentemente com sucesso.",
       });
       return true;
     } catch (error: any) {
-      console.error('Erro ao deletar agendamento:', error);
+      console.error('🗑️ DELETE APPOINTMENT - UNEXPECTED ERROR:', error);
       toast({
         title: "Erro ao deletar agendamento",
         description: "Ocorreu um erro inesperado.",
