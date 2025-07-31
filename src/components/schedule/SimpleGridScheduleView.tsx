@@ -202,8 +202,6 @@ export const SimpleGridScheduleView = ({
                 Novo Agendamento
               </Button>
             </div>
-            
-            <LiveClock />
           </div>
         </div>
 
@@ -242,6 +240,15 @@ export const SimpleGridScheduleView = ({
             </div>
           </CardContent>
         </Card>
+
+        {/* Live Clock */}
+        <div className="flex justify-end mb-4">
+          <Card className="w-fit">
+            <CardContent className="p-3">
+              <LiveClock />
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Schedule Grid */}
         <Card>
