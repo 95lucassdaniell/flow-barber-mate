@@ -38,6 +38,7 @@ import ProviderDashboardLayout from "./components/providers/dashboard/ProviderDa
 import ProviderSchedulePage from "./components/providers/schedule/ProviderSchedulePage";
 import ProviderGoalsManagement from "./components/providers/goals/ProviderGoalsManagement";
 import ProviderCommissionsPage from "./components/providers/commissions/ProviderCommissionsPage";
+import ProviderClientsPage from "./components/providers/clients/ProviderClientsPage";
 
 
 function App() {
@@ -155,6 +156,13 @@ function App() {
             <ProviderProtectedRoute>
               <ProviderDashboardLayout activeTab="comissoes">
                 <ProviderCommissionsPage />
+              </ProviderDashboardLayout>
+            </ProviderProtectedRoute>
+          } />
+          <Route path="/prestador/:slug/clientes" element={
+            <ProviderProtectedRoute>
+              <ProviderDashboardLayout activeTab="clientes">
+                <ProviderClientsPage />
               </ProviderDashboardLayout>
             </ProviderProtectedRoute>
           } />
