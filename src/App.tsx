@@ -31,6 +31,7 @@ import SuperAdminSettingsPage from "./pages/SuperAdminSettingsPage";
 import SuperAdminHistoricalDataPage from "./pages/SuperAdminHistoricalDataPage";
 import FinancialPage from "./pages/FinancialPage";
 import AIPage from "./pages/AIPage";
+import GoalsPage from "./pages/GoalsPage";
 import ProviderLoginPage from "./components/providers/ProviderLoginPage";
 import ProviderProtectedRoute from "./components/providers/ProviderProtectedRoute";
 import ProviderDashboard from "./components/providers/dashboard/ProviderDashboard";
@@ -71,6 +72,11 @@ function App() {
           <Route path="/app/:slug/prestadores" element={
             <ProtectedRoute requiresRole="admin">
               <ProvidersPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/app/:slug/metas" element={
+            <ProtectedRoute requiresRole="admin">
+              <GoalsPage />
             </ProtectedRoute>
           } />
           <Route path="/app/:slug/clients" element={

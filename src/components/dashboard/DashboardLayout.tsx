@@ -16,7 +16,8 @@ import {
   TrendingUp,
   Package,
   Receipt,
-  Brain
+  Brain,
+  Target
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +54,7 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
     { id: "crm", name: "CRM", icon: TrendingUp, href: `/app/${slug}/crm` },
     { id: "ai", name: "IA Preditiva", icon: Brain, href: `/app/${slug}/ai` },
     { id: "providers", name: "Prestadores", icon: Users, href: `/app/${slug}/prestadores` },
+    { id: "metas", name: "Metas", icon: Target, href: `/app/${slug}/metas` },
     { id: "services", name: "Serviços", icon: Scissors, href: `/app/${slug}/services` },
     { id: "produtos", name: "Produtos", icon: Package, href: `/app/${slug}/produtos` },
     { id: "comandas", name: "Comandas", icon: Receipt, href: `/app/${slug}/comandas` },
@@ -142,6 +144,7 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
       crm: "CRM",
       ai: "IA Preditiva",
       providers: "Prestadores",
+      metas: "Metas",
       services: "Serviços",
       produtos: "Produtos",
       comandas: "Comandas",
