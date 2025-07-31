@@ -214,6 +214,18 @@ export const AppointmentModal = ({
     const appointmentDate = format(selectedDate, 'yyyy-MM-dd');
     const totalPrice = ('price' in selectedService ? selectedService.price : 0) || 0;
     
+    console.log('💾 APPOINTMENT MODAL - SAVE APPOINTMENT:', {
+      selectedDate: selectedDate.toISOString(),
+      selectedDateLocal: selectedDate.toLocaleDateString('pt-BR'),
+      selectedDateTime: selectedDate.toLocaleString('pt-BR'),
+      appointmentDate,
+      selectedClient: selectedClient.name,
+      barberId: appointmentData.barberId,
+      serviceId: appointmentData.serviceId,
+      time: appointmentData.time,
+      totalPrice
+    });
+    
     const success = await createAppointment({
       client_id: selectedClient.id,
       barber_id: appointmentData.barberId,

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "@/hooks/use-toast";
+import { createLocalDateTime } from "@/lib/dateUtils";
 
 interface OpeningHours {
   [key: string]: {
@@ -50,38 +51,33 @@ export const useBarbershopSettings = () => {
     }
   };
 
-  // Check if a time slot is in the past - TIMEZONE SAFE VERSION
+  // Check if a time slot is in the past - ULTRA CONSISTENT VERSION
   const isTimeSlotInPast = (date: Date, timeSlot: string, safetyMarginMinutes: number = 1): boolean => {
     const now = new Date();
-    const [hours, minutes] = timeSlot.split(':').map(Number);
     
-    // Garantir que estamos usando sempre o fuso horário local brasileiro
-    const appointmentDateTime = new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate(),
-      hours,
-      minutes,
-      0,
-      0
-    );
+    // 🔧 CORREÇÃO ULTRA-DEFINITIVA: Usar createLocalDateTime para garantir consistência total
+    const dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD
+    const appointmentDateTime = createLocalDateTime(dateString, timeSlot);
     
     // Reduzir margem de segurança para 1 minuto apenas
     const safetyTime = new Date(now.getTime() + safetyMarginMinutes * 60000);
     const isPastTime = appointmentDateTime <= safetyTime;
     
-    // Log detalhado para debug do fuso horário
-    console.log('🕒 TIMEZONE DEBUG - Validação de horário:', {
+    // Log ultra-detalhado para debug final
+    console.log('🚀 ULTRA TIMEZONE DEBUG - Final version:', {
       timeSlot,
       inputDate: date.toLocaleDateString('pt-BR'),
+      dateString,
       appointmentDateTime: appointmentDateTime.toLocaleString('pt-BR'),
       now: now.toLocaleString('pt-BR'),
       safetyTime: safetyTime.toLocaleString('pt-BR'),
       isPast: isPastTime,
       timeDiffMinutes: Math.round((appointmentDateTime.getTime() - safetyTime.getTime()) / 60000),
-      // Timestamps para verificação
+      // Timestamps para verificação final
       appointmentTimestamp: appointmentDateTime.getTime(),
-      safetyTimestamp: safetyTime.getTime()
+      safetyTimestamp: safetyTime.getTime(),
+      // Mais detalhes sobre como a data foi criada
+      createMethod: 'createLocalDateTime'
     });
     
     return isPastTime;

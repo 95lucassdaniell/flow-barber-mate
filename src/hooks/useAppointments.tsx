@@ -5,6 +5,7 @@ import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { useBarbershopSettings } from './useBarbershopSettings';
 import { globalState, cacheManager } from '@/lib/globalState';
+import { createLocalDate } from '@/lib/dateUtils';
 
 export interface Appointment {
   id: string;
@@ -157,7 +158,15 @@ export const useAppointments = () => {
     if (!profile?.barbershop_id) return false;
 
     try {
-      const appointmentDate = new Date(appointmentData.appointment_date);
+      // 🔧 CORREÇÃO CRÍTICA: Usar createLocalDate em vez de new Date
+      const appointmentDate = createLocalDate(appointmentData.appointment_date);
+      
+      console.log('🎯 CREATE APPOINTMENT - START:', {
+        appointmentData,
+        appointmentDate: appointmentDate.toISOString(),
+        appointmentDateLocal: appointmentDate.toLocaleDateString('pt-BR'),
+        appointmentDateTime: appointmentDate.toLocaleString('pt-BR')
+      });
       
       // Verificar se a barbearia está aberta no dia
       if (!isOpenOnDate(appointmentDate)) {
@@ -421,12 +430,32 @@ export const useAppointments = () => {
 
   // Buscar horários disponíveis para um barbeiro em uma data específica
   const getAvailableTimeSlots = (barberId: string, date: string, serviceDuration: number = 15) => {
-    const appointmentDate = new Date(date);
+    // 🔧 CORREÇÃO CRÍTICA: Usar createLocalDate em vez de new Date(date)
+    // new Date(date) interpreta como UTC, causando problemas de timezone
+    const appointmentDate = createLocalDate(date);
+    
+    console.log('⏰ GET AVAILABLE TIME SLOTS:', {
+      barberId,
+      dateString: date,
+      serviceDuration,
+      appointmentDate: appointmentDate.toISOString(),
+      appointmentDateLocal: appointmentDate.toLocaleDateString('pt-BR'),
+      appointmentDateTime: appointmentDate.toLocaleTimeString('pt-BR')
+    });
     
     // Verificar se a barbearia está aberta no dia
     if (!isOpenOnDate(appointmentDate)) {
+      console.log('🚫 BARBERSHOP CLOSED on date:', { 
+        dateString: date, 
+        appointmentDate: appointmentDate.toLocaleDateString('pt-BR') 
+      });
       return [];
     }
+    
+    console.log('✅ BARBERSHOP OPEN on date:', { 
+      dateString: date, 
+      appointmentDate: appointmentDate.toLocaleDateString('pt-BR') 
+    });
 
     const dayAppointments = appointments.filter(
       apt => apt.barber_id === barberId && 
@@ -455,6 +484,16 @@ export const useAppointments = () => {
 
     // Usar horários dinâmicos da barbearia considerando duração do serviço
     const allTimeSlots = generateTimeSlots(appointmentDate, 15, serviceDuration);
+    
+    console.log('🕐 TIME SLOTS GENERATED:', {
+      dateString: date,
+      appointmentDate: appointmentDate.toLocaleDateString('pt-BR'),
+      serviceDuration,
+      totalSlots: allTimeSlots.length,
+      firstSlot: allTimeSlots[0],
+      lastSlot: allTimeSlots[allTimeSlots.length - 1],
+      allSlots: allTimeSlots
+    });
 
     return allTimeSlots.filter(timeSlot => {
       const slotStart = new Date(`2000-01-01T${timeSlot}`);
