@@ -61,21 +61,10 @@ const SchedulePage = () => {
       console.log('SchedulePage: Barbers still loading, skipping fetch');
       return;
     }
-    
-    if (barbers.length === 0) {
-      console.log('SchedulePage: No barbers found, skipping fetch');
-      return;
-    }
 
     console.log('SchedulePage: Fetching appointments for date', format(debouncedDate, 'yyyy-MM-dd'));
-    
-    // Evitar múltiplas requests com um timeout
-    const timeoutId = setTimeout(() => {
-      fetchAppointments(undefined, format(debouncedDate, 'yyyy-MM-dd'), 'day');
-    }, 100);
-
-    return () => clearTimeout(timeoutId);
-  }, [profile?.barbershop_id, debouncedDate, barbersLoading, barbers.length, fetchAppointments]);
+    fetchAppointments(undefined, format(debouncedDate, 'yyyy-MM-dd'), 'day');
+  }, [profile?.barbershop_id, debouncedDate, barbersLoading]);
 
   const handleTimeSlotClick = (barberId: string, timeSlot: string) => {
     setSelectedTimeSlot(timeSlot);

@@ -80,7 +80,7 @@ export const useAuth = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchProfile]);
+  }, []); // Removed fetchProfile dependency to prevent loops
 
   const signOut = async () => {
     try {
