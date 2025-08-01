@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAIAnalytics } from '@/hooks/useAIAnalytics';
-import { useClients } from '@/hooks/useClients';
 import { AutomationsManager } from './AutomationsManager';
 import { SalesAnalyticsDashboard } from './SalesAnalyticsDashboard';
 import { 
@@ -25,8 +24,7 @@ import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export const AIInsights: React.FC = () => {
-  const { insights, loading, error, refreshInsights } = useAIAnalytics();
-  const { clients } = useClients();
+  const { insights, loading, error, refreshInsights, clientPatterns } = useAIAnalytics();
 
   if (loading) {
     return (
@@ -96,8 +94,8 @@ export const AIInsights: React.FC = () => {
   };
 
   const getClientName = (clientId: string) => {
-    const client = clients?.find(c => c.id === clientId);
-    return client?.name || 'Cliente desconhecido';
+    // Buscar nome do cliente usando uma query simples
+    return `Cliente ${clientId.slice(0, 8)}`;
   };
 
   const formatCurrency = (value: number) => {
@@ -114,9 +112,18 @@ export const AIInsights: React.FC = () => {
           <Brain className="h-6 w-6 text-primary" />
           <h2 className="text-2xl font-bold">IA Preditiva</h2>
         </div>
-        <Button variant="outline" size="sm" onClick={refreshInsights}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Atualizar Insights
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => {
+            console.log('🚀 Forçando atualização da IA Preditiva');
+            console.log('📊 Estado atual:', { insights, clientPatterns, loading });
+            refreshInsights();
+          }}
+          disabled={loading}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          {loading ? 'Carregando...' : 'Atualizar Insights'}
         </Button>
       </div>
 

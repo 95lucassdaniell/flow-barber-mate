@@ -81,33 +81,70 @@ export const useSalesAnalytics = () => {
     try {
       setLoading(true);
 
-      // Buscar vendas com itens dos últimos 90 dias
-      const { data: salesData, error } = await supabase
+      // Primeiro buscar vendas básicas dos últimos 90 dias
+      const { data: salesData, error: salesError } = await supabase
         .from('sales')
-        .select(`
-          id,
-          client_id,
-          final_amount,
-          created_at,
-          clients(name),
-          sale_items(
-            item_type,
-            service_id,
-            product_id,
-            quantity,
-            unit_price,
-            total_price,
-            services(name),
-            products(name, cost_price)
-          )
-        `)
+        .select('id, client_id, final_amount, created_at')
         .eq('barbershop_id', profile.barbershop_id)
         .gte('created_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (salesError) throw salesError;
 
-      const sales = salesData || [];
+      if (!salesData || salesData.length === 0) {
+        console.log('Nenhuma venda encontrada nos últimos 90 dias');
+        setAnalytics({
+          productCombos: [],
+          serviceCombos: [],
+          crossSellOpportunities: [],
+          clientPatterns: [],
+          topPerformingServices: [],
+          topPerformingProducts: [],
+        });
+        return;
+      }
+
+      // Buscar clientes
+      const { data: clientsData, error: clientsError } = await supabase
+        .from('clients')
+        .select('id, name')
+        .eq('barbershop_id', profile.barbershop_id);
+
+      // Buscar itens de venda
+      const { data: saleItemsData, error: itemsError } = await supabase
+        .from('sale_items')
+        .select('sale_id, item_type, service_id, product_id, quantity, unit_price, total_price')
+        .in('sale_id', salesData.map(s => s.id));
+
+      // Buscar serviços
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select('id, name')
+        .eq('barbershop_id', profile.barbershop_id);
+
+      // Buscar produtos
+      const { data: productsData, error: productsError } = await supabase
+        .from('products')
+        .select('id, name, cost_price')
+        .eq('barbershop_id', profile.barbershop_id);
+
+      // Criar mapas para lookup rápido
+      const clientsMap = new Map(clientsData?.map(c => [c.id, c.name]) || []);
+      const servicesMap = new Map(servicesData?.map(s => [s.id, s]) || []);
+      const productsMap = new Map(productsData?.map(p => [p.id, p]) || []);
+
+      // Combinar dados
+      const sales = salesData.map(sale => ({
+        ...sale,
+        clients: { name: clientsMap.get(sale.client_id) || 'Cliente' },
+        sale_items: (saleItemsData || [])
+          .filter(item => item.sale_id === sale.id)
+          .map(item => ({
+            ...item,
+            services: item.service_id ? servicesMap.get(item.service_id) : null,
+            products: item.product_id ? productsMap.get(item.product_id) : null
+          }))
+      }));
 
       // Analisar combos de produtos
       const productCombos = analyzeProductCombos(sales);

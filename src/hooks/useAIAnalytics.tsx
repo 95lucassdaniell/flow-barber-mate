@@ -1,8 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from './useAuth';
-import { useClients } from './useClients';
-import { useAppointments } from './useAppointments';
-import { useSales } from './useSales';
 import { supabase } from '@/integrations/supabase/client';
 import { differenceInDays, addDays, format } from 'date-fns';
 
@@ -60,13 +57,13 @@ interface AIInsights {
 
 export const useAIAnalytics = () => {
   const { profile } = useAuth();
-  const { clients } = useClients();
-  const { appointments } = useAppointments();
-  const { sales } = useSales();
   
   const [insights, setInsights] = useState<AIInsights | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [clients, setClients] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [sales, setSales] = useState<any[]>([]);
 
   // Calcular padrões de clientes
   const clientPatterns = useMemo(() => {
@@ -192,10 +189,72 @@ export const useAIAnalytics = () => {
     }).filter(insight => insight.suggestedAction);
   }, [appointments]);
 
-  // Processar insights com IA
-  const processAIInsights = async () => {
+  // Buscar dados diretamente do banco
+  const fetchData = async () => {
+    if (!profile?.barbershop_id) return;
+
     setLoading(true);
     setError(null);
+
+    try {
+      // Buscar dados em paralelo
+      const [clientsRes, appointmentsRes, salesRes] = await Promise.all([
+        supabase
+          .from('clients')
+          .select('id, name, phone, email, created_at')
+          .eq('barbershop_id', profile.barbershop_id),
+        supabase
+          .from('appointments')
+          .select('id, client_id, barber_id, service_id, appointment_date, start_time, end_time, total_price, status, created_at')
+          .eq('barbershop_id', profile.barbershop_id)
+          .gte('appointment_date', '2024-01-01'),
+        supabase
+          .from('sales')
+          .select('id, client_id, barber_id, sale_date, final_amount, created_at')
+          .eq('barbershop_id', profile.barbershop_id)
+          .gte('created_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
+      ]);
+
+      if (clientsRes.error) throw clientsRes.error;
+      if (appointmentsRes.error) throw appointmentsRes.error;
+      if (salesRes.error) throw salesRes.error;
+
+      setClients(clientsRes.data || []);
+      setAppointments(appointmentsRes.data || []);
+      setSales(salesRes.data || []);
+
+      console.log('📊 Dados carregados para IA:', {
+        clients: clientsRes.data?.length || 0,
+        appointments: appointmentsRes.data?.length || 0,
+        sales: salesRes.data?.length || 0
+      });
+
+      // Log adicional para debug
+      console.log('🔍 Amostra de dados:');
+      if (clientsRes.data?.length > 0) {
+        console.log('Cliente exemplo:', clientsRes.data[0]);
+      }
+      if (appointmentsRes.data?.length > 0) {
+        console.log('Agendamento exemplo:', appointmentsRes.data[0]);
+      }
+      if (salesRes.data?.length > 0) {
+        console.log('Venda exemplo:', salesRes.data[0]);
+      }
+
+    } catch (err) {
+      console.error('Erro ao buscar dados:', err);
+      setError('Erro ao buscar dados para análise');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Processar insights com IA
+  const processAIInsights = async () => {
+    if (!clients.length && !appointments.length && !sales.length) {
+      await fetchData();
+      return;
+    }
 
     try {
       const { data, error } = await supabase.functions.invoke('ai-analytics', {
@@ -213,9 +272,9 @@ export const useAIAnalytics = () => {
         scheduleInsights,
         salesPatterns: [], // será implementado na próxima fase
         predictions: data.predictions || {
-          monthlyRevenue: 0,
+          monthlyRevenue: sales.reduce((sum, sale) => sum + Number(sale.final_amount), 0),
           churnRiskClients: clientPatterns.filter(c => c.churnRisk === 'high').length,
-          recommendedActions: []
+          recommendedActions: data.recommendedActions || generateBasicRecommendations()
         }
       };
 
@@ -230,15 +289,13 @@ export const useAIAnalytics = () => {
         scheduleInsights,
         salesPatterns: [],
         predictions: {
-          monthlyRevenue: 0,
+          monthlyRevenue: sales.reduce((sum, sale) => sum + Number(sale.final_amount), 0),
           churnRiskClients: clientPatterns.filter(c => c.churnRisk === 'high').length,
           recommendedActions: generateBasicRecommendations()
         }
       };
       
       setInsights(basicInsights);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -270,16 +327,26 @@ export const useAIAnalytics = () => {
 
   // Atualizar insights automaticamente
   useEffect(() => {
-    if (clients && appointments && sales && profile?.barbershop_id) {
+    if (profile?.barbershop_id) {
+      fetchData();
+    }
+  }, [profile?.barbershop_id]);
+
+  useEffect(() => {
+    if (clients.length > 0 || appointments.length > 0 || sales.length > 0) {
       processAIInsights();
     }
-  }, [clients, appointments, sales, profile?.barbershop_id]);
+  }, [clients, appointments, sales]);
+
+  const refreshInsights = async () => {
+    await fetchData();
+  };
 
   return {
     insights,
     loading,
     error,
-    refreshInsights: processAIInsights,
+    refreshInsights,
     clientPatterns,
     scheduleInsights
   };
