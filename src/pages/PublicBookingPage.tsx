@@ -14,19 +14,47 @@ const PublicBookingContent = () => {
   const { slug } = useParams<{ slug: string }>();
   const { isAuthenticated, client, barbershop } = usePhoneAuth();
   const { barbershop: barbershopData, loading: isLoading } = useBarbershopBySlug(slug || '');
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
+    // Debug logs for production
     console.log('🔄 PublicBookingPage mounted:', {
       slug,
       href: window.location.href,
       pathname: window.location.pathname,
       barbershop: barbershopData?.name,
       isLoading,
-      isAuthenticated
+      isAuthenticated,
+      userAgent: navigator.userAgent,
+      documentReadyState: document.readyState
     });
+
+    // Ensure DOM is ready
+    const initializeApp = () => {
+      if (document.readyState === 'complete') {
+        setInitialized(true);
+        console.log('✅ App initialized successfully');
+      } else {
+        setTimeout(initializeApp, 100);
+      }
+    };
+
+    initializeApp();
   }, [slug, barbershopData, isLoading, isAuthenticated]);
 
-  if (isLoading) {
+  // Add timeout fallback for loading
+  useEffect(() => {
+    if (isLoading) {
+      const timeout = setTimeout(() => {
+        console.warn('⚠️ Loading timeout - forcing initialization');
+        setInitialized(true);
+      }, 10000); // 10 second timeout
+
+      return () => clearTimeout(timeout);
+    }
+  }, [isLoading]);
+
+  if (!initialized || isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-md">
@@ -44,7 +72,7 @@ const PublicBookingContent = () => {
     );
   }
 
-  if (!barbershopData) {
+  if (!barbershopData && !isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-md">
@@ -127,11 +155,40 @@ const PublicBookingContent = () => {
 
 export const PublicBookingPage = () => {
   useEffect(() => {
-    console.log('🚀 PublicBookingPage root mounted');
+    console.log('🚀 PublicBookingPage root mounted:', {
+      location: window.location.href,
+      pathname: window.location.pathname,
+      search: window.location.search,
+      hash: window.location.hash,
+      origin: window.location.origin,
+      protocol: window.location.protocol,
+      host: window.location.host,
+      timestamp: new Date().toISOString()
+    });
+
+    // Ensure React Router is working
+    if (!window.location.pathname.includes('/app/')) {
+      console.warn('⚠️ Possible routing issue - pathname does not include /app/');
+    }
   }, []);
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundary fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Erro de Carregamento</h2>
+          <p className="text-muted-foreground mb-4">
+            Ocorreu um erro ao carregar a página de agendamento.
+          </p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
+    }>
       <LoadingProvider>
         <PhoneAuthProvider>
           <PublicBookingContent />
