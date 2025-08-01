@@ -16,15 +16,37 @@ import {
 import { useSalesAnalytics } from '@/hooks/useSalesAnalytics';
 
 export const SalesAnalyticsDashboard = () => {
-  const { analytics, loading } = useSalesAnalytics();
+  const { analytics, loading, error, progress, refetchAnalytics } = useSalesAnalytics();
 
   // Debug logging
   console.log('🎯 SalesAnalyticsDashboard - Loading:', loading);
   console.log('🎯 SalesAnalyticsDashboard - Analytics:', analytics);
+  console.log('🎯 SalesAnalyticsDashboard - Error:', error);
+  console.log('🎯 SalesAnalyticsDashboard - Progress:', progress);
 
   if (loading) {
     return (
       <div className="space-y-6">
+        {/* Indicador de Progresso */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-medium">Processando Análise de Vendas</h3>
+              <span className="text-sm text-muted-foreground">
+                {progress.current}/{progress.total}
+              </span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>{progress.step}</span>
+                <span>{Math.round((progress.current / progress.total) * 100)}%</span>
+              </div>
+              <Progress value={(progress.current / progress.total) * 100} className="w-full" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Skeleton Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[1, 2, 3].map(i => (
             <Card key={i} className="animate-pulse">
@@ -35,6 +57,28 @@ export const SalesAnalyticsDashboard = () => {
             </Card>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              <h3 className="font-medium text-red-900">Erro na Análise de Vendas</h3>
+            </div>
+            <p className="text-red-700 mb-4">{error}</p>
+            <button 
+              onClick={refetchAnalytics}
+              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+            >
+              Tentar Novamente
+            </button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

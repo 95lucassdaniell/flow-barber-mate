@@ -84,29 +84,68 @@ export const useSalesAnalytics = () => {
     topPerformingProducts: [],
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<{step: string, current: number, total: number}>({
+    step: 'Iniciando...',
+    current: 0,
+    total: 7
+  });
+
+  // Função para buscar dados em chunks menores
+  const fetchDataInChunks = async <T,>(
+    query: any,
+    chunkSize: number = 100
+  ): Promise<T[]> => {
+    let allData: T[] = [];
+    let from = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, error } = await query
+        .range(from, from + chunkSize - 1);
+
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        allData = [...allData, ...data];
+        from += chunkSize;
+        hasMore = data.length === chunkSize;
+      } else {
+        hasMore = false;
+      }
+      
+      // Pequeno delay para não sobrecarregar
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+
+    return allData;
+  };
 
   const calculateMarketBasketAnalysis = async () => {
     if (!profile?.barbershop_id) return;
 
     try {
       setLoading(true);
+      setError(null);
       console.log('🔍 Iniciando análise de vendas para barbershop:', profile.barbershop_id);
 
-      // Buscar vendas dos últimos 90 dias
-      const { data: sales, error: salesError } = await supabase
+      setProgress({step: 'Buscando vendas...', current: 1, total: 7});
+
+      // Buscar vendas dos últimos 150 dias (expandido)
+      const daysBack = 150;
+      const cutoffDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      const salesQuery = supabase
         .from('sales')
         .select('id, client_id, final_amount, sale_date, created_at')
         .eq('barbershop_id', profile.barbershop_id)
-        .gte('sale_date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+        .gte('sale_date', cutoffDate)
         .order('created_at', { ascending: false });
 
-      if (salesError) {
-        console.error('❌ Erro ao buscar vendas:', salesError);
-        throw salesError;
-      }
+      const sales = await fetchDataInChunks(salesQuery, 500);
 
       if (!sales || sales.length === 0) {
-        console.log('❌ Nenhuma venda encontrada nos últimos 90 dias');
+        console.log(`❌ Nenhuma venda encontrada nos últimos ${daysBack} dias`);
         setAnalytics({
           serviceProductCombos: [],
           productCombos: [],
@@ -120,21 +159,43 @@ export const useSalesAnalytics = () => {
       }
 
       console.log('📊 Vendas encontradas:', sales.length);
+      setProgress({step: 'Buscando itens das vendas...', current: 2, total: 7});
 
-      // Buscar itens das vendas
-      const saleIds = sales.map(sale => sale.id);
-      const { data: saleItems, error: itemsError } = await supabase
-        .from('sale_items')
-        .select('id, sale_id, item_type, service_id, product_id, quantity, unit_price, total_price')
-        .in('sale_id', saleIds);
+      // Buscar itens das vendas em chunks menores
+      const saleIds = sales.map((sale: any) => sale.id);
+      let saleItems: any[] = [];
+      
+      // Dividir saleIds em chunks menores para evitar timeouts
+      const chunkSize = 100;
+      for (let i = 0; i < saleIds.length; i += chunkSize) {
+        const idsChunk = saleIds.slice(i, i + chunkSize);
+        
+        console.log(`🔍 Buscando itens chunk ${Math.floor(i/chunkSize) + 1}/${Math.ceil(saleIds.length/chunkSize)}`);
+        
+        const { data: itemsChunk, error: itemsError } = await supabase
+          .from('sale_items')
+          .select('id, sale_id, item_type, service_id, product_id, quantity, unit_price, total_price')
+          .in('sale_id', idsChunk);
 
-      if (itemsError) {
-        console.error('❌ Erro ao buscar itens das vendas:', itemsError);
-        throw itemsError;
+        if (itemsError) {
+          console.error('❌ Erro ao buscar itens das vendas:', itemsError);
+          throw itemsError;
+        }
+
+        if (itemsChunk) {
+          saleItems = [...saleItems, ...itemsChunk];
+        }
+        
+        // Pequeno delay entre chunks
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
 
+      console.log('🛒 Total de itens encontrados:', saleItems.length);
+
+      setProgress({step: 'Buscando clientes...', current: 3, total: 7});
+
       // Buscar clientes
-      const clientIds = [...new Set(sales.map(sale => sale.client_id))];
+      const clientIds = [...new Set(sales.map((sale: any) => sale.client_id))];
       const { data: clients, error: clientsError } = await supabase
         .from('clients')
         .select('id, name')
@@ -145,8 +206,10 @@ export const useSalesAnalytics = () => {
         throw clientsError;
       }
 
+      setProgress({step: 'Buscando serviços...', current: 4, total: 7});
+
       // Buscar serviços
-      const serviceIds = [...new Set(saleItems?.filter(item => item.service_id).map(item => item.service_id) || [])];
+      const serviceIds = [...new Set(saleItems?.filter((item: any) => item.service_id).map((item: any) => item.service_id) || [])];
       const { data: services, error: servicesError } = serviceIds.length > 0 ? await supabase
         .from('services')
         .select('id, name')
@@ -157,8 +220,10 @@ export const useSalesAnalytics = () => {
         throw servicesError;
       }
 
+      setProgress({step: 'Buscando produtos...', current: 5, total: 7});
+
       // Buscar produtos
-      const productIds = [...new Set(saleItems?.filter(item => item.product_id).map(item => item.product_id) || [])];
+      const productIds = [...new Set(saleItems?.filter((item: any) => item.product_id).map((item: any) => item.product_id) || [])];
       const { data: products, error: productsError } = productIds.length > 0 ? await supabase
         .from('products')
         .select('id, name, cost_price')
@@ -169,23 +234,25 @@ export const useSalesAnalytics = () => {
         throw productsError;
       }
 
+      setProgress({step: 'Processando dados...', current: 6, total: 7});
+
       // Criar maps para lookups rápidos
-      const clientsMap = new Map(clients?.map(c => [c.id, c] as const) || []);
-      const servicesMap = new Map(services?.map(s => [s.id, s] as const) || []);
-      const productsMap = new Map(products?.map(p => [p.id, p] as const) || []);
+      const clientsMap = new Map(clients?.map((c: any) => [c.id, c] as const) || []);
+      const servicesMap = new Map(services?.map((s: any) => [s.id, s] as const) || []);
+      const productsMap = new Map(products?.map((p: any) => [p.id, p] as const) || []);
 
       // Combinar dados
-      const salesWithItems = sales.map(sale => ({
+      const salesWithItems = sales.map((sale: any) => ({
         ...sale,
         clients: clientsMap.get(sale.client_id),
         sale_items: (saleItems || [])
-          .filter(item => item.sale_id === sale.id)
-          .map(item => ({
+          .filter((item: any) => item.sale_id === sale.id)
+          .map((item: any) => ({
             ...item,
             services: item.service_id ? servicesMap.get(item.service_id) : null,
             products: item.product_id ? productsMap.get(item.product_id) : null,
           }))
-      })).filter(sale => sale.sale_items.length > 0);
+      })).filter((sale: any) => sale.sale_items.length > 0);
 
       console.log('📊 Vendas com itens encontradas:', salesWithItems?.length || 0);
 
@@ -244,6 +311,8 @@ export const useSalesAnalytics = () => {
       const topPerformingProducts = analyzeProductPerformance(salesWithItems);
       console.log('🥇 Top produtos:', topPerformingProducts.length);
 
+      setProgress({step: 'Finalizando análise...', current: 7, total: 7});
+
       const finalAnalytics = {
         serviceProductCombos,
         productCombos,
@@ -258,9 +327,22 @@ export const useSalesAnalytics = () => {
       setAnalytics(finalAnalytics);
 
     } catch (error) {
-      console.error('Erro ao calcular análise de vendas:', error);
+      console.error('❌ Erro ao calcular análise de vendas:', error);
+      setError(error instanceof Error ? error.message : 'Erro desconhecido ao processar dados');
+      
+      // Em caso de erro, definir analytics vazio
+      setAnalytics({
+        serviceProductCombos: [],
+        productCombos: [],
+        serviceCombos: [],
+        crossSellOpportunities: [],
+        clientPatterns: [],
+        topPerformingServices: [],
+        topPerformingProducts: [],
+      });
     } finally {
       setLoading(false);
+      setProgress({step: 'Concluído', current: 7, total: 7});
     }
   };
 
@@ -759,6 +841,8 @@ export const useSalesAnalytics = () => {
   return {
     analytics,
     loading,
+    error,
+    progress,
     refetchAnalytics: calculateMarketBasketAnalysis,
     getUpsellSuggestions
   };
