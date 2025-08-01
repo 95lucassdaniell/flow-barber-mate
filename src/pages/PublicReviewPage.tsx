@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Star, ThumbsUp, Heart } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Star, ThumbsUp, Heart, User } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 // Função para formatar telefone brasileiro
@@ -50,12 +51,20 @@ interface BarberData {
   full_name: string;
 }
 
+interface ProviderData {
+  id: string;
+  full_name: string;
+  role: string;
+}
+
 const PublicReviewPage: React.FC = () => {
   const { slug } = useParams();
   const [searchParams] = useSearchParams();
   const [barbershop, setBarbershop] = useState<BarbershopData | null>(null);
   const [client, setClient] = useState<ClientData | null>(null);
   const [barber, setBarber] = useState<BarberData | null>(null);
+  const [providers, setProviders] = useState<ProviderData[]>([]);
+  const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -114,6 +123,23 @@ const PublicReviewPage: React.FC = () => {
 
           if (barberData) {
             setBarber(barberData);
+            setSelectedProviderId(barberId);
+          }
+        }
+
+        // Load all providers for selection
+        if (barbershopData) {
+          const { data: providersData } = await supabase
+            .from('profiles')
+            .select('id, full_name, role')
+            .eq('barbershop_id', barbershopData.id)
+            .eq('is_active', true)
+            .in('role', ['admin', 'barber', 'receptionist'])
+            .order('role', { ascending: false }) // barbeiros primeiro
+            .order('full_name');
+
+          if (providersData) {
+            setProviders(providersData);
           }
         }
       } catch (error) {
@@ -161,7 +187,7 @@ const PublicReviewPage: React.FC = () => {
         .from('public_client_reviews')
         .insert([{
           barbershop_id: barbershop.id,
-          barber_id: barberId || null,
+          barber_id: selectedProviderId === 'none' ? null : (selectedProviderId || barberId || null),
           client_name: customerName.trim(),
           client_phone: formattedPhone,
           nps_score: npsScore,
@@ -279,6 +305,66 @@ const PublicReviewPage: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Provider Selection */}
+            {!barberId && providers.length > 0 && (
+              <div>
+                <label className="text-sm font-medium block mb-3">
+                  Quem te atendeu?
+                </label>
+                <Select value={selectedProviderId || ''} onValueChange={setSelectedProviderId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione quem te atendeu">
+                      {selectedProviderId === 'none' ? (
+                        <div className="flex items-center">
+                          <User className="w-4 h-4 mr-2" />
+                          Não me lembro
+                        </div>
+                      ) : selectedProviderId ? (
+                        <div className="flex items-center">
+                          <User className="w-4 h-4 mr-2" />
+                          {providers.find(p => p.id === selectedProviderId)?.full_name}
+                        </div>
+                      ) : null}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {providers.map((provider) => (
+                      <SelectItem key={provider.id} value={provider.id}>
+                        <div className="flex items-center">
+                          <User className="w-4 h-4 mr-2" />
+                          <div>
+                            <div className="font-medium">{provider.full_name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {provider.role === 'barber' ? 'Barbeiro' : 
+                               provider.role === 'admin' ? 'Administrador' : 'Recepcionista'}
+                            </div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="none">
+                      <div className="flex items-center">
+                        <User className="w-4 h-4 mr-2" />
+                        Não me lembro
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Show current barber if pre-selected */}
+            {barber && (
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="flex items-center">
+                  <User className="w-4 h-4 mr-2" />
+                  <span className="text-sm">
+                    <strong>Prestador:</strong> {barber.full_name}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* NPS Score */}
             <div>
