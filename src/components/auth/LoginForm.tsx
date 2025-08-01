@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import logo from "@/assets/barberflow-logo.png";
+import logo from "@/assets/salao-ai-logo.png";
 import usePageTitle from "@/hooks/usePageTitle";
 
 const LoginForm = () => {
@@ -88,7 +88,7 @@ const LoginForm = () => {
 
       toast({
         title: "Login realizado!",
-        description: "Bem-vindo de volta ao BarberFlow!",
+        description: "Bem-vindo de volta ao Salão.ai!",
       });
 
       // Check if there's a redirect location from ProtectedRoute
@@ -125,13 +125,13 @@ const LoginForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-secondary/30 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-3 mb-4">
-            <img src={logo} alt="BarberFlow" className="w-10 h-10" />
-            <span className="text-2xl font-bold">BarberFlow</span>
+            <img src={logo} alt="Salão.ai" className="w-10 h-10" />
+            <span className="text-2xl font-bold">Salão.ai</span>
           </div>
           <h1 className="text-2xl font-bold mb-2">Entrar na sua conta</h1>
           <p className="text-muted-foreground">
@@ -175,7 +175,7 @@ const LoginForm = () => {
                 </Link>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" variant="hero" className="w-full" disabled={loading}>
                 {loading ? "Entrando..." : "Entrar"}
               </Button>
             </form>
