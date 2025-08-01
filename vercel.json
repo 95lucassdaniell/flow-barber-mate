@@ -1,4 +1,5 @@
 {
+  "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "cleanUrls": true,
@@ -13,7 +14,7 @@
       "destination": "/index.html"
     },
     {
-      "source": "/((?!api|static|assets|_next).*)",
+      "source": "/((?!api|assets|_next|favicon\\.ico|robots\\.txt|.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)).*)",
       "destination": "/index.html"
     }
   ],
@@ -40,7 +41,7 @@
       ]
     },
     {
-      "source": "/static/(.*)",
+      "source": "/assets/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -49,7 +50,7 @@
       ]
     },
     {
-      "source": "/(.*\\.(js|css))",
+      "source": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot))",
       "headers": [
         {
           "key": "Cache-Control",
