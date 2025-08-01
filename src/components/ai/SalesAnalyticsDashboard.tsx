@@ -65,7 +65,9 @@ export const SalesAnalyticsDashboard = () => {
               <Package className="h-5 w-5 text-blue-500" />
               <h3 className="font-medium">Combos de Produtos</h3>
             </div>
-            <p className="text-2xl font-bold mt-2">{analytics.productCombos.length}</p>
+            <p className="text-2xl font-bold mt-2">
+              {loading ? "..." : analytics.productCombos.length}
+            </p>
             <p className="text-sm text-muted-foreground">Identificados</p>
           </CardContent>
         </Card>
@@ -76,7 +78,9 @@ export const SalesAnalyticsDashboard = () => {
               <Scissors className="h-5 w-5 text-green-500" />
               <h3 className="font-medium">Combos de Serviços</h3>
             </div>
-            <p className="text-2xl font-bold mt-2">{analytics.serviceCombos.length}</p>
+            <p className="text-2xl font-bold mt-2">
+              {loading ? "..." : analytics.serviceCombos.length}
+            </p>
             <p className="text-sm text-muted-foreground">Identificados</p>
           </CardContent>
         </Card>
