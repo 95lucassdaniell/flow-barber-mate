@@ -8,6 +8,31 @@ import { Textarea } from '@/components/ui/textarea';
 import { Star, ThumbsUp, Heart } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
+// Função para formatar telefone brasileiro
+const formatPhone = (phone: string): string => {
+  // Remove todos os caracteres não numéricos
+  const cleaned = phone.replace(/\D/g, '');
+  
+  // Se tem 11 dígitos (celular), formato: (XX) XXXXX-XXXX
+  if (cleaned.length === 11) {
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+  }
+  
+  // Se tem 10 dígitos (fixo), formato: (XX) XXXX-XXXX
+  if (cleaned.length === 10) {
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+  }
+  
+  // Se não tem 10 ou 11 dígitos, retorna como está
+  return phone;
+};
+
+// Função para validar formato de telefone
+const isValidPhone = (phone: string): boolean => {
+  const cleaned = phone.replace(/\D/g, '');
+  return cleaned.length === 10 || cleaned.length === 11;
+};
+
 interface BarbershopData {
   id: string;
   name: string;
@@ -116,16 +141,27 @@ const PublicReviewPage: React.FC = () => {
       return;
     }
 
+    // Validar formato do telefone
+    if (!isValidPhone(customerPhone)) {
+      toast({
+        title: "Telefone inválido",
+        description: "Por favor, digite um telefone válido com DDD (10 ou 11 dígitos).",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSubmitting(true);
 
     try {
       let finalClientId = client?.id;
+      const formattedPhone = formatPhone(customerPhone);
 
-      // Find existing client by phone or create a new one
+      // Find existing client by formatted phone or create a new one
       const { data: existingClient } = await supabase
         .from('clients')
         .select('id')
-        .eq('phone', customerPhone.trim())
+        .eq('phone', formattedPhone)
         .eq('barbershop_id', barbershop.id)
         .single();
 
@@ -136,7 +172,7 @@ const PublicReviewPage: React.FC = () => {
           .from('clients')
           .insert([{
             name: customerName.trim(),
-            phone: customerPhone.trim(),
+            phone: formattedPhone,
             barbershop_id: barbershop.id
           }])
           .select('id')
@@ -275,9 +311,16 @@ const PublicReviewPage: React.FC = () => {
                   <label className="text-sm font-medium">Telefone *</label>
                   <Input
                     value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    onChange={(e) => {
+                      const cleaned = e.target.value.replace(/\D/g, '');
+                      setCustomerPhone(cleaned);
+                    }}
                     placeholder="(11) 99999-9999"
+                    maxLength={11}
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Digite apenas números (DDD + telefone)
+                  </p>
                 </div>
               )}
             </div>
