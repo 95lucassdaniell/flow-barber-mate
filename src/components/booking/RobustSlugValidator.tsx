@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 interface ValidatorProps {
   slug: string;
   onValidated: (isValid: boolean, barbershopData?: any) => void;
-  children: React.ReactNode;
+  children: (barbershopData: any) => React.ReactNode;
 }
 
 export const RobustSlugValidator = ({ slug, onValidated, children }: ValidatorProps) => {
@@ -125,5 +125,5 @@ export const RobustSlugValidator = ({ slug, onValidated, children }: ValidatorPr
     );
   }
 
-  return <>{children}</>;
+  return <>{children(barbershopData)}</>;
 };

@@ -4,7 +4,7 @@ import { PhoneAuthProvider } from '@/hooks/usePhoneAuth';
 import { PhoneLogin } from '@/components/booking/PhoneLogin';
 import { BookingFlow } from '@/components/booking/BookingFlow';
 import { usePhoneAuth } from '@/hooks/usePhoneAuth';
-import { useBarbershopBySlug } from '@/hooks/useBarbershopBySlug';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { LoadingProvider } from '@/contexts/LoadingContext';
 import { Scissors, Calendar, Star, Clock } from 'lucide-react';
@@ -12,10 +12,9 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { RobustSlugValidator } from '@/components/booking/RobustSlugValidator';
 import { useEnvironmentDetection } from '@/components/booking/EnvironmentDetector';
 
-const PublicBookingContent = () => {
+const PublicBookingContent = ({ barbershopData }: { barbershopData: any }) => {
   const { slug } = useParams<{ slug: string }>();
   const { isAuthenticated, client, barbershop } = usePhoneAuth();
-  const { barbershop: barbershopData, loading: isLoading } = useBarbershopBySlug(slug || '');
   const [initialized, setInitialized] = useState(false);
   const envInfo = useEnvironmentDetection();
 
@@ -26,7 +25,6 @@ const PublicBookingContent = () => {
       href: window.location.href,
       pathname: window.location.pathname,
       barbershop: barbershopData?.name,
-      isLoading,
       isAuthenticated,
       userAgent: navigator.userAgent,
       documentReadyState: document.readyState,
@@ -44,21 +42,9 @@ const PublicBookingContent = () => {
     };
 
     initializeApp();
-  }, [slug, barbershopData, isLoading, isAuthenticated]);
+  }, [slug, barbershopData, isAuthenticated]);
 
-  // Add timeout fallback for loading
-  useEffect(() => {
-    if (isLoading) {
-      const timeout = setTimeout(() => {
-        console.warn('⚠️ Loading timeout - forcing initialization');
-        setInitialized(true);
-      }, 10000); // 10 second timeout
-
-      return () => clearTimeout(timeout);
-    }
-  }, [isLoading]);
-
-  if (!initialized || isLoading) {
+  if (!initialized) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-md">
@@ -76,7 +62,7 @@ const PublicBookingContent = () => {
     );
   }
 
-  if (!barbershopData && !isLoading) {
+  if (!barbershopData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-md">
@@ -216,7 +202,7 @@ export const PublicBookingPage = () => {
               });
             }}
           >
-            <PublicBookingContent />
+            {(barbershopData) => <PublicBookingContent barbershopData={barbershopData} />}
           </RobustSlugValidator>
         </PhoneAuthProvider>
       </LoadingProvider>
