@@ -3468,6 +3468,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          template_type: string | null
           updated_at: string
           variables: Json | null
         }
@@ -3479,6 +3480,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          template_type?: string | null
           updated_at?: string
           variables?: Json | null
         }
@@ -3490,6 +3492,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          template_type?: string | null
           updated_at?: string
           variables?: Json | null
         }

@@ -44,6 +44,14 @@ export const useCRMMetrics = () => {
 
       if (appointmentsError) throw appointmentsError;
 
+      // Buscar avaliações NPS reais
+      const { data: reviews, error: reviewsError } = await supabase
+        .from('client_reviews' as any)
+        .select('nps_score, created_at')
+        .eq('barbershop_id', profile.barbershop_id);
+
+      if (reviewsError) throw reviewsError;
+
       // Cálculos
       const now = new Date();
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -114,21 +122,37 @@ export const useCRMMetrics = () => {
       const avgFrequencyDays = intervalCount > 0 ? 
         Math.round(totalDaysBetweenVisits / intervalCount) : 0;
 
-      // NPS Score simulado baseado em padrões de comportamento
-      const recentClients = Array.from(clientVisits.entries()).filter(([_, visits]) => {
-        const lastVisit = visits[visits.length - 1];
-        return lastVisit >= thirtyDaysAgo;
-      });
+      // NPS Score real ou simulado
+      let npsScore = 0;
+      
+      if (reviews && reviews.length > 0) {
+        // Usar avaliações reais se existirem
+        const recentReviews = reviews.filter((review: any) => 
+          new Date(review.created_at) >= sixMonthsAgo
+        );
+        
+        if (recentReviews.length > 0) {
+          const promoters = recentReviews.filter((r: any) => r.nps_score >= 9).length;
+          const detractors = recentReviews.filter((r: any) => r.nps_score <= 6).length;
+          npsScore = Math.round(((promoters - detractors) / recentReviews.length) * 100);
+        }
+      } else {
+        // Fallback para simulação baseada em comportamento
+        const recentClients = Array.from(clientVisits.entries()).filter(([_, visits]) => {
+          const lastVisit = visits[visits.length - 1];
+          return lastVisit >= thirtyDaysAgo;
+        });
 
-      const promoters = recentClients.filter(([_, visits]) => visits.length >= 3).length;
-      const detractors = recentClients.filter(([_, visits]) => {
-        const lastVisit = visits[visits.length - 1];
-        const daysSinceLastVisit = (now.getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24);
-        return daysSinceLastVisit > 45;
-      }).length;
+        const promoters = recentClients.filter(([_, visits]) => visits.length >= 3).length;
+        const detractors = recentClients.filter(([_, visits]) => {
+          const lastVisit = visits[visits.length - 1];
+          const daysSinceLastVisit = (now.getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24);
+          return daysSinceLastVisit > 45;
+        }).length;
 
-      const npsScore = recentClients.length > 0 ? 
-        Math.max(0, Math.min(100, ((promoters - detractors) / recentClients.length) * 100)) : 75;
+        npsScore = recentClients.length > 0 ? 
+          Math.max(0, Math.min(100, ((promoters - detractors) / recentClients.length) * 100)) : 75;
+      }
 
       setMetrics({
         totalClients,
