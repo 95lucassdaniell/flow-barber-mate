@@ -98,50 +98,90 @@ export const useBookingAvailability = (barbershopId: string) => {
     providerId?: string
   ): Promise<string[]> => {
     try {
+      console.log('🔍 Getting available time slots for:', { date: format(date, 'yyyy-MM-dd'), serviceId, providerId, barbershopId });
+      
       const selectedDate = format(date, 'yyyy-MM-dd');
       
       // Get barbershop opening hours
-      const { data: barbershop } = await supabase
+      const { data: barbershop, error: barbershopError } = await supabase
         .from('barbershops')
         .select('opening_hours')
         .eq('id', barbershopId)
         .single();
 
-      if (!barbershop?.opening_hours) return [];
+      if (barbershopError) {
+        console.error('❌ Error fetching barbershop:', barbershopError);
+        return [];
+      }
+
+      console.log('🏪 Barbershop data:', barbershop);
+
+      if (!barbershop?.opening_hours) {
+        console.log('⚠️ No opening hours found');
+        return [];
+      }
 
       const dayOfWeek = format(date, 'eeee').toLowerCase();
       const daySchedule = barbershop.opening_hours[dayOfWeek];
       
-      if (!daySchedule || !daySchedule.open || !daySchedule.close) return [];
+      console.log('📅 Day schedule:', { dayOfWeek, daySchedule });
+      
+      if (!daySchedule || !daySchedule.open || !daySchedule.close) {
+        console.log('⚠️ No schedule for this day');
+        return [];
+      }
 
       // Get service duration
       const service = services.find(s => s.id === serviceId);
-      if (!service) return [];
+      if (!service) {
+        console.log('⚠️ Service not found:', serviceId);
+        console.log('Available services:', services);
+        return [];
+      }
+
+      console.log('⚡ Service found:', service);
+
+      // Get available providers
+      let targetProviders: string[] = [];
+      if (providerId) {
+        targetProviders = [providerId];
+      } else {
+        const availableProviders = getAvailableProviders(serviceId);
+        console.log('👥 Available providers for service:', availableProviders);
+        if (availableProviders.length === 0) {
+          console.log('⚠️ No providers available for service');
+          return [];
+        }
+        targetProviders = availableProviders.map(p => p.id);
+      }
 
       // Get existing appointments for the date
-      let appointmentsQuery = supabase
+      const { data: appointments, error: appointmentsError } = await supabase
         .from('appointments')
         .select('barber_id, start_time, end_time')
         .eq('barbershop_id', barbershopId)
         .eq('appointment_date', selectedDate)
-        .neq('status', 'cancelled');
+        .neq('status', 'cancelled')
+        .in('barber_id', targetProviders);
 
-      if (providerId) {
-        appointmentsQuery = appointmentsQuery.eq('barber_id', providerId);
-      } else {
-        // Get all providers that can do this service
-        const availableProviders = getAvailableProviders(serviceId);
-        if (availableProviders.length === 0) return [];
-        appointmentsQuery = appointmentsQuery.in('barber_id', availableProviders.map(p => p.id));
+      if (appointmentsError) {
+        console.error('❌ Error fetching appointments:', appointmentsError);
+        return [];
       }
 
-      const { data: appointments } = await appointmentsQuery;
+      console.log('📋 Existing appointments:', appointments);
 
       // Generate time slots
       const slots: string[] = [];
       const startTime = new Date(`${selectedDate}T${daySchedule.open}:00`);
       const endTime = new Date(`${selectedDate}T${daySchedule.close}:00`);
       const slotDuration = 30; // minutes
+
+      console.log('⏰ Time range:', { 
+        start: format(startTime, 'HH:mm'), 
+        end: format(endTime, 'HH:mm'),
+        serviceDuration: service.duration_minutes
+      });
 
       let currentTime = new Date(startTime);
       
@@ -152,16 +192,13 @@ export const useBookingAvailability = (barbershopId: string) => {
         if (slotEnd <= endTime) {
           const timeSlot = format(currentTime, 'HH:mm');
           
-          // Check if slot is available
+          // Check if slot is available (simplified logic)
           const isAvailable = !appointments?.some(apt => {
             const aptStart = new Date(`${selectedDate}T${apt.start_time}`);
             const aptEnd = new Date(`${selectedDate}T${apt.end_time}`);
             
-            return (
-              (currentTime >= aptStart && currentTime < aptEnd) ||
-              (slotEnd > aptStart && slotEnd <= aptEnd) ||
-              (currentTime <= aptStart && slotEnd >= aptEnd)
-            );
+            // Simple overlap check: slot starts before appointment ends AND slot ends after appointment starts
+            return currentTime < aptEnd && slotEnd > aptStart;
           });
 
           if (isAvailable) {
@@ -172,9 +209,10 @@ export const useBookingAvailability = (barbershopId: string) => {
         currentTime = new Date(currentTime.getTime() + slotDuration * 60000);
       }
 
+      console.log('✅ Generated slots:', slots);
       return slots;
     } catch (error) {
-      console.error('Error getting available time slots:', error);
+      console.error('❌ Error getting available time slots:', error);
       return [];
     }
   };

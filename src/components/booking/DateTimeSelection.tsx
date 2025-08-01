@@ -39,6 +39,7 @@ export const DateTimeSelection = ({
   }, [selectedDate, serviceId, barberId]);
 
   const loadAvailableSlots = async (date: Date) => {
+    console.log('🔄 Loading slots for date:', date, 'serviceId:', serviceId, 'barberId:', barberId);
     setIsLoadingSlots(true);
     try {
       const slots = await getAvailableTimeSlots(
@@ -46,9 +47,10 @@ export const DateTimeSelection = ({
         serviceId, 
         barberId === 'any' ? undefined : barberId
       );
+      console.log('📊 Slots received:', slots);
       setAvailableSlots(slots);
     } catch (error) {
-      console.error('Error loading slots:', error);
+      console.error('❌ Error loading slots:', error);
       setAvailableSlots([]);
     } finally {
       setIsLoadingSlots(false);
