@@ -107,10 +107,10 @@ const PublicReviewPage: React.FC = () => {
   }, [slug, clientId, barberId]);
 
   const handleSubmit = async () => {
-    if (!barbershop || npsScore === null || !customerName.trim()) {
+    if (!barbershop || npsScore === null || !customerName.trim() || !customerPhone.trim()) {
       toast({
         title: "Campos obrigatórios",
-        description: "Por favor, preencha seu nome e dê uma nota de 0 a 10.",
+        description: "Por favor, preencha seu nome, telefone e dê uma nota de 0 a 10.",
         variant: "destructive",
       });
       return;
@@ -121,47 +121,29 @@ const PublicReviewPage: React.FC = () => {
     try {
       let finalClientId = client?.id;
 
-      // If no existing client, create a new one or find by phone
-      if (!finalClientId && customerPhone.trim()) {
-        const { data: existingClient } = await supabase
-          .from('clients')
-          .select('id')
-          .eq('phone', customerPhone.trim())
-          .eq('barbershop_id', barbershop.id)
-          .single();
+      // Find existing client by phone or create a new one
+      const { data: existingClient } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('phone', customerPhone.trim())
+        .eq('barbershop_id', barbershop.id)
+        .single();
 
-        if (existingClient) {
-          finalClientId = existingClient.id;
-        } else {
-          const { data: newClient, error: clientError } = await supabase
-            .from('clients')
-            .insert([{
-              name: customerName.trim(),
-              phone: customerPhone.trim(),
-              barbershop_id: barbershop.id
-            }])
-            .select('id')
-            .single();
-
-          if (clientError) throw clientError;
-          finalClientId = newClient.id;
-        }
-      }
-
-      if (!finalClientId) {
-        // Create a temporary client entry for reviews without phone
-        const { data: tempClient, error: tempClientError } = await supabase
+      if (existingClient) {
+        finalClientId = existingClient.id;
+      } else {
+        const { data: newClient, error: clientError } = await supabase
           .from('clients')
           .insert([{
             name: customerName.trim(),
-            phone: `temp_${Date.now()}@review`,
+            phone: customerPhone.trim(),
             barbershop_id: barbershop.id
           }])
           .select('id')
           .single();
 
-        if (tempClientError) throw tempClientError;
-        finalClientId = tempClient.id;
+        if (clientError) throw clientError;
+        finalClientId = newClient.id;
       }
 
       // Get default barber if none specified
@@ -290,7 +272,7 @@ const PublicReviewPage: React.FC = () => {
               
               {!client && (
                 <div>
-                  <label className="text-sm font-medium">Telefone (opcional)</label>
+                  <label className="text-sm font-medium">Telefone *</label>
                   <Input
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
@@ -366,7 +348,7 @@ const PublicReviewPage: React.FC = () => {
             {/* Submit Button */}
             <Button 
               onClick={handleSubmit}
-              disabled={submitting || npsScore === null || !customerName.trim()}
+              disabled={submitting || npsScore === null || !customerName.trim() || (!client && !customerPhone.trim())}
               className="w-full"
             >
               {submitting ? (
