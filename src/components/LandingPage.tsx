@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Scissors, Calendar, MessageCircle, TrendingUp, Users, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-barbershop.jpg";
-import logo from "@/assets/barberflow-logo.png";
+import logo from "@/assets/salao-ai-logo.png";
 import usePageTitle from "@/hooks/usePageTitle";
 
 const LandingPage = () => {
@@ -15,8 +15,8 @@ const LandingPage = () => {
       <header className="border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <img src={logo} alt="BarberFlow" className="w-8 h-8" />
-            <span className="text-xl font-bold text-foreground">BarberFlow</span>
+            <img src={logo} alt="Salão.ai" className="w-8 h-8" />
+            <span className="text-xl font-bold text-foreground">Salão.ai</span>
           </div>
           <nav className="hidden md:flex items-center space-x-6">
             <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -45,7 +45,7 @@ const LandingPage = () => {
         <div className="relative container mx-auto px-4 py-20 md:py-32">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-              Automatize sua barbearia e 
+              Automatize seu salão e 
               <span className="text-accent"> aumente o faturamento</span>
             </h1>
             <p className="text-xl md:text-2xl mb-8 text-primary-foreground/90">
@@ -70,10 +70,10 @@ const LandingPage = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Por que escolher o BarberFlow?
+              Por que escolher o Salão.ai?
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Não é mais um sistema complicado. É o assistente que sua barbearia precisa para crescer.
+              Não é mais um sistema complicado. É o assistente que seu salão precisa para crescer.
             </p>
           </div>
 
@@ -132,7 +132,7 @@ const LandingPage = () => {
               <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mb-4">
                 <Scissors className="w-6 h-6 text-accent" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Feito para Barbearias</h3>
+              <h3 className="text-xl font-semibold mb-3">Feito para Salões</h3>
               <p className="text-muted-foreground">
                 Interface simples, mobile-first e pensada especificamente para o seu negócio.
               </p>
@@ -162,10 +162,10 @@ const LandingPage = () => {
       <footer className="border-t border-border py-8">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
           <div className="flex items-center justify-center space-x-3 mb-4">
-            <img src={logo} alt="BarberFlow" className="w-6 h-6" />
-            <span className="font-semibold">BarberFlow</span>
+            <img src={logo} alt="Salão.ai" className="w-6 h-6" />
+            <span className="font-semibold">Salão.ai</span>
           </div>
-          <p>&copy; 2024 BarberFlow. Transformando barbearias em negócios digitais.</p>
+          <p>&copy; 2024 Salão.ai. Transformando salões em negócios digitais inteligentes.</p>
         </div>
       </footer>
     </div>

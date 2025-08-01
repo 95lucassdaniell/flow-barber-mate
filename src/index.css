@@ -17,31 +17,31 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 220 20% 14%;
 
-    --primary: 220 40% 18%;
+    --primary: 259 54% 53%;
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 220 15% 96%;
+    --secondary: 301 89% 73%;
     --secondary-foreground: 220 20% 14%;
 
     --muted: 220 15% 96%;
     --muted-foreground: 220 8% 46%;
 
-    --accent: 43 96% 56%;
-    --accent-foreground: 220 20% 14%;
+    --accent: 301 89% 73%;
+    --accent-foreground: 0 0% 98%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
     --border: 220 15% 91%;
     --input: 220 15% 91%;
-    --ring: 220 40% 18%;
+    --ring: 259 54% 53%;
 
-    --hero-gradient: linear-gradient(135deg, hsl(220 40% 18%), hsl(220 30% 25%));
-    --accent-gradient: linear-gradient(135deg, hsl(43 96% 56%), hsl(45 90% 60%));
-    --card-gradient: linear-gradient(135deg, hsl(0 0% 100%), hsl(220 15% 98%));
+    --hero-gradient: linear-gradient(135deg, hsl(259 54% 53%), hsl(301 89% 73%));
+    --accent-gradient: linear-gradient(135deg, hsl(259 54% 53%), hsl(301 89% 73%));
+    --card-gradient: linear-gradient(135deg, hsl(0 0% 100%), hsl(301 89% 95%));
     
-    --shadow-elegant: 0 10px 30px -10px hsl(220 40% 18% / 0.2);
-    --shadow-glow: 0 0 40px hsl(43 96% 56% / 0.15);
+    --shadow-elegant: 0 10px 30px -10px hsl(259 54% 53% / 0.3);
+    --shadow-glow: 0 0 40px hsl(301 89% 73% / 0.4);
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
