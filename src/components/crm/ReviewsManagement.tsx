@@ -238,11 +238,11 @@ const ReviewsManagement: React.FC = () => {
                             </div>
                             <div className="text-xs text-muted-foreground">NPS</div>
                           </div>
-                          {review.rating_stars && (
+                          {review.star_rating && (
                             <div className="text-center">
-                              {getStarRating(review.rating_stars)}
+                              {getStarRating(review.star_rating)}
                               <div className="text-xs text-muted-foreground mt-1">
-                                {review.rating_stars}/5 estrelas
+                                {review.star_rating}/5 estrelas
                               </div>
                             </div>
                           )}
@@ -328,11 +328,11 @@ const ReviewsManagement: React.FC = () => {
                             </div>
                             <div className="text-xs text-muted-foreground">NPS</div>
                           </div>
-                          {review.rating_stars && (
+                          {review.star_rating && (
                             <div className="text-center">
-                              {getStarRating(review.rating_stars)}
+                              {getStarRating(review.star_rating)}
                               <div className="text-xs text-muted-foreground mt-1">
-                                {review.rating_stars}/5 estrelas
+                                {review.star_rating}/5 estrelas
                               </div>
                             </div>
                           )}

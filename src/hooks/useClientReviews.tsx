@@ -5,18 +5,16 @@ import { toast } from '@/hooks/use-toast';
 
 export interface ClientReview {
   id: string;
-  client_id: string;
   barbershop_id: string;
-  barber_id: string;
-  appointment_id?: string;
+  barber_id?: string;
+  client_name: string;
+  client_phone: string;
   nps_score: number;
-  rating_stars?: number;
+  star_rating?: number;
   review_text?: string;
-  review_type: string;
   created_at: string;
   updated_at: string;
   // Joined data
-  client_name?: string;
   barber_name?: string;
 }
 
@@ -48,27 +46,39 @@ export const useClientReviews = () => {
     try {
       setLoading(true);
       
-      // Query reviews with joins using generic typing
+      // Query reviews from public_client_reviews table
       const { data, error } = await supabase
-        .from('client_reviews' as any)
-        .select(`
-          *,
-          clients!inner(name),
-          profiles!inner(full_name)
-        `)
+        .from('public_client_reviews')
+        .select('*')
         .eq('barbershop_id', profile.barbershop_id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const reviewsWithNames = data?.map((review: any) => ({
-        ...review,
-        client_name: review.clients?.name || 'Cliente',
-        barber_name: review.profiles?.full_name || 'Barbeiro'
-      })) || [];
+      // Get barber names for reviews that have barber_id
+      const reviewsWithBarberNames = await Promise.all(
+        (data || []).map(async (review: any) => {
+          let barber_name = 'Barbeiro';
+          
+          if (review.barber_id) {
+            const { data: barberData } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', review.barber_id)
+              .single();
+            
+            barber_name = barberData?.full_name || 'Barbeiro';
+          }
+          
+          return {
+            ...review,
+            barber_name
+          };
+        })
+      );
 
-      setReviews(reviewsWithNames);
-      await calculateMetrics(reviewsWithNames);
+      setReviews(reviewsWithBarberNames);
+      await calculateMetrics(reviewsWithBarberNames);
     } catch (error) {
       console.error('Erro ao buscar avaliações:', error);
       toast({
@@ -100,9 +110,9 @@ export const useClientReviews = () => {
 
     // Calculate averages
     const averageNPS = reviewData.reduce((sum, r) => sum + r.nps_score, 0) / reviewData.length;
-    const ratingsWithStars = reviewData.filter(r => r.rating_stars);
+    const ratingsWithStars = reviewData.filter(r => r.star_rating);
     const averageRating = ratingsWithStars.length > 0 
-      ? ratingsWithStars.reduce((sum, r) => sum + (r.rating_stars || 0), 0) / ratingsWithStars.length 
+      ? ratingsWithStars.reduce((sum, r) => sum + (r.star_rating || 0), 0) / ratingsWithStars.length 
       : 0;
 
     // Calculate monthly trend (last 6 months)
@@ -141,7 +151,7 @@ export const useClientReviews = () => {
   const addReview = async (reviewData: Omit<ClientReview, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const { data, error } = await supabase
-        .from('client_reviews' as any)
+        .from('public_client_reviews')
         .insert([reviewData])
         .select()
         .single();
@@ -169,7 +179,7 @@ export const useClientReviews = () => {
   const deleteReview = async (reviewId: string) => {
     try {
       const { error } = await supabase
-        .from('client_reviews' as any)
+        .from('public_client_reviews')
         .delete()
         .eq('id', reviewId);
 
