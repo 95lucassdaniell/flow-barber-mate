@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import logo from "@/assets/barberflow-logo.png";
+import logo from "@/assets/salao-ai-logo.png";
 import usePageTitle from "@/hooks/usePageTitle";
 
 const RegisterForm = () => {
@@ -288,13 +288,13 @@ const RegisterForm = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-secondary/30 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-3 mb-4">
-            <img src={logo} alt="BarberFlow" className="w-10 h-10" />
-            <span className="text-2xl font-bold">BarberFlow</span>
+            <img src={logo} alt="Salão.ai" className="w-10 h-10" />
+            <span className="text-2xl font-bold">Salão.ai</span>
           </div>
           <h1 className="text-2xl font-bold mb-2">
             {step === 1 ? "Criar sua conta" : step === 2 ? "Dados da barbearia" : "Confirme seu email"}
@@ -373,7 +373,7 @@ const RegisterForm = () => {
                   />
                 </div>
 
-                <Button onClick={handleNextStep} className="w-full" disabled={loading}>
+                <Button onClick={handleNextStep} variant="hero" className="w-full" disabled={loading}>
                   Próximo Passo
                 </Button>
               </>
@@ -393,7 +393,7 @@ const RegisterForm = () => {
                 <div className="space-y-2">
                   <Label htmlFor="businessSlug">URL personalizada</Label>
                   <div className="flex items-center text-sm">
-                    <span className="text-muted-foreground mr-1">barberflow.com/</span>
+                    <span className="text-muted-foreground mr-1">salao.ai/</span>
                     <Input
                       id="businessSlug"
                       value={formData.businessSlug}
@@ -448,7 +448,7 @@ const RegisterForm = () => {
                   <Button variant="outline" onClick={() => setStep(1)} className="flex-1" disabled={loading}>
                     Voltar
                   </Button>
-                  <Button onClick={handleSubmit} className="flex-1" disabled={loading}>
+                  <Button onClick={handleSubmit} variant="hero" className="flex-1" disabled={loading}>
                     {loading ? "Criando..." : "Criar Barbearia"}
                   </Button>
                 </div>
