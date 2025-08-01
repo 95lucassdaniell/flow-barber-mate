@@ -41,6 +41,7 @@ import ProviderGoalsManagement from "./components/providers/goals/ProviderGoalsM
 import ProviderCommissionsPage from "./components/providers/commissions/ProviderCommissionsPage";
 import ProviderClientsPage from "./components/providers/clients/ProviderClientsPage";
 import { PublicBookingPage } from "./pages/PublicBookingPage";
+import PublicReviewPage from "./pages/PublicReviewPage";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,9 @@ function App() {
             {/* Public booking routes - outside SessionGuard */}
             <Route path="/app/:slug/agendamento" element={<PublicBookingPage />} />
             <Route path="/:slug/agendamento" element={<PublicBookingPage />} />
+            
+            {/* Public review routes - outside SessionGuard */}
+            <Route path="/review/:slug" element={<PublicReviewPage />} />
             
             {/* All other routes wrapped in SessionGuard */}
             <Route path="/*" element={
