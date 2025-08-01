@@ -3,6 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from '@/hooks/use-toast';
 
+export interface Provider {
+  id: string;
+  full_name: string;
+  role: string;
+  is_active: boolean;
+}
+
 export interface ClientReview {
   id: string;
   barbershop_id: string;
@@ -38,7 +45,27 @@ export const useClientReviews = () => {
   const { profile } = useAuth();
   const [reviews, setReviews] = useState<ClientReview[]>([]);
   const [metrics, setMetrics] = useState<ReviewMetrics | null>(null);
+  const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const fetchProviders = async () => {
+    if (!profile?.barbershop_id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, role, is_active')
+        .eq('barbershop_id', profile.barbershop_id)
+        .eq('is_active', true)
+        .in('role', ['admin', 'receptionist', 'barber'])
+        .order('full_name');
+
+      if (error) throw error;
+      setProviders(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar prestadores:', error);
+    }
+  };
 
   const fetchReviews = async () => {
     if (!profile?.barbershop_id) return;
@@ -58,7 +85,7 @@ export const useClientReviews = () => {
       // Get barber names for reviews that have barber_id
       const reviewsWithBarberNames = await Promise.all(
         (data || []).map(async (review: any) => {
-          let barber_name = 'Barbeiro';
+          let barber_name = 'Não me lembro';
           
           if (review.barber_id) {
             const { data: barberData } = await supabase
@@ -67,7 +94,7 @@ export const useClientReviews = () => {
               .eq('id', review.barber_id)
               .single();
             
-            barber_name = barberData?.full_name || 'Barbeiro';
+            barber_name = barberData?.full_name || 'Prestador não identificado';
           }
           
           return {
@@ -204,6 +231,7 @@ export const useClientReviews = () => {
 
   useEffect(() => {
     if (profile?.barbershop_id) {
+      fetchProviders();
       fetchReviews();
     }
   }, [profile?.barbershop_id]);
@@ -211,6 +239,7 @@ export const useClientReviews = () => {
   return {
     reviews,
     metrics,
+    providers,
     loading,
     addReview,
     deleteReview,

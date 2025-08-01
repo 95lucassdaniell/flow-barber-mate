@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useClientReviews } from '@/hooks/useClientReviews';
 import { StatCard } from '@/components/ui/stat-card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Star, 
   TrendingUp, 
@@ -16,7 +17,8 @@ import {
   Search,
   Trash2,
   ExternalLink,
-  RefreshCw
+  RefreshCw,
+  Users
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -33,14 +35,21 @@ import {
 } from '@/components/ui/alert-dialog';
 
 const ReviewsManagement: React.FC = () => {
-  const { reviews, metrics, loading, deleteReview, refetch } = useClientReviews();
+  const { reviews, metrics, providers, loading, deleteReview, refetch } = useClientReviews();
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState<string>('all');
 
-  const filteredReviews = reviews.filter(review =>
-    review.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    review.barber_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    review.review_text?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredReviews = reviews.filter(review => {
+    const matchesSearch = review.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      review.barber_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      review.review_text?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesProvider = selectedProvider === 'all' || 
+      (selectedProvider === 'unspecified' && !review.barber_id) ||
+      review.barber_id === selectedProvider;
+    
+    return matchesSearch && matchesProvider;
+  });
 
   const getNPSCategory = (score: number) => {
     if (score >= 9) return { label: 'Promotor', color: 'bg-green-500', icon: ThumbsUp };
@@ -119,10 +128,10 @@ const ReviewsManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Ações */}
-      <div className="flex justify-between items-center">
-        <div className="flex-1 max-w-sm">
-          <div className="relative">
+      {/* Ações e Filtros */}
+      <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
+        <div className="flex flex-1 gap-4 max-w-2xl">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Buscar avaliações..."
@@ -131,6 +140,37 @@ const ReviewsManagement: React.FC = () => {
               className="pl-10"
             />
           </div>
+          <Select value={selectedProvider} onValueChange={setSelectedProvider}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filtrar por prestador" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                <div className="flex items-center">
+                  <Users className="w-4 h-4 mr-2" />
+                  Todos os prestadores
+                </div>
+              </SelectItem>
+              <SelectItem value="unspecified">
+                <div className="flex items-center text-muted-foreground">
+                  <Minus className="w-4 h-4 mr-2" />
+                  Não me lembro
+                </div>
+              </SelectItem>
+              {providers.map((provider) => (
+                <SelectItem key={provider.id} value={provider.id}>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 rounded-full bg-primary mr-2" />
+                    {provider.full_name}
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      ({provider.role === 'admin' ? 'Admin' : 
+                        provider.role === 'receptionist' ? 'Recepcionista' : 'Barbeiro'})
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex gap-2">
           <Button 
