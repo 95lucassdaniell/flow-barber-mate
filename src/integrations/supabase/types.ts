@@ -2299,6 +2299,45 @@ export type Database = {
           },
         ]
       }
+      public_client_reviews: {
+        Row: {
+          barber_id: string | null
+          barbershop_id: string
+          client_name: string
+          client_phone: string
+          created_at: string
+          id: string
+          nps_score: number
+          review_text: string | null
+          star_rating: number | null
+          updated_at: string
+        }
+        Insert: {
+          barber_id?: string | null
+          barbershop_id: string
+          client_name: string
+          client_phone: string
+          created_at?: string
+          id?: string
+          nps_score: number
+          review_text?: string | null
+          star_rating?: number | null
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string | null
+          barbershop_id?: string
+          client_name?: string
+          client_phone?: string
+          created_at?: string
+          id?: string
+          nps_score?: number
+          review_text?: string | null
+          star_rating?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       rate_limit_log: {
         Row: {
           action: string

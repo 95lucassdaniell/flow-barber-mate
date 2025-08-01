@@ -154,64 +154,19 @@ const PublicReviewPage: React.FC = () => {
     setSubmitting(true);
 
     try {
-      let finalClientId = client?.id;
       const formattedPhone = formatPhone(customerPhone);
 
-      // Find existing client by formatted phone or create a new one
-      const { data: existingClient } = await supabase
-        .from('clients')
-        .select('id')
-        .eq('phone', formattedPhone)
-        .eq('barbershop_id', barbershop.id)
-        .single();
-
-      if (existingClient) {
-        finalClientId = existingClient.id;
-      } else {
-        const { data: newClient, error: clientError } = await supabase
-          .from('clients')
-          .insert([{
-            name: customerName.trim(),
-            phone: formattedPhone,
-            barbershop_id: barbershop.id
-          }])
-          .select('id')
-          .single();
-
-        if (clientError) throw clientError;
-        finalClientId = newClient.id;
-      }
-
-      // Get default barber if none specified
-      let finalBarberId = barber?.id;
-      if (!finalBarberId) {
-        const { data: defaultBarber } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('barbershop_id', barbershop.id)
-          .eq('is_active', true)
-          .limit(1)
-          .single();
-
-        finalBarberId = defaultBarber?.id;
-      }
-
-      if (!finalBarberId) {
-        throw new Error('Nenhum barbeiro disponível encontrado');
-      }
-
-      // Submit review
+      // Insert the review directly into public_client_reviews table
       const { error: reviewError } = await supabase
-        .from('client_reviews' as any)
+        .from('public_client_reviews')
         .insert([{
-          client_id: finalClientId,
           barbershop_id: barbershop.id,
-          barber_id: finalBarberId,
-          appointment_id: appointmentId || null,
+          barber_id: barberId || null,
+          client_name: customerName.trim(),
+          client_phone: formattedPhone,
           nps_score: npsScore,
-          rating_stars: rating || null,
-          review_text: reviewText.trim() || null,
-          review_type: 'nps'
+          star_rating: rating || null,
+          review_text: reviewText.trim() || null
         }]);
 
       if (reviewError) throw reviewError;
