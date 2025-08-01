@@ -88,6 +88,17 @@ export default function SuperAdminLayout({ children, activeTab }: SuperAdminLayo
                   {item.name}
                 </Link>
               ))}
+              
+              <div className="mt-8">
+                <Button
+                  variant="ghost"
+                  onClick={signOut}
+                  className="group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                >
+                  <LogOut className="mr-3 h-5 w-5" />
+                  Sair
+                </Button>
+              </div>
             </nav>
           </div>
           <div className="flex-shrink-0 flex border-t p-4">
@@ -101,14 +112,6 @@ export default function SuperAdminLayout({ children, activeTab }: SuperAdminLayo
                 <p className="text-sm font-medium">{superAdmin?.full_name}</p>
                 <p className="text-xs text-muted-foreground">Super Admin</p>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={signOut}
-                className="ml-2"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </div>
@@ -148,6 +151,17 @@ export default function SuperAdminLayout({ children, activeTab }: SuperAdminLayo
                     {item.name}
                   </Link>
                 ))}
+                
+                <div className="mt-8">
+                  <Button
+                    variant="ghost"
+                    onClick={signOut}
+                    className="group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  >
+                    <LogOut className="mr-3 h-5 w-5" />
+                    Sair
+                  </Button>
+                </div>
               </nav>
             </div>
             <div className="flex-shrink-0 flex border-t p-4">
@@ -161,14 +175,6 @@ export default function SuperAdminLayout({ children, activeTab }: SuperAdminLayo
                   <p className="text-sm font-medium">{superAdmin?.full_name}</p>
                   <p className="text-xs text-muted-foreground">Super Admin</p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={signOut}
-                  className="ml-2"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
               </div>
             </div>
           </div>
