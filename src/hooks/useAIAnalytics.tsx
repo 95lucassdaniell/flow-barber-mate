@@ -152,7 +152,7 @@ export const useAIAnalytics = () => {
     if (!appointments) return [];
 
     const timeSlotStats: Record<string, { total: number; revenue: number }> = {};
-    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const daysOfWeek = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
     appointments.forEach(apt => {
       const date = new Date(apt.appointment_date);
@@ -174,7 +174,7 @@ export const useAIAnalytics = () => {
       
       let suggestedAction = '';
       if (occupationRate < 0.3) {
-        suggestedAction = `Criar promoção para ${dayOfWeek}s às ${hour}h - baixa ocupação`;
+        suggestedAction = `Criar promoção para ${dayOfWeek} às ${hour}h - baixa ocupação`;
       } else if (occupationRate > 0.8) {
         suggestedAction = `Considerar aumentar preços - alta demanda`;
       }
