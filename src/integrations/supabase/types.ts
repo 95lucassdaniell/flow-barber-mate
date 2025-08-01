@@ -19,6 +19,7 @@ export type Database = {
           appointment_date: string
           barber_id: string
           barbershop_id: string
+          booking_source: string | null
           client_id: string
           created_at: string
           end_time: string
@@ -34,6 +35,7 @@ export type Database = {
           appointment_date: string
           barber_id: string
           barbershop_id: string
+          booking_source?: string | null
           client_id: string
           created_at?: string
           end_time: string
@@ -49,6 +51,7 @@ export type Database = {
           appointment_date?: string
           barber_id?: string
           barbershop_id?: string
+          booking_source?: string | null
           client_id?: string
           created_at?: string
           end_time?: string
@@ -1976,6 +1979,47 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      phone_verification_codes: {
+        Row: {
+          attempts: number
+          barbershop_id: string
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          phone: string
+          verified: boolean
+        }
+        Insert: {
+          attempts?: number
+          barbershop_id: string
+          code: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          phone: string
+          verified?: boolean
+        }
+        Update: {
+          attempts?: number
+          barbershop_id?: string
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone?: string
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_verification_codes_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       plan_features: {
         Row: {
