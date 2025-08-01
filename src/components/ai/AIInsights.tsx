@@ -9,6 +9,7 @@ import { useAIAnalytics } from '@/hooks/useAIAnalytics';
 import { useCRMMetrics } from '@/hooks/useCRMMetrics';
 import { AutomationsManager } from './AutomationsManager';
 import { SalesAnalyticsDashboard } from './SalesAnalyticsDashboard';
+import { ClientInsights } from './ClientInsights';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Brain, 
@@ -163,6 +164,10 @@ export const AIInsights: React.FC = () => {
           <TabsTrigger value="insights">
             <Brain className="h-4 w-4 mr-2" />
             Insights
+          </TabsTrigger>
+          <TabsTrigger value="clients">
+            <Users className="h-4 w-4 mr-2" />
+            Clientes
           </TabsTrigger>
           <TabsTrigger value="sales">
             <TrendingUp className="h-4 w-4 mr-2" />
@@ -449,6 +454,10 @@ export const AIInsights: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="clients">
+          <ClientInsights />
         </TabsContent>
 
         <TabsContent value="sales">
