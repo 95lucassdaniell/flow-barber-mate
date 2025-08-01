@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAIAnalytics } from '@/hooks/useAIAnalytics';
 import { AutomationsManager } from './AutomationsManager';
 import { SalesAnalyticsDashboard } from './SalesAnalyticsDashboard';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Brain, 
   TrendingUp, 
@@ -25,6 +26,30 @@ import { ptBR } from 'date-fns/locale';
 
 export const AIInsights: React.FC = () => {
   const { insights, loading, error, refreshInsights, clientPatterns } = useAIAnalytics();
+  const [clientsMap, setClientsMap] = useState<Map<string, string>>(new Map());
+
+  // Buscar nomes dos clientes
+  useEffect(() => {
+    const fetchClientNames = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('clients')
+          .select('id, name');
+        
+        if (!error && data) {
+          const newClientsMap = new Map();
+          data.forEach(client => {
+            newClientsMap.set(client.id, client.name);
+          });
+          setClientsMap(newClientsMap);
+        }
+      } catch (err) {
+        console.error('Erro ao buscar nomes dos clientes:', err);
+      }
+    };
+
+    fetchClientNames();
+  }, []);
 
   if (loading) {
     return (
@@ -94,8 +119,7 @@ export const AIInsights: React.FC = () => {
   };
 
   const getClientName = (clientId: string) => {
-    // Buscar nome do cliente usando uma query simples
-    return `Cliente ${clientId.slice(0, 8)}`;
+    return clientsMap.get(clientId) || `Cliente ${clientId.slice(0, 8)}`;
   };
 
   const formatCurrency = (value: number) => {
