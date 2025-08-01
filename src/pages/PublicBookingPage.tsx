@@ -8,11 +8,23 @@ import { useBarbershopBySlug } from '@/hooks/useBarbershopBySlug';
 import { Card, CardContent } from '@/components/ui/card';
 import { LoadingProvider } from '@/contexts/LoadingContext';
 import { Scissors, Calendar, Star, Clock } from 'lucide-react';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const PublicBookingContent = () => {
   const { slug } = useParams<{ slug: string }>();
   const { isAuthenticated, client, barbershop } = usePhoneAuth();
   const { barbershop: barbershopData, loading: isLoading } = useBarbershopBySlug(slug || '');
+
+  useEffect(() => {
+    console.log('🔄 PublicBookingPage mounted:', {
+      slug,
+      href: window.location.href,
+      pathname: window.location.pathname,
+      barbershop: barbershopData?.name,
+      isLoading,
+      isAuthenticated
+    });
+  }, [slug, barbershopData, isLoading, isAuthenticated]);
 
   if (isLoading) {
     return (
@@ -114,11 +126,17 @@ const PublicBookingContent = () => {
 };
 
 export const PublicBookingPage = () => {
+  useEffect(() => {
+    console.log('🚀 PublicBookingPage root mounted');
+  }, []);
+
   return (
-    <LoadingProvider>
-      <PhoneAuthProvider>
-        <PublicBookingContent />
-      </PhoneAuthProvider>
-    </LoadingProvider>
+    <ErrorBoundary>
+      <LoadingProvider>
+        <PhoneAuthProvider>
+          <PublicBookingContent />
+        </PhoneAuthProvider>
+      </LoadingProvider>
+    </ErrorBoundary>
   );
 };
