@@ -17,7 +17,9 @@ export const RobustSlugValidator = ({ slug, onValidated, children }: ValidatorPr
 
   const validateSlug = async (attempt = 1) => {
     if (!slug) {
+      console.log('❌ No slug provided');
       setError('Slug não fornecido');
+      setIsValidating(false);
       onValidated(false);
       return;
     }
@@ -44,7 +46,9 @@ export const RobustSlugValidator = ({ slug, onValidated, children }: ValidatorPr
 
       if (dbError) {
         if (dbError.code === 'PGRST116') {
+          console.log('❌ Barbershop not found');
           setError(`Barbearia "${slug}" não encontrada`);
+          setIsValidating(false);
           onValidated(false);
           return;
         }
@@ -52,13 +56,18 @@ export const RobustSlugValidator = ({ slug, onValidated, children }: ValidatorPr
       }
 
       if (data) {
-        console.log('✅ Barbershop validated:', data);
+        console.log('✅ Barbershop validated successfully, stopping validation');
         setBarbershopData(data);
         setError(null);
+        setIsValidating(false);
         onValidated(true, data);
+        return;
       } else {
+        console.log('❌ No barbershop data returned');
         setError(`Barbearia "${slug}" não encontrada`);
+        setIsValidating(false);
         onValidated(false);
+        return;
       }
     } catch (err: any) {
       console.error(`❌ Validation error (attempt ${attempt}):`, err);
@@ -69,13 +78,13 @@ export const RobustSlugValidator = ({ slug, onValidated, children }: ValidatorPr
           setRetryCount(attempt);
           validateSlug(attempt + 1);
         }, attempt * 1000);
+        return;
       } else {
+        console.log('❌ Max retries reached, stopping validation');
         setError(`Erro ao validar barbearia: ${err.message}`);
-        onValidated(false);
-      }
-    } finally {
-      if (attempt >= 3 || barbershopData) {
         setIsValidating(false);
+        onValidated(false);
+        return;
       }
     }
   };
