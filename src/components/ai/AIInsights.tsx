@@ -4,7 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { StatCard } from '@/components/ui/stat-card';
 import { useAIAnalytics } from '@/hooks/useAIAnalytics';
+import { useCRMMetrics } from '@/hooks/useCRMMetrics';
 import { AutomationsManager } from './AutomationsManager';
 import { SalesAnalyticsDashboard } from './SalesAnalyticsDashboard';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,13 +21,18 @@ import {
   Target,
   Lightbulb,
   RefreshCw,
-  Zap
+  Zap,
+  UserPlus,
+  Heart,
+  Repeat,
+  Star
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export const AIInsights: React.FC = () => {
   const { insights, loading, error, refreshInsights, clientPatterns } = useAIAnalytics();
+  const { metrics: crmMetrics, loading: crmLoading } = useCRMMetrics();
   const [clientsMap, setClientsMap] = useState<Map<string, string>>(new Map());
 
   // Buscar nomes dos clientes
@@ -168,8 +175,68 @@ export const AIInsights: React.FC = () => {
         </TabsList>
 
         <TabsContent value="insights" className="space-y-6">
-          {/* Métricas Principais */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Métricas CRM */}
+          {crmMetrics && (
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Users className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-semibold">Métricas CRM</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <StatCard
+                  title="Total de Clientes"
+                  value={crmMetrics.totalClients}
+                  subtitle="Clientes cadastrados"
+                  icon={Users}
+                  format="number"
+                />
+                <StatCard
+                  title="Novos Clientes (30d)"
+                  value={crmMetrics.newClients30d.count}
+                  subtitle="Crescimento mensal"
+                  trend={crmMetrics.newClients30d.growthRate}
+                  icon={UserPlus}
+                  format="number"
+                />
+                <StatCard
+                  title="CLV Médio"
+                  value={crmMetrics.avgCLV}
+                  subtitle="Valor médio por cliente"
+                  icon={DollarSign}
+                  format="currency"
+                />
+                <StatCard
+                  title="Taxa de Retenção"
+                  value={crmMetrics.retentionRate}
+                  subtitle="Clientes que retornam"
+                  icon={Heart}
+                  format="percentage"
+                />
+                <StatCard
+                  title="Frequência Média"
+                  value={crmMetrics.avgFrequencyDays}
+                  subtitle="Intervalo entre visitas"
+                  icon={Repeat}
+                  format="days"
+                />
+                <StatCard
+                  title="NPS Score"
+                  value={crmMetrics.npsScore}
+                  subtitle="Satisfação estimada"
+                  icon={Star}
+                  format="rating"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Métricas IA */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Brain className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Insights de IA</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Receita Prevista</CardTitle>
@@ -223,6 +290,7 @@ export const AIInsights: React.FC = () => {
                 <p className="text-xs text-muted-foreground">Receita adicional possível</p>
               </CardContent>
             </Card>
+            </div>
           </div>
 
           {/* Recomendações de Ações */}
