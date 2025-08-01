@@ -80,6 +80,8 @@ export const DateTimeSelection = ({
   };
 
   const handleDateSelect = (date: Date) => {
+    console.log('📅 Date selected:', date);
+    onSelect(date, ''); // Update parent state with selected date
     loadAvailableSlots(date);
   };
 
