@@ -82,28 +82,10 @@ export const useSalesAnalytics = () => {
       setLoading(true);
       console.log('🔍 Iniciando análise de vendas para barbershop:', profile.barbershop_id);
 
-      // Query única com JOIN para pegar todos os dados necessários
-      const { data: salesWithItems, error: salesError } = await supabase
+      // Buscar vendas dos últimos 90 dias
+      const { data: sales, error: salesError } = await supabase
         .from('sales')
-        .select(`
-          id,
-          client_id,
-          final_amount,
-          sale_date,
-          created_at,
-          clients!inner(id, name),
-          sale_items!inner(
-            id,
-            item_type,
-            service_id,
-            product_id,
-            quantity,
-            unit_price,
-            total_price,
-            services(id, name),
-            products(id, name, cost_price)
-          )
-        `)
+        .select('id, client_id, final_amount, sale_date, created_at')
         .eq('barbershop_id', profile.barbershop_id)
         .gte('sale_date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
         .order('created_at', { ascending: false });
@@ -112,6 +94,87 @@ export const useSalesAnalytics = () => {
         console.error('❌ Erro ao buscar vendas:', salesError);
         throw salesError;
       }
+
+      if (!sales || sales.length === 0) {
+        console.log('❌ Nenhuma venda encontrada nos últimos 90 dias');
+        setAnalytics({
+          productCombos: [],
+          serviceCombos: [],
+          crossSellOpportunities: [],
+          clientPatterns: [],
+          topPerformingServices: [],
+          topPerformingProducts: [],
+        });
+        return;
+      }
+
+      console.log('📊 Vendas encontradas:', sales.length);
+
+      // Buscar itens das vendas
+      const saleIds = sales.map(sale => sale.id);
+      const { data: saleItems, error: itemsError } = await supabase
+        .from('sale_items')
+        .select('id, sale_id, item_type, service_id, product_id, quantity, unit_price, total_price')
+        .in('sale_id', saleIds);
+
+      if (itemsError) {
+        console.error('❌ Erro ao buscar itens das vendas:', itemsError);
+        throw itemsError;
+      }
+
+      // Buscar clientes
+      const clientIds = [...new Set(sales.map(sale => sale.client_id))];
+      const { data: clients, error: clientsError } = await supabase
+        .from('clients')
+        .select('id, name')
+        .in('id', clientIds);
+
+      if (clientsError) {
+        console.error('❌ Erro ao buscar clientes:', clientsError);
+        throw clientsError;
+      }
+
+      // Buscar serviços
+      const serviceIds = [...new Set(saleItems?.filter(item => item.service_id).map(item => item.service_id) || [])];
+      const { data: services, error: servicesError } = serviceIds.length > 0 ? await supabase
+        .from('services')
+        .select('id, name')
+        .in('id', serviceIds) : { data: [], error: null };
+
+      if (servicesError) {
+        console.error('❌ Erro ao buscar serviços:', servicesError);
+        throw servicesError;
+      }
+
+      // Buscar produtos
+      const productIds = [...new Set(saleItems?.filter(item => item.product_id).map(item => item.product_id) || [])];
+      const { data: products, error: productsError } = productIds.length > 0 ? await supabase
+        .from('products')
+        .select('id, name, cost_price')
+        .in('id', productIds) : { data: [], error: null };
+
+      if (productsError) {
+        console.error('❌ Erro ao buscar produtos:', productsError);
+        throw productsError;
+      }
+
+      // Criar maps para lookups rápidos
+      const clientsMap = new Map(clients?.map(c => [c.id, c] as const) || []);
+      const servicesMap = new Map(services?.map(s => [s.id, s] as const) || []);
+      const productsMap = new Map(products?.map(p => [p.id, p] as const) || []);
+
+      // Combinar dados
+      const salesWithItems = sales.map(sale => ({
+        ...sale,
+        clients: clientsMap.get(sale.client_id),
+        sale_items: (saleItems || [])
+          .filter(item => item.sale_id === sale.id)
+          .map(item => ({
+            ...item,
+            services: item.service_id ? servicesMap.get(item.service_id) : null,
+            products: item.product_id ? productsMap.get(item.product_id) : null,
+          }))
+      })).filter(sale => sale.sale_items.length > 0);
 
       console.log('📊 Vendas com itens encontradas:', salesWithItems?.length || 0);
 
