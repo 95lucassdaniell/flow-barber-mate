@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
-import { format, addDays, startOfWeek, isSameDay, isToday, isBefore } from 'date-fns';
+import { Clock } from 'lucide-react';
+import { format, addDays, isSameDay, isToday, isBefore } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useBookingAvailability } from '@/hooks/useBookingAvailability';
 
@@ -24,7 +24,6 @@ export const DateTimeSelection = ({
   onSelect,
   barbershopId
 }: DateTimeSelectionProps) => {
-  const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   
@@ -45,7 +44,8 @@ export const DateTimeSelection = ({
   
   const { getAvailableTimeSlots } = useBookingAvailability(barbershopId);
 
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
+  // Generate next 7 days starting from today
+  const availableDays = Array.from({ length: 7 }, (_, i) => addDays(new Date(), i));
 
   useEffect(() => {
     if (selectedDate && serviceId && barbershopId) {
@@ -80,11 +80,7 @@ export const DateTimeSelection = ({
   };
 
   const handleDateSelect = (date: Date) => {
-    if (selectedTime) {
-      onSelect(date, selectedTime);
-    } else {
-      loadAvailableSlots(date);
-    }
+    loadAvailableSlots(date);
   };
 
   const handleTimeSelect = (time: string) => {
@@ -93,16 +89,6 @@ export const DateTimeSelection = ({
     }
   };
 
-  const goToPreviousWeek = () => {
-    setCurrentWeekStart(addDays(currentWeekStart, -7));
-  };
-
-  const goToNextWeek = () => {
-    setCurrentWeekStart(addDays(currentWeekStart, 7));
-  };
-
-  const canGoPrevious = !isBefore(addDays(currentWeekStart, -7), startOfWeek(new Date(), { weekStartsOn: 1 }));
-
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
@@ -110,64 +96,43 @@ export const DateTimeSelection = ({
         <p className="text-muted-foreground">Selecione o dia e horário preferido</p>
       </div>
 
-      {/* Week Navigation */}
-      <div className="flex items-center justify-between">
-        <Button 
-          variant="ghost" 
-          size="sm"
-          onClick={goToPreviousWeek}
-          disabled={!canGoPrevious}
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </Button>
-        
-        <span className="font-medium">
-          {format(currentWeekStart, 'MMM yyyy', { locale: ptBR })}
-        </span>
-        
-        <Button 
-          variant="ghost" 
-          size="sm"
-          onClick={goToNextWeek}
-        >
-          <ChevronRight className="w-4 h-4" />
-        </Button>
+      {/* Day Selection - Horizontal Cards */}
+      <div className="space-y-3">
+        <h3 className="font-medium text-sm text-muted-foreground">Selecione o dia</h3>
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {availableDays.map((date) => {
+            const isSelected = selectedDate && isSameDay(date, selectedDate);
+            const isPast = isBefore(date, new Date()) && !isToday(date);
+            
+            return (
+              <Card
+                key={date.toISOString()}
+                className={`min-w-[80px] cursor-pointer transition-all ${
+                  isSelected ? 'ring-2 ring-primary bg-primary/5' : 
+                  isPast ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md hover:bg-muted/50'
+                }`}
+                onClick={() => !isPast && handleDateSelect(date)}
+              >
+                <CardContent className="p-3 text-center">
+                  <div className="text-xs text-muted-foreground mb-1">
+                    {format(date, 'EEE', { locale: ptBR })}
+                  </div>
+                  <div className={`text-lg font-semibold ${isSelected ? 'text-primary' : ''}`}>
+                    {format(date, 'd')}
+                  </div>
+                  {isToday(date) && (
+                    <Badge variant="secondary" className="text-xs mt-1">
+                      Hoje
+                    </Badge>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Calendar */}
-      <div className="grid grid-cols-7 gap-2">
-        {weekDays.map((date) => {
-          const isSelected = selectedDate && isSameDay(date, selectedDate);
-          const isPast = isBefore(date, new Date()) && !isToday(date);
-          
-          return (
-            <Card
-              key={date.toISOString()}
-              className={`cursor-pointer transition-all ${
-                isSelected ? 'ring-2 ring-primary' : 
-                isPast ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'
-              }`}
-              onClick={() => !isPast && handleDateSelect(date)}
-            >
-              <CardContent className="p-2 text-center">
-                <div className="text-xs text-muted-foreground mb-1">
-                  {format(date, 'EEE', { locale: ptBR })}
-                </div>
-                <div className={`text-sm font-medium ${isSelected ? 'text-primary' : ''}`}>
-                  {format(date, 'd')}
-                </div>
-                {isToday(date) && (
-                  <Badge variant="secondary" className="text-xs mt-1">
-                    Hoje
-                  </Badge>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Time Slots */}
+      {/* Time Slots - Cards Grid */}
       {selectedDate && (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
@@ -176,39 +141,49 @@ export const DateTimeSelection = ({
           </div>
 
           {isLoadingSlots ? (
-            <div className="text-center py-4">
-              <p className="text-muted-foreground">Carregando horários...</p>
+            <div className="text-center py-8">
+              <div className="inline-flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-muted-foreground">Carregando horários...</p>
+              </div>
             </div>
           ) : availableSlots.length > 0 ? (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {availableSlots.map((time) => {
                 const isSelected = time === selectedTime;
                 
                 return (
-                  <Button
+                  <Card
                     key={time}
-                    variant={isSelected ? "default" : "outline"}
+                    className={`cursor-pointer transition-all ${
+                      isSelected ? 'ring-2 ring-primary bg-primary text-primary-foreground' : 
+                      'hover:shadow-md hover:bg-muted/50'
+                    }`}
                     onClick={() => handleTimeSelect(time)}
-                    className="h-10"
                   >
-                    {time}
-                  </Button>
+                    <CardContent className="p-3 text-center">
+                      <div className={`font-semibold ${isSelected ? 'text-primary-foreground' : 'text-foreground'}`}>
+                        {time}
+                      </div>
+                    </CardContent>
+                  </Card>
                 );
               })}
             </div>
           ) : (
-            <div className="text-center py-4">
-              <p className="text-muted-foreground">
-                Não há horários disponíveis para este dia
-              </p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="mt-2"
-                onClick={() => selectedDate && loadAvailableSlots(selectedDate)}
-              >
-                Tentar novamente
-              </Button>
+            <div className="text-center py-8">
+              <div className="space-y-3">
+                <p className="text-muted-foreground">
+                  Não há horários disponíveis para este dia
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => selectedDate && loadAvailableSlots(selectedDate)}
+                >
+                  Tentar novamente
+                </Button>
+              </div>
             </div>
           )}
         </div>
