@@ -80,19 +80,22 @@ export const useSalesAnalytics = () => {
 
     try {
       setLoading(true);
+      console.log('🔍 Iniciando análise de vendas para barbershop:', profile.barbershop_id);
 
-      // Primeiro buscar vendas básicas dos últimos 90 dias
+      // Buscar vendas dos últimos 90 dias com mais detalhes
       const { data: salesData, error: salesError } = await supabase
         .from('sales')
-        .select('id, client_id, final_amount, created_at')
+        .select('id, client_id, final_amount, sale_date, created_at')
         .eq('barbershop_id', profile.barbershop_id)
-        .gte('created_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
+        .gte('sale_date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
         .order('created_at', { ascending: false });
 
       if (salesError) throw salesError;
 
+      console.log('📊 Vendas encontradas:', salesData?.length || 0);
+
       if (!salesData || salesData.length === 0) {
-        console.log('Nenhuma venda encontrada nos últimos 90 dias');
+        console.log('❌ Nenhuma venda encontrada nos últimos 90 dias');
         setAnalytics({
           productCombos: [],
           serviceCombos: [],
@@ -110,11 +113,21 @@ export const useSalesAnalytics = () => {
         .select('id, name')
         .eq('barbershop_id', profile.barbershop_id);
 
+      if (clientsError) {
+        console.error('❌ Erro ao buscar clientes:', clientsError);
+      }
+      console.log('👥 Clientes encontrados:', clientsData?.length || 0);
+
       // Buscar itens de venda
       const { data: saleItemsData, error: itemsError } = await supabase
         .from('sale_items')
         .select('sale_id, item_type, service_id, product_id, quantity, unit_price, total_price')
         .in('sale_id', salesData.map(s => s.id));
+
+      if (itemsError) {
+        console.error('❌ Erro ao buscar itens de venda:', itemsError);
+      }
+      console.log('🛒 Itens de venda encontrados:', saleItemsData?.length || 0);
 
       // Buscar serviços
       const { data: servicesData, error: servicesError } = await supabase
@@ -122,11 +135,21 @@ export const useSalesAnalytics = () => {
         .select('id, name')
         .eq('barbershop_id', profile.barbershop_id);
 
+      if (servicesError) {
+        console.error('❌ Erro ao buscar serviços:', servicesError);
+      }
+      console.log('✂️ Serviços encontrados:', servicesData?.length || 0);
+
       // Buscar produtos
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('id, name, cost_price')
         .eq('barbershop_id', profile.barbershop_id);
+
+      if (productsError) {
+        console.error('❌ Erro ao buscar produtos:', productsError);
+      }
+      console.log('📦 Produtos encontrados:', productsData?.length || 0);
 
       // Criar mapas para lookup rápido
       const clientsMap = new Map(clientsData?.map(c => [c.id, c.name]) || []);
@@ -146,32 +169,45 @@ export const useSalesAnalytics = () => {
           }))
       }));
 
+      console.log('🔄 Processando análises...');
+      console.log('📋 Vendas processadas para análise:', sales.length);
+      console.log('📊 Amostra de venda:', sales[0]);
+
       // Analisar combos de produtos
       const productCombos = analyzeProductCombos(sales);
+      console.log('📦 Combos de produtos:', productCombos.length);
       
       // Analisar combos de serviços
       const serviceCombos = analyzeServiceCombos(sales);
+      console.log('✂️ Combos de serviços:', serviceCombos.length);
       
       // Analisar oportunidades de cross-sell
       const crossSellOpportunities = analyzeCrossSellOpportunities(sales);
+      console.log('🎯 Oportunidades cross-sell:', crossSellOpportunities.length);
       
       // Analisar padrões de cliente
       const clientPatterns = analyzeClientPatterns(sales);
+      console.log('👥 Padrões de clientes:', clientPatterns.length);
       
       // Analisar performance de serviços
       const topPerformingServices = analyzeServicePerformance(sales);
+      console.log('🏆 Top serviços:', topPerformingServices.length);
       
       // Analisar performance de produtos
       const topPerformingProducts = analyzeProductPerformance(sales);
+      console.log('🥇 Top produtos:', topPerformingProducts.length);
 
-      setAnalytics({
+      const finalAnalytics = {
         productCombos,
         serviceCombos,
         crossSellOpportunities,
         clientPatterns,
         topPerformingServices,
         topPerformingProducts,
-      });
+      };
+
+      console.log('✅ Análise concluída:', finalAnalytics);
+      setAnalytics(finalAnalytics);
 
     } catch (error) {
       console.error('Erro ao calcular análise de vendas:', error);
@@ -183,6 +219,8 @@ export const useSalesAnalytics = () => {
   const analyzeProductCombos = (sales: any[]): ProductCombo[] => {
     const combos = new Map<string, { frequency: number; revenue: number }>();
 
+    console.log('🔍 Analisando combos de produtos...');
+    
     sales.forEach(sale => {
       const products = sale.sale_items
         .filter((item: any) => item.item_type === 'product' && item.products?.name)
@@ -209,21 +247,30 @@ export const useSalesAnalytics = () => {
       }
     });
 
-    return Array.from(combos.entries())
+    const result = Array.from(combos.entries())
       .map(([combo, data]) => ({
         items: combo.split(' + '),
         frequency: data.frequency,
         revenue: data.revenue,
         confidence: Math.min(data.frequency / sales.length * 100, 100)
       }))
-      .filter(combo => combo.frequency >= 3) // Mínimo 3 ocorrências
+      .filter(combo => combo.frequency >= 2) // Reduzir mínimo para 2 ocorrências
       .sort((a, b) => b.confidence - a.confidence)
       .slice(0, 10);
+
+    console.log('📦 Combos de produtos encontrados:', result.length);
+    if (result.length > 0) {
+      console.log('📦 Exemplo combo produto:', result[0]);
+    }
+    
+    return result;
   };
 
   const analyzeServiceCombos = (sales: any[]): ServiceCombo[] => {
     const combos = new Map<string, { frequency: number; revenue: number }>();
 
+    console.log('🔍 Analisando combos de serviços...');
+    
     sales.forEach(sale => {
       const services = sale.sale_items
         .filter((item: any) => item.item_type === 'service' && item.services?.name)
@@ -250,16 +297,23 @@ export const useSalesAnalytics = () => {
       }
     });
 
-    return Array.from(combos.entries())
+    const result = Array.from(combos.entries())
       .map(([combo, data]) => ({
         items: combo.split(' + '),
         frequency: data.frequency,
         revenue: data.revenue,
         confidence: Math.min(data.frequency / sales.length * 100, 100)
       }))
-      .filter(combo => combo.frequency >= 3)
+      .filter(combo => combo.frequency >= 2) // Reduzir mínimo para 2 ocorrências
       .sort((a, b) => b.confidence - a.confidence)
       .slice(0, 10);
+
+    console.log('✂️ Combos de serviços encontrados:', result.length);
+    if (result.length > 0) {
+      console.log('✂️ Exemplo combo serviço:', result[0]);
+    }
+    
+    return result;
   };
 
   const analyzeCrossSellOpportunities = (sales: any[]): CrossSellOpportunity[] => {

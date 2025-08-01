@@ -18,6 +18,10 @@ import { useSalesAnalytics } from '@/hooks/useSalesAnalytics';
 export const SalesAnalyticsDashboard = () => {
   const { analytics, loading } = useSalesAnalytics();
 
+  // Debug logging
+  console.log('🎯 SalesAnalyticsDashboard - Loading:', loading);
+  console.log('🎯 SalesAnalyticsDashboard - Analytics:', analytics);
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -124,9 +128,12 @@ export const SalesAnalyticsDashboard = () => {
                 <ScrollArea className="h-80">
                   <div className="space-y-4">
                     {analytics.serviceCombos.length === 0 ? (
-                      <p className="text-center text-muted-foreground py-8">
-                        Nenhum combo de serviços identificado
-                      </p>
+                      <div className="text-center text-muted-foreground py-8">
+                        <p>Nenhum combo de serviços identificado</p>
+                        <p className="text-xs mt-2">
+                          {loading ? 'Carregando...' : 'Vendas analisadas: ' + (analytics.clientPatterns?.length || 0)}
+                        </p>
+                      </div>
                     ) : (
                       analytics.serviceCombos.map((combo, index) => (
                         <div key={index} className="p-3 border rounded-lg">
@@ -167,9 +174,12 @@ export const SalesAnalyticsDashboard = () => {
                 <ScrollArea className="h-80">
                   <div className="space-y-4">
                     {analytics.productCombos.length === 0 ? (
-                      <p className="text-center text-muted-foreground py-8">
-                        Nenhum combo de produtos identificado
-                      </p>
+                      <div className="text-center text-muted-foreground py-8">
+                        <p>Nenhum combo de produtos identificado</p>
+                        <p className="text-xs mt-2">
+                          {loading ? 'Carregando...' : 'Vendas analisadas: ' + (analytics.clientPatterns?.length || 0)}
+                        </p>
+                      </div>
                     ) : (
                       analytics.productCombos.map((combo, index) => (
                         <div key={index} className="p-3 border rounded-lg">
