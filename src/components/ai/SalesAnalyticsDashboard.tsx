@@ -110,13 +110,61 @@ export const SalesAnalyticsDashboard = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="combos" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="combos">Combos</TabsTrigger>
-          <TabsTrigger value="opportunities">Oportunidades</TabsTrigger>
-          <TabsTrigger value="clients">Clientes</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue="service-product-combos" className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="service-product-combos">Serviço+Produto</TabsTrigger>
+            <TabsTrigger value="combos">Combos</TabsTrigger>
+            <TabsTrigger value="opportunities">Oportunidades</TabsTrigger>
+            <TabsTrigger value="clients">Clientes</TabsTrigger>
+            <TabsTrigger value="performance">Performance</TabsTrigger>
+           </TabsList>
+
+          <TabsContent value="service-product-combos">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Combos Serviço + Produto Mais Populares
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-80">
+                  <div className="space-y-4">
+                    {analytics.serviceProductCombos.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-8">
+                        <p>Nenhum combo serviço+produto identificado</p>
+                        <p className="text-xs mt-2">
+                          {loading ? 'Carregando...' : 'Analisando padrões de vendas...'}
+                        </p>
+                      </div>
+                    ) : (
+                      analytics.serviceProductCombos.map((combo, index) => (
+                        <div key={index} className="p-3 border rounded-lg">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-medium">{combo.serviceName} + {combo.productName}</h4>
+                            <Badge variant="outline">
+                              {Math.round(combo.confidence)}%
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Frequência:</span>
+                              <span className="ml-1 font-medium">{combo.frequency}x</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Receita:</span>
+                              <span className="ml-1 font-medium">R$ {combo.revenue.toFixed(2)}</span>
+                            </div>
+                          </div>
+                          <Progress value={combo.confidence} className="mt-2" />
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
         <TabsContent value="combos" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

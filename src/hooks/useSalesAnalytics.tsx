@@ -40,7 +40,16 @@ export interface ClientPurchasePattern {
   nextSuggestedProduct?: string;
 }
 
+export interface ServiceProductCombo {
+  serviceName: string;
+  productName: string;
+  frequency: number;
+  revenue: number;
+  confidence: number;
+}
+
 export interface SalesAnalytics {
+  serviceProductCombos: ServiceProductCombo[];
   productCombos: ProductCombo[];
   serviceCombos: ServiceCombo[];
   crossSellOpportunities: CrossSellOpportunity[];
@@ -66,6 +75,7 @@ export interface SalesAnalytics {
 export const useSalesAnalytics = () => {
   const { profile } = useAuth();
   const [analytics, setAnalytics] = useState<SalesAnalytics>({
+    serviceProductCombos: [],
     productCombos: [],
     serviceCombos: [],
     crossSellOpportunities: [],
@@ -98,6 +108,7 @@ export const useSalesAnalytics = () => {
       if (!sales || sales.length === 0) {
         console.log('❌ Nenhuma venda encontrada nos últimos 90 dias');
         setAnalytics({
+          serviceProductCombos: [],
           productCombos: [],
           serviceCombos: [],
           crossSellOpportunities: [],
@@ -181,6 +192,7 @@ export const useSalesAnalytics = () => {
       if (!salesWithItems || salesWithItems.length === 0) {
         console.log('❌ Nenhuma venda com itens encontrada nos últimos 90 dias');
         setAnalytics({
+          serviceProductCombos: [],
           productCombos: [],
           serviceCombos: [],
           crossSellOpportunities: [],
@@ -203,6 +215,10 @@ export const useSalesAnalytics = () => {
       console.log('📦 Vendas com múltiplos itens:', multiItemSales.length);
 
       console.log('🔄 Processando análises...');
+
+      // Analisar combos serviço + produto (mais realístico para barbearias)
+      const serviceProductCombos = analyzeServiceProductCombos(salesWithItems);
+      console.log('🤝 Combos serviço+produto:', serviceProductCombos.length);
 
       // Analisar combos de produtos
       const productCombos = analyzeProductCombos(salesWithItems);
@@ -229,6 +245,7 @@ export const useSalesAnalytics = () => {
       console.log('🥇 Top produtos:', topPerformingProducts.length);
 
       const finalAnalytics = {
+        serviceProductCombos,
         productCombos,
         serviceCombos,
         crossSellOpportunities,
@@ -245,6 +262,62 @@ export const useSalesAnalytics = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const analyzeServiceProductCombos = (sales: any[]): ServiceProductCombo[] => {
+    const combos = new Map<string, { frequency: number; revenue: number }>();
+
+    console.log('🔍 Analisando combos serviço + produto...');
+    
+    sales.forEach(sale => {
+      const services = sale.sale_items
+        .filter((item: any) => item.item_type === 'service' && item.services?.name)
+        .map((item: any) => item.services.name);
+      
+      const products = sale.sale_items
+        .filter((item: any) => item.item_type === 'product' && item.products?.name)
+        .map((item: any) => item.products.name);
+
+      // Criar combos serviço + produto
+      services.forEach((service: string) => {
+        products.forEach((product: string) => {
+          const comboKey = `${service}|${product}`;
+          const revenue = sale.final_amount;
+          
+          if (combos.has(comboKey)) {
+            const current = combos.get(comboKey)!;
+            combos.set(comboKey, {
+              frequency: current.frequency + 1,
+              revenue: current.revenue + revenue
+            });
+          } else {
+            combos.set(comboKey, { frequency: 1, revenue });
+          }
+        });
+      });
+    });
+
+    const result = Array.from(combos.entries())
+      .map(([combo, data]) => {
+        const [serviceName, productName] = combo.split('|');
+        return {
+          serviceName,
+          productName,
+          frequency: data.frequency,
+          revenue: data.revenue,
+          confidence: Math.min(data.frequency / sales.length * 100, 100)
+        };
+      })
+      .filter(combo => combo.frequency >= 1) // Aceitar qualquer ocorrência
+      .sort((a, b) => b.confidence - a.confidence)
+      .slice(0, 15);
+
+    console.log('🤝 Combos serviço+produto encontrados:', result.length);
+    if (result.length > 0) {
+      console.log('🤝 Exemplo combo serviço+produto:', result[0]);
+    }
+    
+    return result;
   };
 
   const analyzeProductCombos = (sales: any[]): ProductCombo[] => {
@@ -348,54 +421,106 @@ export const useSalesAnalytics = () => {
   };
 
   const analyzeCrossSellOpportunities = (sales: any[]): CrossSellOpportunity[] => {
-    const opportunities = new Map<string, { frequency: number; revenue: number }>();
+    const serviceToProduct = new Map<string, Map<string, number>>();
+    const productToProduct = new Map<string, Map<string, number>>();
+
+    console.log('🎯 Analisando oportunidades de cross-sell (foco serviço → produto)...');
 
     sales.forEach(sale => {
-      const items = sale.sale_items.map((item: any) => ({
-        name: item.item_type === 'service' ? item.services?.name : item.products?.name,
-        type: item.item_type,
-        price: item.unit_price
-      })).filter((item: any) => item.name);
+      const services = sale.sale_items
+        .filter((item: any) => item.item_type === 'service' && item.services?.name)
+        .map((item: any) => ({ name: item.services.name, price: item.unit_price }));
+      
+      const products = sale.sale_items
+        .filter((item: any) => item.item_type === 'product' && item.products?.name)
+        .map((item: any) => ({ name: item.products.name, price: item.unit_price }));
 
-      // Analisar associações entre itens
-      items.forEach((baseItem: any) => {
-        items.forEach((suggestedItem: any) => {
-          if (baseItem.name === suggestedItem.name) return;
-
-          const key = `${baseItem.name}|${baseItem.type} -> ${suggestedItem.name}|${suggestedItem.type}`;
-          
-          if (opportunities.has(key)) {
-            const current = opportunities.get(key)!;
-            opportunities.set(key, {
-              frequency: current.frequency + 1,
-              revenue: current.revenue + suggestedItem.price
-            });
-          } else {
-            opportunities.set(key, { frequency: 1, revenue: suggestedItem.price });
+      // Analisar padrões serviço → produto (mais comum em barbearias)
+      services.forEach(service => {
+        products.forEach(product => {
+          if (!serviceToProduct.has(service.name)) {
+            serviceToProduct.set(service.name, new Map());
           }
+          
+          const serviceProducts = serviceToProduct.get(service.name)!;
+          const currentCount = serviceProducts.get(product.name) || 0;
+          serviceProducts.set(product.name, currentCount + 1);
         });
+      });
+
+      // Analisar alguns padrões produto → produto (limitado)
+      for (let i = 0; i < products.length; i++) {
+        for (let j = i + 1; j < products.length; j++) {
+          const product1 = products[i];
+          const product2 = products[j];
+          
+          [
+            { base: product1.name, suggested: product2.name },
+            { base: product2.name, suggested: product1.name }
+          ].forEach(({ base, suggested }) => {
+            if (!productToProduct.has(base)) {
+              productToProduct.set(base, new Map());
+            }
+            
+            const baseProducts = productToProduct.get(base)!;
+            const currentCount = baseProducts.get(suggested) || 0;
+            baseProducts.set(suggested, currentCount + 1);
+          });
+        }
+      }
+    });
+
+    const result: CrossSellOpportunity[] = [];
+
+    // Processar oportunidades serviço → produto
+    serviceToProduct.forEach((products, serviceName) => {
+      products.forEach((frequency, productName) => {
+        if (frequency >= 1) {
+          const confidence = (frequency / sales.length) * 100;
+          
+          result.push({
+            baseItem: serviceName,
+            baseItemType: 'service',
+            suggestedItem: productName,
+            suggestedItemType: 'product',
+            confidence,
+            frequency,
+            potentialRevenue: frequency * 25 // Estimativa baseada no valor médio de produtos
+          });
+        }
       });
     });
 
-    return Array.from(opportunities.entries())
-      .map(([key, data]) => {
-        const [baseInfo, suggestedInfo] = key.split(' -> ');
-        const [baseName, baseType] = baseInfo.split('|');
-        const [suggestedName, suggestedType] = suggestedInfo.split('|');
-        
-        return {
-          baseItem: baseName,
-          baseItemType: baseType as 'service' | 'product',
-          suggestedItem: suggestedName,
-          suggestedItemType: suggestedType as 'service' | 'product',
-          confidence: Math.min(data.frequency / sales.length * 100, 100),
-          potentialRevenue: data.revenue / data.frequency,
-          frequency: data.frequency
-        };
+    // Processar algumas oportunidades produto → produto (limitado)
+    productToProduct.forEach((suggestedProducts, baseName) => {
+      suggestedProducts.forEach((frequency, suggestedName) => {
+        if (frequency >= 2) { // Threshold mais alto para produto → produto
+          const confidence = (frequency / sales.length) * 100;
+          
+          result.push({
+            baseItem: baseName,
+            baseItemType: 'product',
+            suggestedItem: suggestedName,
+            suggestedItemType: 'product',
+            confidence,
+            frequency,
+            potentialRevenue: frequency * 20
+          });
+        }
+      });
+    });
+
+    const finalResult = result
+      .sort((a, b) => {
+        // Priorizar oportunidades serviço → produto
+        if (a.baseItemType === 'service' && b.baseItemType === 'product') return -1;
+        if (a.baseItemType === 'product' && b.baseItemType === 'service') return 1;
+        return b.confidence - a.confidence;
       })
-      .filter(opp => opp.frequency >= 1)
-      .sort((a, b) => b.confidence - a.confidence)
-      .slice(0, 20);
+      .slice(0, 15);
+
+    console.log('🎯 Oportunidades de cross-sell encontradas:', finalResult.length);
+    return finalResult;
   };
 
   const analyzeClientPatterns = (sales: any[]): ClientPurchasePattern[] => {
