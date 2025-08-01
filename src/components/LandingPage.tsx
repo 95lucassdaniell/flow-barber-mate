@@ -39,7 +39,7 @@ const LandingPage = () => {
       <section className="relative overflow-hidden bg-background text-foreground">
         <div className="absolute inset-0 bg-muted/20"></div>
         <div 
-          className="absolute inset-0 bg-cover bg-center opacity-5"
+          className="absolute inset-0 bg-cover bg-center opacity-15 grayscale"
           style={{ backgroundImage: `url(${heroImage})` }}
         ></div>
         <div className="relative container mx-auto px-4 py-20 md:py-32">
