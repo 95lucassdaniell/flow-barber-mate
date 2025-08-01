@@ -40,6 +40,7 @@ import ProviderSchedulePage from "./components/providers/schedule/ProviderSchedu
 import ProviderGoalsManagement from "./components/providers/goals/ProviderGoalsManagement";
 import ProviderCommissionsPage from "./components/providers/commissions/ProviderCommissionsPage";
 import ProviderClientsPage from "./components/providers/clients/ProviderClientsPage";
+import { PublicBookingPage } from "./pages/PublicBookingPage";
 
 
 function App() {
@@ -57,6 +58,9 @@ function App() {
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          
+          {/* Public booking route */}
+          <Route path="/app/:slug/agendamento" element={<PublicBookingPage />} />
           
           {/* Protected Routes */}
           <Route path="/app/:slug" element={

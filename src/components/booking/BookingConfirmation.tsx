@@ -48,7 +48,8 @@ export const BookingConfirmation = ({
           start_time: bookingData.time,
           end_time: endTimeString,
           total_price: bookingData.price || 0,
-          status: 'scheduled'
+          status: 'scheduled',
+          booking_source: 'online'
         });
 
       if (appointmentError) throw appointmentError;

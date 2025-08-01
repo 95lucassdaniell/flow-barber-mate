@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Clock, User, Scissors, Phone } from "lucide-react";
+import { Clock, User, Scissors, Phone, Instagram } from "lucide-react";
 import { Appointment } from "@/types/appointment";
 
 interface AppointmentCardProps {
@@ -86,6 +86,13 @@ export const AppointmentCard = ({ appointment, onClick, barberColor, slotsCount 
         <div className="flex items-center gap-1 mb-1">
           <Phone className="h-3 w-3" />
           <span className="text-xs">{appointment.client.phone}</span>
+        </div>
+      )}
+
+      {appointment.booking_source === 'online' && (
+        <div className="flex items-center gap-1 mb-1">
+          <Instagram className="h-3 w-3 text-pink-500" />
+          <span className="text-xs text-pink-600 font-medium">Online</span>
         </div>
       )}
 

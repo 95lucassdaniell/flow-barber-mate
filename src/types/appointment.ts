@@ -10,6 +10,7 @@ export interface Appointment {
   total_price: number;
   status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
   notes?: string;
+  booking_source?: string;
   created_at: string;
   updated_at: string;
   
