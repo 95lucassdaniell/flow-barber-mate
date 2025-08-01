@@ -57,8 +57,9 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             
-            {/* Public booking route - outside SessionGuard */}
+            {/* Public booking routes - outside SessionGuard */}
             <Route path="/app/:slug/agendamento" element={<PublicBookingPage />} />
+            <Route path="/:slug/agendamento" element={<PublicBookingPage />} />
             
             {/* All other routes wrapped in SessionGuard */}
             <Route path="/*" element={

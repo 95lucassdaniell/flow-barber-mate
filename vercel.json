@@ -5,7 +5,15 @@
   "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/((?!api/.*).*)",
+      "source": "/(.+)/agendamento",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/app/(.+)/agendamento",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/((?!api|static|assets|_next).*)",
       "destination": "/index.html"
     }
   ],

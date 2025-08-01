@@ -9,12 +9,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { LoadingProvider } from '@/contexts/LoadingContext';
 import { Scissors, Calendar, Star, Clock } from 'lucide-react';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { RobustSlugValidator } from '@/components/booking/RobustSlugValidator';
+import { useEnvironmentDetection } from '@/components/booking/EnvironmentDetector';
 
 const PublicBookingContent = () => {
   const { slug } = useParams<{ slug: string }>();
   const { isAuthenticated, client, barbershop } = usePhoneAuth();
   const { barbershop: barbershopData, loading: isLoading } = useBarbershopBySlug(slug || '');
   const [initialized, setInitialized] = useState(false);
+  const envInfo = useEnvironmentDetection();
 
   useEffect(() => {
     // Debug logs for production
@@ -26,7 +29,8 @@ const PublicBookingContent = () => {
       isLoading,
       isAuthenticated,
       userAgent: navigator.userAgent,
-      documentReadyState: document.readyState
+      documentReadyState: document.readyState,
+      environment: envInfo
     });
 
     // Ensure DOM is ready
@@ -154,7 +158,16 @@ const PublicBookingContent = () => {
 };
 
 export const PublicBookingPage = () => {
+  const [detectedSlug, setDetectedSlug] = useState<string>('');
+
   useEffect(() => {
+    // Extract slug from either /:slug/agendamento or /app/:slug/agendamento
+    const currentPath = window.location.pathname;
+    const pathSegments = currentPath.split('/').filter(Boolean);
+    const slug = pathSegments[0] === 'app' ? pathSegments[1] : pathSegments[0];
+    
+    setDetectedSlug(slug);
+
     console.log('🚀 PublicBookingPage root mounted:', {
       location: window.location.href,
       pathname: window.location.pathname,
@@ -163,12 +176,14 @@ export const PublicBookingPage = () => {
       origin: window.location.origin,
       protocol: window.location.protocol,
       host: window.location.host,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      extractedSlug: slug,
+      pathSegments
     });
 
-    // Ensure React Router is working
-    if (!window.location.pathname.includes('/app/')) {
-      console.warn('⚠️ Possible routing issue - pathname does not include /app/');
+    // Check for potential routing issues
+    if (!slug || slug === 'agendamento') {
+      console.warn('⚠️ Invalid slug detected:', { slug, currentPath, pathSegments });
     }
   }, []);
 
@@ -191,7 +206,18 @@ export const PublicBookingPage = () => {
     }>
       <LoadingProvider>
         <PhoneAuthProvider>
-          <PublicBookingContent />
+          <RobustSlugValidator
+            slug={detectedSlug}
+            onValidated={(isValid, data) => {
+              console.log('🔍 Slug validation result:', { 
+                slug: detectedSlug, 
+                isValid, 
+                barbershopData: data 
+              });
+            }}
+          >
+            <PublicBookingContent />
+          </RobustSlugValidator>
         </PhoneAuthProvider>
       </LoadingProvider>
     </ErrorBoundary>
