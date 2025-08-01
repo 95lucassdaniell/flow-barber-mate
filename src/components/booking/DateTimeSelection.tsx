@@ -28,15 +28,37 @@ export const DateTimeSelection = ({
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   
+  console.log('📅 DateTimeSelection props:', { serviceId, barberId, barbershopId, selectedDate, selectedTime });
+  
+  // Early validation
+  if (!barbershopId) {
+    console.warn('⚠️ DateTimeSelection: barbershopId is empty or undefined');
+    return (
+      <div className="space-y-6">
+        <div className="text-center mb-6">
+          <h2 className="text-xl font-semibold mb-2">Carregando...</h2>
+          <p className="text-muted-foreground">Aguarde um momento</p>
+        </div>
+      </div>
+    );
+  }
+  
   const { getAvailableTimeSlots } = useBookingAvailability(barbershopId);
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
 
   useEffect(() => {
-    if (selectedDate && serviceId) {
+    if (selectedDate && serviceId && barbershopId) {
+      console.log('🔄 DateTimeSelection useEffect triggered:', { selectedDate, serviceId, barberId, barbershopId });
       loadAvailableSlots(selectedDate);
+    } else {
+      console.log('⚠️ DateTimeSelection useEffect: missing required data:', { 
+        hasSelectedDate: !!selectedDate, 
+        hasServiceId: !!serviceId, 
+        hasBarbershopId: !!barbershopId 
+      });
     }
-  }, [selectedDate, serviceId, barberId]);
+  }, [selectedDate, serviceId, barberId, barbershopId]);
 
   const loadAvailableSlots = async (date: Date) => {
     console.log('🔄 Loading slots for date:', date, 'serviceId:', serviceId, 'barberId:', barberId);
@@ -179,6 +201,14 @@ export const DateTimeSelection = ({
               <p className="text-muted-foreground">
                 Não há horários disponíveis para este dia
               </p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-2"
+                onClick={() => selectedDate && loadAvailableSlots(selectedDate)}
+              >
+                Tentar novamente
+              </Button>
             </div>
           )}
         </div>

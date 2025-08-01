@@ -36,12 +36,16 @@ export const useBookingAvailability = (barbershopId: string) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (barbershopId) {
+    console.log('🔄 useBookingAvailability useEffect:', { barbershopId, hasId: !!barbershopId });
+    if (barbershopId && barbershopId.trim() !== '') {
       fetchInitialData();
+    } else {
+      console.warn('⚠️ useBookingAvailability: invalid barbershopId:', barbershopId);
     }
   }, [barbershopId]);
 
   const fetchInitialData = async () => {
+    console.log('🔄 fetchInitialData started for barbershopId:', barbershopId);
     setIsLoading(true);
     setError(null);
 
@@ -77,6 +81,12 @@ export const useBookingAvailability = (barbershopId: string) => {
       setServices(servicesData || []);
       setProviders(providersData || []);
       setProviderServices(providerServicesData || []);
+      
+      console.log('✅ fetchInitialData completed:', {
+        services: servicesData?.length || 0,
+        providers: providersData?.length || 0,
+        providerServices: providerServicesData?.length || 0
+      });
     } catch (error: any) {
       setError(error.message || 'Erro ao carregar dados');
     } finally {

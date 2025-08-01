@@ -36,7 +36,16 @@ export const BookingFlow = () => {
   const [bookingData, setBookingData] = useState<BookingData>({});
   
   const { client, barbershop } = usePhoneAuth();
-  const { services, providers, getAvailableProviders, getServicePrice } = useBookingAvailability(barbershop?.id || '');
+  const { services, providers, getAvailableProviders, getServicePrice, isLoading: isBookingDataLoading } = useBookingAvailability(barbershop?.id || '');
+  
+  console.log('📋 BookingFlow state:', { 
+    currentStep, 
+    barbershopId: barbershop?.id, 
+    hasBarbershop: !!barbershop, 
+    isBookingDataLoading,
+    servicesCount: services.length,
+    providersCount: providers.length
+  });
 
   const getCurrentStepIndex = () => steps.findIndex(step => step.id === currentStep);
   
@@ -153,14 +162,23 @@ export const BookingFlow = () => {
         )}
 
         {currentStep === 'datetime' && bookingData.serviceId && (
-          <DateTimeSelection
-            serviceId={bookingData.serviceId}
-            barberId={bookingData.barberId}
-            selectedDate={bookingData.date}
-            selectedTime={bookingData.time}
-            onSelect={(date, time) => updateBookingData({ date, time })}
-            barbershopId={barbershop?.id || ''}
-          />
+          <>
+            {!barbershop?.id ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Carregando dados da barbearia...</p>
+              </div>
+            ) : (
+              <DateTimeSelection
+                serviceId={bookingData.serviceId}
+                barberId={bookingData.barberId}
+                selectedDate={bookingData.date}
+                selectedTime={bookingData.time}
+                onSelect={(date, time) => updateBookingData({ date, time })}
+                barbershopId={barbershop.id}
+              />
+            )}
+          </>
         )}
 
         {currentStep === 'confirmation' && (
