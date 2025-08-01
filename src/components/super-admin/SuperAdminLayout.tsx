@@ -12,7 +12,8 @@ import {
   Shield,
   Activity,
   DollarSign,
-  Monitor
+  Monitor,
+  Bell
 } from "lucide-react";
 import { useSuperAuth } from "@/hooks/useSuperAuth";
 import { Link, useLocation } from "react-router-dom";
@@ -67,8 +68,8 @@ export default function SuperAdminLayout({ children, activeTab }: SuperAdminLayo
     <div className="h-screen flex bg-background">
       {/* Sidebar Desktop */}
       <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
-        <div className="flex-1 flex flex-col min-h-0 bg-card border-r relative">
-          <div className="flex-1 flex flex-col pt-5 pb-20 overflow-y-auto">
+        <div className="flex-1 flex flex-col min-h-0 bg-card border-r">
+          <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
             <div className="flex items-center flex-shrink-0 px-4">
               <Shield className="h-8 w-8 text-primary" />
               <span className="ml-2 text-xl font-bold">Super Admin</span>
@@ -89,18 +90,6 @@ export default function SuperAdminLayout({ children, activeTab }: SuperAdminLayo
                 </Link>
               ))}
             </nav>
-          </div>
-          
-          {/* Botão Sair fixo na parte inferior */}
-          <div className="absolute bottom-16 left-2 right-2">
-            <Button
-              variant="ghost"
-              onClick={signOut}
-              className="group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-            >
-              <LogOut className="mr-3 h-5 w-5" />
-              Sair
-            </Button>
           </div>
           
           <div className="flex-shrink-0 flex border-t p-4">
@@ -131,8 +120,8 @@ export default function SuperAdminLayout({ children, activeTab }: SuperAdminLayo
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="p-0 w-64">
-          <div className="flex flex-col h-full bg-card relative">
-            <div className="flex-1 flex flex-col pt-5 pb-20 overflow-y-auto">
+          <div className="flex flex-col h-full bg-card">
+            <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
               <div className="flex items-center flex-shrink-0 px-4">
                 <Shield className="h-8 w-8 text-primary" />
                 <span className="ml-2 text-xl font-bold">Super Admin</span>
@@ -156,18 +145,6 @@ export default function SuperAdminLayout({ children, activeTab }: SuperAdminLayo
               </nav>
             </div>
             
-            {/* Botão Sair fixo na parte inferior */}
-            <div className="absolute bottom-16 left-2 right-2">
-              <Button
-                variant="ghost"
-                onClick={signOut}
-                className="group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              >
-                <LogOut className="mr-3 h-5 w-5" />
-                Sair
-              </Button>
-            </div>
-            
             <div className="flex-shrink-0 flex border-t p-4">
               <div className="flex items-center w-full">
                 <Avatar className="h-9 w-9">
@@ -185,8 +162,44 @@ export default function SuperAdminLayout({ children, activeTab }: SuperAdminLayo
         </SheetContent>
       </Sheet>
 
-      {/* Main Content */}
+      {/* Header */}
       <div className="md:pl-64 flex flex-col flex-1">
+        <header className="bg-background border-b h-14 flex items-center justify-between px-4 md:px-6">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="md:hidden"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <h1 className="text-lg font-semibold">{getCurrentTitle()}</h1>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Button variant="ghost" size="sm" className="relative">
+              <Bell className="h-5 w-5" />
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={signOut}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+            
+            <Avatar className="h-8 w-8">
+              <AvatarFallback>
+                {superAdmin?.full_name?.charAt(0) || "SA"}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+        </header>
+
+        {/* Main Content */}
         <main className="flex-1 p-8 overflow-auto">
           {children}
         </main>
