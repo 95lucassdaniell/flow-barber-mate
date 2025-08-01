@@ -67,8 +67,8 @@ export default function SuperAdminLayout({ children, activeTab }: SuperAdminLayo
     <div className="h-screen flex bg-background">
       {/* Sidebar Desktop */}
       <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
-        <div className="flex-1 flex flex-col min-h-0 bg-card border-r">
-          <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+        <div className="flex-1 flex flex-col min-h-0 bg-card border-r relative">
+          <div className="flex-1 flex flex-col pt-5 pb-20 overflow-y-auto">
             <div className="flex items-center flex-shrink-0 px-4">
               <Shield className="h-8 w-8 text-primary" />
               <span className="ml-2 text-xl font-bold">Super Admin</span>
@@ -88,19 +88,21 @@ export default function SuperAdminLayout({ children, activeTab }: SuperAdminLayo
                   {item.name}
                 </Link>
               ))}
-              
-              <div className="mt-8">
-                <Button
-                  variant="ghost"
-                  onClick={signOut}
-                  className="group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                >
-                  <LogOut className="mr-3 h-5 w-5" />
-                  Sair
-                </Button>
-              </div>
             </nav>
           </div>
+          
+          {/* Botão Sair fixo na parte inferior */}
+          <div className="absolute bottom-16 left-2 right-2">
+            <Button
+              variant="ghost"
+              onClick={signOut}
+              className="group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            >
+              <LogOut className="mr-3 h-5 w-5" />
+              Sair
+            </Button>
+          </div>
+          
           <div className="flex-shrink-0 flex border-t p-4">
             <div className="flex items-center w-full">
               <Avatar className="h-9 w-9">
@@ -129,8 +131,8 @@ export default function SuperAdminLayout({ children, activeTab }: SuperAdminLayo
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="p-0 w-64">
-          <div className="flex flex-col h-full bg-card">
-            <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+          <div className="flex flex-col h-full bg-card relative">
+            <div className="flex-1 flex flex-col pt-5 pb-20 overflow-y-auto">
               <div className="flex items-center flex-shrink-0 px-4">
                 <Shield className="h-8 w-8 text-primary" />
                 <span className="ml-2 text-xl font-bold">Super Admin</span>
@@ -151,19 +153,21 @@ export default function SuperAdminLayout({ children, activeTab }: SuperAdminLayo
                     {item.name}
                   </Link>
                 ))}
-                
-                <div className="mt-8">
-                  <Button
-                    variant="ghost"
-                    onClick={signOut}
-                    className="group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                  >
-                    <LogOut className="mr-3 h-5 w-5" />
-                    Sair
-                  </Button>
-                </div>
               </nav>
             </div>
+            
+            {/* Botão Sair fixo na parte inferior */}
+            <div className="absolute bottom-16 left-2 right-2">
+              <Button
+                variant="ghost"
+                onClick={signOut}
+                className="group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              >
+                <LogOut className="mr-3 h-5 w-5" />
+                Sair
+              </Button>
+            </div>
+            
             <div className="flex-shrink-0 flex border-t p-4">
               <div className="flex items-center w-full">
                 <Avatar className="h-9 w-9">
