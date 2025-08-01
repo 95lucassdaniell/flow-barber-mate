@@ -36,10 +36,10 @@ const LandingPage = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-hero-gradient text-primary-foreground">
-        <div className="absolute inset-0 bg-black/20"></div>
+      <section className="relative overflow-hidden bg-background text-foreground">
+        <div className="absolute inset-0 bg-muted/20"></div>
         <div 
-          className="absolute inset-0 bg-cover bg-center opacity-10"
+          className="absolute inset-0 bg-cover bg-center opacity-5"
           style={{ backgroundImage: `url(${heroImage})` }}
         ></div>
         <div className="relative container mx-auto px-4 py-20 md:py-32">
@@ -48,7 +48,7 @@ const LandingPage = () => {
               Automatize seu salão e 
               <span className="text-accent"> aumente o faturamento</span>
             </h1>
-            <p className="text-xl md:text-2xl mb-8 text-primary-foreground/90">
+            <p className="text-xl md:text-2xl mb-8 text-muted-foreground">
               O único sistema que realmente preenche sua agenda e reativa clientes automaticamente via WhatsApp
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -57,7 +57,7 @@ const LandingPage = () => {
                   Começar Teste Grátis
                 </Button>
               </Link>
-              <Button variant="outline" size="lg" className="text-lg px-8 py-4 bg-white/10 border-white/20 text-white hover:bg-white/20">
+              <Button variant="outline" size="lg" className="text-lg px-8 py-4">
                 Ver Demonstração
               </Button>
             </div>
@@ -142,12 +142,12 @@ const LandingPage = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-hero-gradient text-primary-foreground">
+      <section className="py-20 bg-background border-t">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">
             Pronto para encher sua agenda?
           </h2>
-          <p className="text-xl mb-8 text-primary-foreground/90 max-w-2xl mx-auto">
+          <p className="text-xl mb-8 text-muted-foreground max-w-2xl mx-auto">
             Teste grátis por 14 dias. Sem cartão de crédito. Configure em 5 minutos.
           </p>
           <Link to="/register">
