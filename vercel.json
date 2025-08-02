@@ -12,10 +12,6 @@
     {
       "source": "/app/(.+)/agendamento",
       "destination": "/index.html"
-    },
-    {
-      "source": "/((?!api|assets|_next|favicon\\.ico|robots\\.txt|.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)).*)",
-      "destination": "/index.html"
     }
   ],
   "headers": [
