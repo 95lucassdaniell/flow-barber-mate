@@ -31,25 +31,91 @@ serve(async (req) => {
   }
 
   try {
-    const { clientPatterns, scheduleInsights, barbershopId } = await req.json();
-    
-    console.log('Processing AI analytics for barbershop:', barbershopId);
-    console.log('Client patterns:', clientPatterns?.length || 0);
-    console.log('Schedule insights:', scheduleInsights?.length || 0);
+    // Validação de entrada robusta
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (parseError) {
+      console.error('❌ JSON parse error:', parseError);
+      return new Response(JSON.stringify({ 
+        error: 'Invalid JSON in request body',
+        predictions: null,
+        fallback: true
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    // Analisar padrões de clientes para previsões
-    const highRiskClients = clientPatterns.filter((client: ClientPattern) => client.churnRisk === 'high');
-    const mediumRiskClients = clientPatterns.filter((client: ClientPattern) => client.churnRisk === 'medium');
+    const { clientPatterns, scheduleInsights, barbershopId } = requestBody;
     
-    // Calcular receita prevista baseada nos padrões
-    const totalLifetimeValue = clientPatterns.reduce((sum: number, client: ClientPattern) => 
-      sum + client.lifetimeValue, 0);
-    
-    const averageVisitValue = totalLifetimeValue / clientPatterns.reduce((sum: number, client: ClientPattern) => 
-      sum + client.totalVisits, 1);
+    // Validação de dados obrigatórios
+    if (!barbershopId) {
+      console.error('❌ Missing barbershopId');
+      return new Response(JSON.stringify({ 
+        error: 'barbershopId is required',
+        predictions: null,
+        fallback: true
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    const monthlyPredictedVisits = clientPatterns.reduce((sum: number, client: ClientPattern) => {
-      const visitsPerMonth = 30 / (client.averageCycle || 30);
+    // Validação e sanitização dos arrays
+    const safeClientPatterns = Array.isArray(clientPatterns) ? clientPatterns : [];
+    const safeScheduleInsights = Array.isArray(scheduleInsights) ? scheduleInsights : [];
+    
+    console.log('🔍 [Railway Debug] Processing AI analytics for barbershop:', barbershopId);
+    console.log('📊 [Railway Debug] Client patterns:', safeClientPatterns.length);
+    console.log('⏰ [Railway Debug] Schedule insights:', safeScheduleInsights.length);
+    console.log('🌐 [Railway Debug] Environment check:', Deno.env.get('DENO_DEPLOYMENT_ID') || 'local');
+
+    // Verificar se há dados suficientes
+    if (safeClientPatterns.length === 0 && safeScheduleInsights.length === 0) {
+      console.warn('⚠️ [Railway Debug] Insufficient data for analysis');
+      return new Response(JSON.stringify({ 
+        predictions: {
+          monthlyRevenue: 0,
+          churnRiskClients: 0,
+          recommendedActions: [{
+            type: 'data_collection',
+            description: 'Dados insuficientes para análise. Continue usando o sistema para gerar insights.',
+            priority: 'low',
+            potentialImpact: 0,
+            details: {
+              message: 'Quando houver mais dados de clientes e agendamentos, análises mais precisas serão geradas.'
+            }
+          }],
+          insights: {
+            averageClientCycle: 30,
+            averageLifetimeValue: 0,
+            retentionRate: 100,
+            mostProfitableDay: 'N/A',
+            leastProfitableDay: 'N/A'
+          }
+        }
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Analisar padrões de clientes para previsões (usando dados sanitizados)
+    const highRiskClients = safeClientPatterns.filter((client: ClientPattern) => client.churnRisk === 'high');
+    const mediumRiskClients = safeClientPatterns.filter((client: ClientPattern) => client.churnRisk === 'medium');
+    
+    // Calcular receita prevista baseada nos padrões (com proteção contra divisão por zero)
+    const totalLifetimeValue = safeClientPatterns.reduce((sum: number, client: ClientPattern) => 
+      sum + (client.lifetimeValue || 0), 0);
+    
+    const totalVisits = safeClientPatterns.reduce((sum: number, client: ClientPattern) => 
+      sum + (client.totalVisits || 0), 0);
+    
+    const averageVisitValue = totalVisits > 0 ? totalLifetimeValue / totalVisits : 0;
+
+    const monthlyPredictedVisits = safeClientPatterns.reduce((sum: number, client: ClientPattern) => {
+      const cycle = client.averageCycle || 30;
+      const visitsPerMonth = cycle > 0 ? 30 / cycle : 1;
       return sum + visitsPerMonth;
     }, 0);
 
@@ -93,7 +159,7 @@ serve(async (req) => {
     }
 
     // Recomendações para otimização de horários
-    const lowOccupancySlots = scheduleInsights.filter((slot: ScheduleInsight) => 
+    const lowOccupancySlots = safeScheduleInsights.filter((slot: ScheduleInsight) => 
       slot.occupationRate < 0.3);
     
     if (lowOccupancySlots.length > 0) {
@@ -118,9 +184,9 @@ serve(async (req) => {
     }
 
     // Recomendações para upsell
-    const frequentClients = clientPatterns
-      .filter((client: ClientPattern) => client.totalVisits >= 3 && client.churnRisk === 'low')
-      .sort((a: ClientPattern, b: ClientPattern) => b.lifetimeValue - a.lifetimeValue)
+    const frequentClients = safeClientPatterns
+      .filter((client: ClientPattern) => (client.totalVisits || 0) >= 3 && client.churnRisk === 'low')
+      .sort((a: ClientPattern, b: ClientPattern) => (b.lifetimeValue || 0) - (a.lifetimeValue || 0))
       .slice(0, 10);
 
     if (frequentClients.length > 0) {
@@ -145,30 +211,65 @@ serve(async (req) => {
       churnRiskClients: highRiskClients.length + mediumRiskClients.length,
       recommendedActions: recommendedActions.slice(0, 5), // Top 5 recomendações
       insights: {
-        averageClientCycle: Math.round(
-          clientPatterns.reduce((sum: number, client: ClientPattern) => 
-            sum + client.averageCycle, 0) / clientPatterns.length
-        ),
-        averageLifetimeValue: Math.round(totalLifetimeValue / clientPatterns.length),
-        retentionRate: Math.round(
-          ((clientPatterns.length - highRiskClients.length) / clientPatterns.length) * 100
-        ),
-        mostProfitableDay: findMostProfitableDay(scheduleInsights),
-        leastProfitableDay: findLeastProfitableDay(scheduleInsights)
+        averageClientCycle: safeClientPatterns.length > 0 ? Math.round(
+          safeClientPatterns.reduce((sum: number, client: ClientPattern) => 
+            sum + (client.averageCycle || 30), 0) / safeClientPatterns.length
+        ) : 30,
+        averageLifetimeValue: safeClientPatterns.length > 0 ? Math.round(totalLifetimeValue / safeClientPatterns.length) : 0,
+        retentionRate: safeClientPatterns.length > 0 ? Math.round(
+          ((safeClientPatterns.length - highRiskClients.length) / safeClientPatterns.length) * 100
+        ) : 100,
+        mostProfitableDay: findMostProfitableDay(safeScheduleInsights),
+        leastProfitableDay: findLeastProfitableDay(safeScheduleInsights)
       }
     };
 
-    console.log('Generated predictions:', predictions);
+    console.log('✅ [Railway Debug] Generated predictions successfully:', {
+      monthlyRevenue: predictions.monthlyRevenue,
+      actionsCount: predictions.recommendedActions.length,
+      clientsAnalyzed: safeClientPatterns.length,
+      slotsAnalyzed: safeScheduleInsights.length
+    });
 
     return new Response(JSON.stringify({ predictions }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error in ai-analytics function:', error);
+    console.error('💥 [Railway Debug] Critical error in ai-analytics function:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      environment: Deno.env.get('DENO_DEPLOYMENT_ID') || 'local'
+    });
+    
+    // Fallback seguro com dados válidos
+    const fallbackPredictions = {
+      monthlyRevenue: 0,
+      churnRiskClients: 0,
+      recommendedActions: [{
+        type: 'system_error',
+        description: 'Erro temporário no sistema de análise. Tente novamente em alguns minutos.',
+        priority: 'low',
+        potentialImpact: 0,
+        details: {
+          error: 'Falha na função de IA - usando dados de fallback',
+          timestamp: new Date().toISOString()
+        }
+      }],
+      insights: {
+        averageClientCycle: 30,
+        averageLifetimeValue: 0,
+        retentionRate: 100,
+        mostProfitableDay: 'N/A',
+        leastProfitableDay: 'N/A'
+      }
+    };
+    
     return new Response(JSON.stringify({ 
-      error: error.message,
-      predictions: null 
+      error: error.message || 'Internal server error',
+      predictions: fallbackPredictions,
+      fallback: true
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

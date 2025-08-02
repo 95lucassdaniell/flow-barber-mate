@@ -249,52 +249,133 @@ export const useAIAnalytics = () => {
     }
   };
 
-  // Processar insights com IA
-  const processAIInsights = async () => {
+  // Processar insights com IA (com retry e validação robusta)
+  const processAIInsights = async (retryCount = 0) => {
+    const maxRetries = 2;
+    
     if (!clients.length && !appointments.length && !sales.length) {
       await fetchData();
       return;
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke('ai-analytics', {
+      console.log('🚀 [Railway Debug] Calling ai-analytics function:', {
+        clientPatterns: clientPatterns.length,
+        scheduleInsights: scheduleInsights.length,
+        barbershopId: profile?.barbershop_id,
+        attempt: retryCount + 1
+      });
+
+      // Timeout protection para Railway
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Function timeout - Railway may have limitations')), 30000);
+      });
+
+      const invokePromise = supabase.functions.invoke('ai-analytics', {
         body: {
-          clientPatterns,
-          scheduleInsights,
+          clientPatterns: clientPatterns.map(cp => ({
+            clientId: cp.clientId,
+            averageCycle: cp.averageCycle || 30,
+            lastVisit: cp.lastVisit.toISOString(),
+            nextPredictedVisit: cp.nextPredictedVisit.toISOString(),
+            churnRisk: cp.churnRisk,
+            totalVisits: cp.totalVisits || 0,
+            lifetimeValue: cp.lifetimeValue || 0
+          })),
+          scheduleInsights: scheduleInsights.map(si => ({
+            timeSlot: si.timeSlot,
+            dayOfWeek: si.dayOfWeek,
+            occupationRate: si.occupationRate || 0,
+            suggestedAction: si.suggestedAction,
+            potentialRevenue: si.potentialRevenue || 0
+          })),
           barbershopId: profile?.barbershop_id
         }
       });
 
-      if (error) throw error;
+      const result = await Promise.race([invokePromise, timeoutPromise]);
+      const { data, error } = result as any;
+
+      console.log('📡 [Railway Debug] Function response:', {
+        hasData: !!data,
+        hasError: !!error,
+        dataKeys: data ? Object.keys(data) : [],
+        errorMessage: error?.message
+      });
+
+      if (error) {
+        throw new Error(`Supabase function error: ${error.message}`);
+      }
+
+      // Validar resposta JSON
+      let predictions;
+      if (typeof data === 'string') {
+        try {
+          predictions = JSON.parse(data).predictions;
+        } catch (parseErr) {
+          console.error('❌ [Railway Debug] JSON parse error from function response:', parseErr);
+          throw new Error('Invalid JSON response from AI function');
+        }
+      } else if (data && data.predictions) {
+        predictions = data.predictions;
+      } else {
+        console.warn('⚠️ [Railway Debug] Unexpected response format:', data);
+        throw new Error('Invalid response format from AI function');
+      }
 
       const enhancedInsights: AIInsights = {
         clientPatterns,
         scheduleInsights,
         salesPatterns: [], // será implementado na próxima fase
-        predictions: data.predictions || {
-          monthlyRevenue: sales.reduce((sum, sale) => sum + Number(sale.final_amount), 0),
+        predictions: predictions || {
+          monthlyRevenue: sales.reduce((sum, sale) => sum + Number(sale.final_amount || 0), 0),
           churnRiskClients: clientPatterns.filter(c => c.churnRisk === 'high').length,
-          recommendedActions: data.recommendedActions || generateBasicRecommendations()
+          recommendedActions: generateBasicRecommendations()
         }
       };
 
+      console.log('✅ [Railway Debug] Successfully processed AI insights:', {
+        monthlyRevenue: enhancedInsights.predictions.monthlyRevenue,
+        actionsCount: enhancedInsights.predictions.recommendedActions.length
+      });
+
       setInsights(enhancedInsights);
-    } catch (err) {
-      console.error('Error processing AI insights:', err);
-      setError(err instanceof Error ? err.message : 'Erro ao processar insights');
+      setError(null); // Clear any previous errors
       
-      // Fallback para insights básicos sem IA
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao processar insights';
+      
+      console.error('💥 [Railway Debug] Error processing AI insights:', {
+        message: errorMessage,
+        attempt: retryCount + 1,
+        maxRetries,
+        willRetry: retryCount < maxRetries
+      });
+
+      // Retry logic
+      if (retryCount < maxRetries && !errorMessage.includes('timeout')) {
+        console.log(`🔄 [Railway Debug] Retrying AI insights (${retryCount + 1}/${maxRetries})...`);
+        setTimeout(() => {
+          processAIInsights(retryCount + 1);
+        }, 2000 * (retryCount + 1)); // Exponential backoff
+        return;
+      }
+      
+      setError(`Análise IA indisponível: ${errorMessage}`);
+      
+      // Fallback robusto para insights básicos
       const basicInsights: AIInsights = {
         clientPatterns,
         scheduleInsights,
         salesPatterns: [],
         predictions: {
-          monthlyRevenue: sales.reduce((sum, sale) => sum + Number(sale.final_amount), 0),
+          monthlyRevenue: sales.reduce((sum, sale) => sum + Number(sale.final_amount || 0), 0),
           churnRiskClients: clientPatterns.filter(c => c.churnRisk === 'high').length,
           recommendedActions: generateBasicRecommendations()
         }
       };
       
+      console.log('🔧 [Railway Debug] Using fallback insights:', basicInsights.predictions);
       setInsights(basicInsights);
     }
   };
@@ -340,6 +421,25 @@ export const useAIAnalytics = () => {
 
   const refreshInsights = async () => {
     await fetchData();
+  };
+
+  // Health check para diagnóstico
+  const checkAIFunctionHealth = async () => {
+    try {
+      console.log('🏥 [Railway Debug] Checking AI function health...');
+      const { data, error } = await supabase.functions.invoke('ai-health-check');
+      
+      if (error) {
+        console.error('❌ [Railway Debug] Health check failed:', error);
+        return false;
+      }
+      
+      console.log('✅ [Railway Debug] Health check result:', data);
+      return data.status === 'healthy';
+    } catch (err) {
+      console.error('💥 [Railway Debug] Health check error:', err);
+      return false;
+    }
   };
 
   return {
