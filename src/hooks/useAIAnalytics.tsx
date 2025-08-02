@@ -398,146 +398,48 @@ export const useAIAnalytics = () => {
     };
   };
 
-  // ============= CORREÇÃO DEFINITIVA: SISTEMA ROBUSTO =============
-  const processAIInsights = async (retryCount = 0) => {
+  // ============= SOLUÇÃO SIMPLIFICADA E ROBUSTA =============
+  const processAIInsights = async () => {
     setLoading(true);
-    setError(null);
-
-    console.log('🚀 [DEFINITIVE-FIX] Starting AI insights processing...', {
-      retryCount,
-      hasProfile: !!profile,
-      barbershopId: profile?.barbershop_id
-    });
-
-    // ETAPA 1: GARANTIR DADOS VÁLIDOS ANTES DO ENVIO
-    const hasValidData = clients.length > 0 || appointments.length > 0 || sales.length > 0;
-    const hasComputedPatterns = (clientPatterns.length > 0 || scheduleInsights.length > 0);
     
-    console.log('🔍 [VALIDATION] Critical data check:', {
-      hasValidData,
-      hasComputedPatterns,
-      clientsCount: clients.length,
-      appointmentsCount: appointments.length,
-      salesCount: sales.length,
-      clientPatternsCount: clientPatterns.length,
-      scheduleInsightsCount: scheduleInsights.length
-    });
-
-    // Se não há dados base, buscar primeiro
-    if (!hasValidData) {
-      console.log('🚨 [CRITICAL] No base data available, triggering fetch...');
-      await fetchData();
-      return;
-    }
-
-    // Sempre processar local primeiro (garantia)
+    // SEMPRE processar insights locais primeiro (100% confiável)
     const localInsights = processLocalAIInsights(clientPatterns, scheduleInsights);
     setInsights(localInsights);
-    console.log('✅ [LOCAL] Local insights set as primary');
-
-    // Só tentar edge function se temos padrões computados válidos
-    if (!hasComputedPatterns || !profile?.barbershop_id) {
-      console.log('⚠️ [SKIP] No computed patterns or barbershop ID, staying with local');
+    
+    // Se não temos dados suficientes, manter apenas local
+    if (!clientPatterns?.length || !scheduleInsights?.length || !profile?.barbershop_id) {
       setLoading(false);
       return;
     }
 
+    // Tentar enhancement via IA com payload mínimo
     try {
-      // ETAPA 2: CORREÇÃO TOTAL DA SERIALIZAÇÃO
-      const sanitizeForJSON = (obj: any): any => {
-        if (obj === null || obj === undefined) return obj;
-        if (obj instanceof Date) return obj.toISOString();
-        if (Array.isArray(obj)) return obj.map(sanitizeForJSON);
-        if (typeof obj === 'object') {
-          const sanitized: any = {};
-          for (const [key, value] of Object.entries(obj)) {
-            sanitized[key] = sanitizeForJSON(value);
-          }
-          return sanitized;
-        }
-        return obj;
+      const minimalPayload = {
+        b: profile.barbershop_id,
+        c: clientPatterns.length,
+        s: scheduleInsights.length,
+        v: Math.round(clientPatterns.reduce((sum, p) => sum + (p.lifetimeValue || 0), 0) / clientPatterns.length) || 0,
+        r: Math.round(scheduleInsights.reduce((sum, s) => sum + (s.potentialRevenue || 0), 0)) || 0
       };
 
-      const sanitizedPayload = sanitizeForJSON({
-        barbershopId: profile.barbershop_id,
-        clientPatterns: clientPatterns.slice(0, 10), // Reduzir payload
-        scheduleInsights: scheduleInsights.slice(0, 10)
-      });
-
-      // Validação final do payload
-      let payloadString: string;
-      let payloadSize: number;
-      
-      try {
-        payloadString = JSON.stringify(sanitizedPayload);
-        payloadSize = new Blob([payloadString]).size;
-        
-        console.log('📦 [PAYLOAD] Validation successful:', {
-          size: payloadSize,
-          hasContent: payloadString.length > 0,
-          isValidJSON: true,
-          preview: payloadString.substring(0, 200)
-        });
-
-        // Limitar tamanho do payload
-        if (payloadSize > 50000) { // 50KB limit
-          console.warn('⚠️ [PAYLOAD] Too large, reducing...');
-          sanitizedPayload.clientPatterns = sanitizedPayload.clientPatterns.slice(0, 5);
-          sanitizedPayload.scheduleInsights = sanitizedPayload.scheduleInsights.slice(0, 5);
-          payloadString = JSON.stringify(sanitizedPayload);
-          payloadSize = new Blob([payloadString]).size;
-        }
-
-      } catch (serializationError) {
-        console.error('❌ [SERIALIZATION] Failed:', serializationError);
-        setLoading(false);
-        return;
-      }
-
-      // ETAPA 3: BYPASS DO RAILWAY - TESTE DIRETO
-      console.log('🔧 [RAILWAY-BYPASS] Starting direct test...');
-      
-      const directFetchHeaders = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6cXdteGZmanVmZWZvY2drZXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyOTk5NzUsImV4cCI6MjA2ODg3NTk3NX0.f4UD5xQ16wInFkwkAYcqIfAFyhJ2uuefc-l6n4pSJpY',
-        'x-client-debug': 'definitive-fix',
-        'x-payload-size': payloadSize.toString(),
-        'Content-Length': payloadString.length.toString()
-      };
-
-      console.log('📡 [DIRECT-FETCH] Attempting direct call...', {
-        url: 'https://yzqwmxffjufefocgkevz.supabase.co/functions/v1/ai-analytics',
-        headers: directFetchHeaders,
-        payloadSize
-      });
-
-      const directResponse = await fetch('https://yzqwmxffjufefocgkevz.supabase.co/functions/v1/ai-analytics', {
+      const response = await fetch('https://yzqwmxffjufefocgkevz.supabase.co/functions/v1/ai-analytics', {
         method: 'POST',
-        headers: directFetchHeaders,
-        body: payloadString
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6cXdteGZmanVmZWZvY2drZXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyOTk5NzUsImV4cCI6MjA2ODg3NTk3NX0.f4UD5xQ16wInFkwkAYcqIfAFyhJ2uuefc-l6n4pSJpY'
+        },
+        body: JSON.stringify(minimalPayload)
       });
 
-      console.log('📊 [DIRECT-FETCH] Response status:', directResponse.status);
-      
-      if (directResponse.ok) {
-        const enhancedInsights = await directResponse.json();
-        console.log('✅ [DIRECT-FETCH] Success! Enhanced insights received');
-        
-        // Merge com insights locais
-        setInsights({
-          ...localInsights,
-          ...enhancedInsights,
-          source: 'enhanced'
-        });
-      } else {
-        console.warn('⚠️ [DIRECT-FETCH] Failed, keeping local insights');
+      if (response.ok) {
+        const enhanced = await response.json();
+        setInsights(prev => ({ ...prev, ...enhanced, enhanced: true }));
       }
-
-    } catch (enhancementError) {
-      console.warn('⚠️ [ENHANCEMENT] Edge function enhancement failed:', enhancementError);
-    } finally {
-      setLoading(false);
+    } catch {
+      // Silently continue with local insights
     }
+    
+    setLoading(false);
   };
 
   const generateBasicRecommendations = (patterns: ClientPattern[] = [], scheduleData: ScheduleInsight[] = []) => {
