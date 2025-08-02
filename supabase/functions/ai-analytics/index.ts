@@ -75,73 +75,106 @@ serve(async (req) => {
       
       logEmergencyDebug('RAILWAY-DETECTION', railwayHeaders, requestId);
       
-      // FASE 3: EDGE FUNCTION RESILIENTE - Múltiplas tentativas de leitura do body
+      // CORREÇÃO DEFINITIVA: LEITURA ULTRA-ROBUSTA DO BODY
       let bodyReadAttempts = 0;
-      const maxBodyReadAttempts = 3;
+      const maxBodyReadAttempts = 4;
       
-      while (bodyReadAttempts < maxBodyReadAttempts && (!rawBody || !rawBody.trim())) {
+      // Detectar problema Railway específico
+      const isRailwayRequest = req.headers.get('user-agent')?.includes('Railway') || 
+                              req.headers.get('x-forwarded-for')?.includes('railway');
+      
+      logEmergencyDebug('RAILWAY-SPECIFIC', { isRailwayRequest }, requestId);
+      
+      while (bodyReadAttempts < maxBodyReadAttempts && (!rawBody || rawBody.trim().length === 0)) {
         bodyReadAttempts++;
-        logEmergencyDebug('BODY-READ-ATTEMPT', { attempt: bodyReadAttempts }, requestId);
+        logEmergencyDebug('BODY-READ-ATTEMPT', { 
+          attempt: bodyReadAttempts, 
+          isRailway: isRailwayRequest 
+        }, requestId);
         
         try {
-          // Estratégias diferentes para cada tentativa
           if (bodyReadAttempts === 1) {
-            // Tentativa 1: Leitura padrão com timeout
-            const timeout = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error('Body read timeout attempt 1')), 3000);
-            });
-            const bodyPromise = req.text();
-            rawBody = await Promise.race([bodyPromise, timeout]) as string;
+            // Tentativa 1: Leitura direta sem timeout
+            rawBody = await req.text();
             
           } else if (bodyReadAttempts === 2) {
-            // Tentativa 2: Leitura como ArrayBuffer primeiro
-            const arrayBuffer = await req.arrayBuffer();
-            rawBody = new TextDecoder().decode(arrayBuffer);
+            // Tentativa 2: Clone e re-read
+            const clonedReq = req.clone();
+            rawBody = await clonedReq.text();
             
           } else if (bodyReadAttempts === 3) {
-            // Tentativa 3: Stream reading
+            // Tentativa 3: ArrayBuffer approach
+            const arrayBuffer = await req.arrayBuffer();
+            rawBody = new TextDecoder('utf-8').decode(arrayBuffer);
+            
+          } else if (bodyReadAttempts === 4) {
+            // Tentativa 4: Byte-by-byte reading para Railway
             if (req.body) {
               const reader = req.body.getReader();
               const chunks: Uint8Array[] = [];
-              let done = false;
               
-              while (!done) {
-                const { value, done: readerDone } = await reader.read();
-                done = readerDone;
-                if (value) chunks.push(value);
+              try {
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  if (value) chunks.push(value);
+                }
+                
+                if (chunks.length > 0) {
+                  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+                  const combined = new Uint8Array(totalLength);
+                  let offset = 0;
+                  
+                  for (const chunk of chunks) {
+                    combined.set(chunk, offset);
+                    offset += chunk.length;
+                  }
+                  
+                  rawBody = new TextDecoder('utf-8', { fatal: false }).decode(combined);
+                }
+              } finally {
+                reader.releaseLock();
               }
-              
-              const concatenated = new Uint8Array(chunks.reduce((acc, chunk) => acc + chunk.length, 0));
-              let offset = 0;
-              for (const chunk of chunks) {
-                concatenated.set(chunk, offset);
-                offset += chunk.length;
-              }
-              
-              rawBody = new TextDecoder().decode(concatenated);
             }
           }
           
-          logEmergencyDebug('BODY-READ-SUCCESS', {
+          // Limpar whitespace e caracteres invisíveis
+          if (rawBody) {
+            rawBody = rawBody.trim().replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+          }
+          
+          logEmergencyDebug('BODY-READ-RESULT', {
             attempt: bodyReadAttempts,
             length: rawBody?.length || 0,
             hasContent: !!(rawBody && rawBody.trim()),
-            firstChars: rawBody?.substring(0, 100) || 'EMPTY'
+            firstChars: rawBody?.substring(0, 200) || 'EMPTY',
+            lastChars: rawBody?.substring(Math.max(0, (rawBody?.length || 0) - 50)) || 'EMPTY'
           }, requestId);
           
-          // Se conseguiu ler algo, sair do loop
-          if (rawBody && rawBody.trim()) {
-            break;
+          // Se conseguiu ler algo válido, sair
+          if (rawBody && rawBody.trim().length > 0) {
+            // Verificar se é JSON válido
+            try {
+              JSON.parse(rawBody);
+              logEmergencyDebug('JSON-VALIDATION', 'Valid JSON detected', requestId);
+              break;
+            } catch {
+              logEmergencyDebug('JSON-VALIDATION', 'Invalid JSON, continuing...', requestId);
+              if (bodyReadAttempts < maxBodyReadAttempts) {
+                rawBody = '';
+                continue;
+              }
+            }
           }
           
         } catch (readError) {
           logEmergencyDebug('BODY-READ-ERROR', {
             attempt: bodyReadAttempts,
             error: readError.message,
-            errorType: readError.constructor.name
+            errorType: readError.constructor.name,
+            stack: readError.stack?.substring(0, 300)
           }, requestId);
           
-          // Se é a última tentativa, manter o erro
           if (bodyReadAttempts === maxBodyReadAttempts) {
             rawBody = '';
           }
