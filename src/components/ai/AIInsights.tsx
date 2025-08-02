@@ -32,6 +32,8 @@ import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export const AIInsights: React.FC = () => {
+  console.log('🔥 [AI INSIGHTS] Componente carregado - Sistema 100% local ativo');
+  
   const { insights, loading, error, refreshInsights, clientPatterns, scheduleInsights } = useAIAnalytics();
   const { metrics: crmMetrics, loading: crmLoading } = useCRMMetrics();
   const [clientsMap, setClientsMap] = useState<Map<string, string>>(new Map());

@@ -400,10 +400,12 @@ export const useAIAnalytics = () => {
 
   // ============= PROCESSAMENTO 100% LOCAL OTIMIZADO =============
   const processAIInsights = async () => {
+    console.log('✅ [SISTEMA LOCAL] Processando insights 100% localmente - SEM edge function');
     setLoading(true);
     
     // Sistema local aprimorado com algoritmos mais sofisticados
     const enhancedLocalInsights = processAdvancedLocalInsights(clientPatterns, scheduleInsights);
+    console.log('✅ [SISTEMA LOCAL] Insights processados com sucesso:', enhancedLocalInsights);
     setInsights(enhancedLocalInsights);
     
     setLoading(false);
