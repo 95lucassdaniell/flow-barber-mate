@@ -32,7 +32,7 @@ import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export const AIInsights: React.FC = () => {
-  const { insights, loading, error, refreshInsights, clientPatterns } = useAIAnalytics();
+  const { insights, loading, error, refreshInsights, clientPatterns, scheduleInsights } = useAIAnalytics();
   const { metrics: crmMetrics, loading: crmLoading } = useCRMMetrics();
   const [clientsMap, setClientsMap] = useState<Map<string, string>>(new Map());
 
@@ -249,7 +249,7 @@ export const AIInsights: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {formatCurrency(insights.predictions.monthlyRevenue)}
+                  {formatCurrency(insights.predictedMonthlyRevenue)}
                 </div>
                 <p className="text-xs text-muted-foreground">Este mês</p>
               </CardContent>
@@ -262,7 +262,7 @@ export const AIInsights: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-destructive">
-                  {insights.predictions.churnRiskClients}
+                  {insights.churnRiskClients.length}
                 </div>
                 <p className="text-xs text-muted-foreground">Precisam de atenção</p>
               </CardContent>
@@ -275,7 +275,7 @@ export const AIInsights: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {insights.predictions.recommendedActions.length}
+                  {insights.recommendedActions.length}
                 </div>
                 <p className="text-xs text-muted-foreground">Oportunidades identificadas</p>
               </CardContent>
@@ -288,9 +288,7 @@ export const AIInsights: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {formatCurrency(
-                    insights.predictions.recommendedActions.reduce((sum, action) => sum + action.potentialImpact, 0)
-                  )}
+                  {formatCurrency(insights.predictedMonthlyRevenue * 0.1)}
                 </div>
                 <p className="text-xs text-muted-foreground">Receita adicional possível</p>
               </CardContent>
@@ -311,23 +309,14 @@ export const AIInsights: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {insights.predictions.recommendedActions.map((action, index) => (
+                {insights.recommendedActions.map((action, index) => (
                   <div key={index} className="border rounded-lg p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <Badge variant={getPriorityColor(action.priority)}>
-                          {action.priority === 'high' ? 'Alta' : action.priority === 'medium' ? 'Média' : 'Baixa'} Prioridade
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Impacto: {formatCurrency(action.potentialImpact)}
+                        <Badge variant="default">Recomendação</Badge>
                       </div>
                     </div>
-                    <h4 className="font-medium mb-1">{action.description}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Tipo: {action.type === 'retention' ? 'Retenção' : 
-                             action.type === 'upsell' ? 'Venda Adicional' : 'Otimização de Agenda'}
-                    </p>
+                    <h4 className="font-medium mb-1">{action}</h4>
                   </div>
                 ))}
               </div>
@@ -348,7 +337,7 @@ export const AIInsights: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {insights.clientPatterns
+                  {clientPatterns
                     .filter(pattern => pattern.churnRisk !== 'low')
                     .slice(0, 5)
                     .map((pattern) => (
@@ -388,7 +377,7 @@ export const AIInsights: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {insights.clientPatterns
+                  {clientPatterns
                     .filter(pattern => {
                       const daysDiff = Math.abs(
                         new Date(pattern.nextPredictedVisit).getTime() - new Date().getTime()
@@ -430,7 +419,7 @@ export const AIInsights: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {insights.scheduleInsights
+                {scheduleInsights
                   .filter(insight => insight.occupationRate < 0.5)
                   .slice(0, 6)
                   .map((insight, index) => (
