@@ -86,7 +86,7 @@ const PublicBookingContent = ({ barbershopData }: { barbershopData: any }) => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
-        <div className="max-w-md mx-auto px-4 py-8">
+        <div className="max-w-md mx-auto px-4 py-4 md:py-8">
           <div className="text-center space-y-4">
             {barbershopData.logo_url ? (
               <img 
@@ -124,7 +124,7 @@ const PublicBookingContent = ({ barbershopData }: { barbershopData: any }) => {
       </div>
 
       {/* Content */}
-      <div className="max-w-md mx-auto px-4 py-6">
+      <div className="max-w-md mx-auto px-4 py-3 md:py-6">
         {!isAuthenticated ? (
           <PhoneLogin 
             barbershopSlug={slug || ''} 

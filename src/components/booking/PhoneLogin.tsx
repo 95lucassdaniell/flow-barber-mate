@@ -93,18 +93,18 @@ export const PhoneLogin = ({ barbershopSlug, onSuccess }: PhoneLoginProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-              <Phone className="w-8 h-8 text-primary" />
+    <div className="w-full">
+      <Card className="w-full">
+        <CardHeader className="text-center pb-4">
+          <div className="flex justify-center mb-3">
+            <div className="w-12 h-12 md:w-16 md:h-16 bg-primary/10 rounded-full flex items-center justify-center">
+              <Phone className="w-6 h-6 md:w-8 md:h-8 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl">
+          <CardTitle className="text-xl md:text-2xl">
             {step === 'phone' ? 'Entre com seu telefone' : 'Digite o código'}
           </CardTitle>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm md:text-base">
             {step === 'phone' 
               ? 'Vamos enviar um código via WhatsApp para confirmar seu número'
               : 'Digite o código de 6 dígitos enviado via WhatsApp'
@@ -112,7 +112,7 @@ export const PhoneLogin = ({ barbershopSlug, onSuccess }: PhoneLoginProps) => {
           </p>
         </CardHeader>
         
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 px-4 md:px-6">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
