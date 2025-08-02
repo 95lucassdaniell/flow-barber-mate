@@ -31,16 +31,53 @@ serve(async (req) => {
   }
 
   try {
-    // Validação de entrada robusta
+    // Log detalhado para debugging Railway
+    console.log('🔍 [Railway Fix] Request details:', {
+      method: req.method,
+      headers: Object.fromEntries(req.headers.entries()),
+      contentType: req.headers.get('content-type'),
+      timestamp: new Date().toISOString()
+    });
+
+    // Validação robusta de entrada específica para Railway
     let requestBody;
+    let rawBody;
+    
     try {
-      requestBody = await req.json();
+      // Primeiro tentar ler como texto para debugging
+      rawBody = await req.text();
+      console.log('📥 [Railway Fix] Raw body received:', {
+        length: rawBody.length,
+        firstChars: rawBody.substring(0, 100),
+        isEmptyOrWhitespace: !rawBody.trim()
+      });
+      
+      // Verificar se o body está vazio
+      if (!rawBody.trim()) {
+        throw new Error('Empty request body');
+      }
+      
+      // Tentar fazer parse do JSON
+      requestBody = JSON.parse(rawBody);
+      console.log('✅ [Railway Fix] JSON parsed successfully:', {
+        hasClientPatterns: Array.isArray(requestBody.clientPatterns),
+        hasScheduleInsights: Array.isArray(requestBody.scheduleInsights),
+        hasBarbershopId: !!requestBody.barbershopId
+      });
+      
     } catch (parseError) {
-      console.error('❌ JSON parse error:', parseError);
+      console.error('❌ [Railway Fix] JSON parse error details:', {
+        error: parseError.message,
+        rawBodyLength: rawBody?.length || 0,
+        rawBodySample: rawBody?.substring(0, 200) || 'no body'
+      });
+      
       return new Response(JSON.stringify({ 
         error: 'Invalid JSON in request body',
+        details: parseError.message,
         predictions: null,
-        fallback: true
+        fallback: true,
+        requestId: crypto.randomUUID()
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

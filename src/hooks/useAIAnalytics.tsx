@@ -271,26 +271,72 @@ export const useAIAnalytics = () => {
         setTimeout(() => reject(new Error('Function timeout - Railway may have limitations')), 30000);
       });
 
-      const invokePromise = supabase.functions.invoke('ai-analytics', {
-        body: {
-          clientPatterns: clientPatterns.map(cp => ({
-            clientId: cp.clientId,
-            averageCycle: cp.averageCycle || 30,
-            lastVisit: cp.lastVisit.toISOString(),
-            nextPredictedVisit: cp.nextPredictedVisit.toISOString(),
-            churnRisk: cp.churnRisk,
-            totalVisits: cp.totalVisits || 0,
-            lifetimeValue: cp.lifetimeValue || 0
-          })),
+      // Criar payload com serialização segura para Railway
+      const createSafePayload = () => {
+        const payload = {
+          clientPatterns: clientPatterns.map(cp => {
+            // Sanitizar cada campo individualmente
+            const safePattern: any = {};
+            safePattern.clientId = cp.clientId || '';
+            safePattern.averageCycle = Number(cp.averageCycle) || 30;
+            
+            // Converter datas de forma segura
+            if (cp.lastVisit instanceof Date) {
+              safePattern.lastVisit = cp.lastVisit.toISOString();
+            } else if (typeof cp.lastVisit === 'string') {
+              safePattern.lastVisit = cp.lastVisit;
+            } else {
+              safePattern.lastVisit = new Date().toISOString();
+            }
+            
+            if (cp.nextPredictedVisit instanceof Date) {
+              safePattern.nextPredictedVisit = cp.nextPredictedVisit.toISOString();
+            } else if (typeof cp.nextPredictedVisit === 'string') {
+              safePattern.nextPredictedVisit = cp.nextPredictedVisit;
+            } else {
+              safePattern.nextPredictedVisit = new Date().toISOString();
+            }
+            
+            safePattern.churnRisk = cp.churnRisk || 'low';
+            safePattern.totalVisits = Number(cp.totalVisits) || 0;
+            safePattern.lifetimeValue = Number(cp.lifetimeValue) || 0;
+            
+            return safePattern;
+          }),
           scheduleInsights: scheduleInsights.map(si => ({
-            timeSlot: si.timeSlot,
-            dayOfWeek: si.dayOfWeek,
-            occupationRate: si.occupationRate || 0,
-            suggestedAction: si.suggestedAction,
-            potentialRevenue: si.potentialRevenue || 0
+            timeSlot: String(si.timeSlot || ''),
+            dayOfWeek: String(si.dayOfWeek || ''),
+            occupationRate: Number(si.occupationRate) || 0,
+            suggestedAction: String(si.suggestedAction || ''),
+            potentialRevenue: Number(si.potentialRevenue) || 0
           })),
           barbershopId: profile?.barbershop_id
+        };
+        
+        // Verificar se o payload pode ser serializado
+        try {
+          JSON.stringify(payload);
+          return payload;
+        } catch (serializeError) {
+          console.error('❌ [Railway Fix] Serialization error:', serializeError);
+          // Retornar payload mínimo em caso de erro
+          return {
+            clientPatterns: [],
+            scheduleInsights: [],
+            barbershopId: profile?.barbershop_id
+          };
         }
+      };
+
+      const safePayload = createSafePayload();
+      console.log('🔧 [Railway Fix] Safe payload created:', {
+        clientPatternsCount: safePayload.clientPatterns.length,
+        scheduleInsightsCount: safePayload.scheduleInsights.length,
+        payloadSize: JSON.stringify(safePayload).length
+      });
+
+      const invokePromise = supabase.functions.invoke('ai-analytics', {
+        body: safePayload
       });
 
       const result = await Promise.race([invokePromise, timeoutPromise]);
