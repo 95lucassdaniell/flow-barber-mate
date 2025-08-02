@@ -341,71 +341,141 @@ export const useAIAnalytics = () => {
       setInsights(localInsights);
       console.log('✅ [LOCAL AI] Local insights set successfully');
 
-      // SEGUNDA ESTRATÉGIA: Tentar edge function como ENHANCEMENT (não bloqueante)
+      // FASE 1: DIAGNÓSTICO DETALHADO DOS DADOS
       if (retryCount === 0) {
-        console.log('🌐 [ENHANCEMENT] Attempting edge function for enhanced insights...');
+        console.log('🔍 [DIAGNOSTIC] Starting detailed data diagnostics...');
+        
+        // Validação rigorosa dos dados antes do envio
+        const diagnostics = {
+          barbershopId: profile?.barbershop_id,
+          clientPatternsCount: clientPatterns?.length || 0,
+          scheduleInsightsCount: scheduleInsights?.length || 0,
+          hasValidBarbershopId: !!profile?.barbershop_id,
+          clientPatternsValid: Array.isArray(clientPatterns) && clientPatterns.length > 0,
+          scheduleInsightsValid: Array.isArray(scheduleInsights) && scheduleInsights.length > 0
+        };
+        
+        console.log('📊 [DIAGNOSTIC] Data validation:', diagnostics);
+        
+        // Só prosseguir se temos dados válidos
+        if (!diagnostics.hasValidBarbershopId) {
+          console.warn('⚠️ [DIAGNOSTIC] No valid barbershop ID, skipping edge function');
+          return;
+        }
+        
+        if (!diagnostics.clientPatternsValid && !diagnostics.scheduleInsightsValid) {
+          console.warn('⚠️ [DIAGNOSTIC] No valid patterns or insights, skipping edge function');
+          return;
+        }
         
         try {
-          // Health check ultra-rápido (2 segundos max)
-          const healthCheck = await Promise.race([
-            fetch('https://yzqwmxffjufefocgkevz.supabase.co/functions/v1/ai-health-check', {
-              method: 'GET',
-              headers: { 'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6cXdteGZmanVmZWZvY2drZXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyOTk5NzUsImV4cCI6MjA2ODg3NTk3NX0.f4UD5xQ16wInFkwkAYcqIfAFyhJ2uuefc-l6n4pSJpY` }
+          // FASE 2: ESTRATÉGIA DE ENVIO ROBUSTA
+          console.log('🚀 [SEND-STRATEGY] Preparing robust sending strategy...');
+          
+          const payload = {
+            barbershopId: profile.barbershop_id,
+            clientPatterns: clientPatterns.slice(0, 15), // Reduzir payload
+            scheduleInsights: scheduleInsights.slice(0, 15)
+          };
+          
+          // Verificação do tamanho do payload JSON
+          const payloadString = JSON.stringify(payload);
+          const payloadSize = new Blob([payloadString]).size;
+          
+          console.log('📦 [SEND-STRATEGY] Payload info:', {
+            size: payloadSize,
+            clientPatterns: payload.clientPatterns.length,
+            scheduleInsights: payload.scheduleInsights.length,
+            sizeKB: Math.round(payloadSize / 1024)
+          });
+          
+          // Headers de debugging específicos para Railway
+          const debugHeaders = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6cXdteGZmanVmZWZvY2drZXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyOTk5NzUsImV4cCI6MjA2ODg3NTk3NX0.f4UD5xQ16wInFkwkAYcqIfAFyhJ2uuefc-l6n4pSJpY`,
+            'X-Client-Debug': 'railway-fix',
+            'X-Payload-Size': payloadSize.toString(),
+            'X-Railway-Debug': 'true',
+            'Content-Length': payloadSize.toString()
+          };
+          
+          console.log('🌐 [SEND-STRATEGY] Attempting multiple sending strategies...');
+          
+          // Estratégia 1: Supabase client (método padrão)
+          try {
+            console.log('📡 [STRATEGY-1] Trying Supabase client...');
+            const { data: supabaseResult, error: supabaseError } = await supabase.functions.invoke('ai-analytics', {
+              body: payload,
+              headers: { 'X-Strategy': 'supabase-client' }
+            });
+            
+            if (!supabaseError && supabaseResult?.predictions) {
+              console.log('✅ [STRATEGY-1] Supabase client successful!');
+              
+              const mergedInsights = {
+                ...localInsights,
+                predictedMonthlyRevenue: supabaseResult.predictions.predictedMonthlyRevenue || localInsights.predictedMonthlyRevenue,
+                churnRiskClients: supabaseResult.predictions.churnRiskClients || localInsights.churnRiskClients,
+                recommendedActions: [
+                  ...supabaseResult.predictions.recommendedActions || [],
+                  ...localInsights.recommendedActions
+                ].slice(0, 8),
+                insights: {
+                  ...localInsights.insights,
+                  ...supabaseResult.predictions.insights
+                }
+              };
+              
+              setInsights(mergedInsights);
+              console.log('🌟 [STRATEGY-1] Enhanced insights applied successfully');
+              return;
+            }
+          } catch (supabaseError) {
+            console.warn('⚠️ [STRATEGY-1] Supabase client failed:', supabaseError);
+          }
+          
+          // Estratégia 2: Direct fetch com chunking se necessário
+          console.log('📡 [STRATEGY-2] Trying direct fetch...');
+          
+          const fetchResult = await Promise.race([
+            fetch('https://yzqwmxffjufefocgkevz.supabase.co/functions/v1/ai-analytics', {
+              method: 'POST',
+              headers: debugHeaders,
+              body: payloadString
             }),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Health check timeout')), 2000))
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Direct fetch timeout')), 8000))
           ]);
 
-          if ((healthCheck as Response).ok) {
-            console.log('🌟 [ENHANCEMENT] Edge function available, attempting enhanced analysis...');
-            
-            const payload = {
-              barbershopId: profile?.barbershop_id,
-              clientPatterns: clientPatterns.slice(0, 20), // Limitar payload
-              scheduleInsights: scheduleInsights.slice(0, 20)
-            };
-
-            const enhancedResult = await Promise.race([
-              fetch('https://yzqwmxffjufefocgkevz.supabase.co/functions/v1/ai-analytics', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6cXdteGZmanVmZWZvY2drZXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyOTk5NzUsImV4cCI6MjA2ODg3NTk3NX0.f4UD5xQ16wInFkwkAYcqIfAFyhJ2uuefc-l6n4pSJpY`,
-                  'X-Enhancement-Mode': 'true'
-                },
-                body: JSON.stringify(payload)
-              }),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('Enhancement timeout')), 5000))
-            ]);
-
-            if ((enhancedResult as Response).ok) {
-              const enhancedData = await (enhancedResult as Response).json();
-              if (enhancedData && enhancedData.predictions) {
-                console.log('🌟 [ENHANCEMENT] Enhanced insights received, merging with local...');
-                
-                // Mesclar insights locais com dados aprimorados da edge function
-                const mergedInsights = {
-                  ...localInsights,
-                  predictedMonthlyRevenue: enhancedData.predictions.predictedMonthlyRevenue || localInsights.predictedMonthlyRevenue,
-                  churnRiskClients: enhancedData.predictions.churnRiskClients || localInsights.churnRiskClients,
-                  recommendedActions: [
-                    ...enhancedData.predictions.recommendedActions || [],
-                    ...localInsights.recommendedActions
-                  ].slice(0, 8), // Limitar a 8 recomendações
-                  insights: {
-                    ...localInsights.insights,
-                    ...enhancedData.predictions.insights
-                  }
-                };
-                
-                setInsights(mergedInsights);
-                console.log('✨ [ENHANCEMENT] Enhanced insights successfully applied');
-              }
+          if ((fetchResult as Response).ok) {
+            const enhancedData = await (fetchResult as Response).json();
+            if (enhancedData && enhancedData.predictions) {
+              console.log('✅ [STRATEGY-2] Direct fetch successful!');
+              
+              const mergedInsights = {
+                ...localInsights,
+                predictedMonthlyRevenue: enhancedData.predictions.predictedMonthlyRevenue || localInsights.predictedMonthlyRevenue,
+                churnRiskClients: enhancedData.predictions.churnRiskClients || localInsights.churnRiskClients,
+                recommendedActions: [
+                  ...enhancedData.predictions.recommendedActions || [],
+                  ...localInsights.recommendedActions
+                ].slice(0, 8),
+                insights: {
+                  ...localInsights.insights,
+                  ...enhancedData.predictions.insights
+                }
+              };
+              
+              setInsights(mergedInsights);
+              console.log('🌟 [STRATEGY-2] Enhanced insights applied successfully');
+              return;
             }
           }
+          
         } catch (enhancementError) {
-          console.log('ℹ️ [ENHANCEMENT] Enhancement failed, keeping local insights:', enhancementError);
-          // Não falha - mantém insights locais
+          console.warn('⚠️ [STRATEGY-2] Direct fetch failed:', enhancementError);
         }
+        
+        console.log('ℹ️ [FINAL] All enhancement strategies completed, keeping local insights');
       }
 
     } catch (error) {
