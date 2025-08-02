@@ -67,16 +67,70 @@ export const useAIAnalytics = () => {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
 
-  // Calcular padrões de clientes
-  const clientPatterns = useMemo(() => {
-    if (!clients || !appointments || !sales) return [];
+  // ============= FASE 1: DIAGNÓSTICO DETALHADO DOS DADOS BASE =============
+  const logDataDiagnostics = () => {
+    console.log('🔍 [DIAGNOSTIC] Detailed data diagnostics:', {
+      profile: !!profile,
+      barbershopId: profile?.barbershop_id,
+      clients: {
+        loaded: !!clients,
+        count: clients?.length || 0,
+        isEmpty: !clients?.length,
+        sample: clients?.[0] ? { id: clients[0].id, name: clients[0].name } : null
+      },
+      appointments: {
+        loaded: !!appointments,
+        count: appointments?.length || 0,
+        isEmpty: !appointments?.length,
+        sample: appointments?.[0] ? { 
+          id: appointments[0].id, 
+          client_id: appointments[0].client_id,
+          date: appointments[0].appointment_date 
+        } : null
+      },
+      sales: {
+        loaded: !!sales,
+        count: sales?.length || 0,
+        isEmpty: !sales?.length,
+        sample: sales?.[0] ? { 
+          id: sales[0].id, 
+          client_id: sales[0].client_id,
+          amount: sales[0].final_amount 
+        } : null
+      }
+    });
+  };
 
-    return clients.map(client => {
+  // ============= FASE 2: VALIDAÇÃO DOS PADRÕES COMPUTADOS =============
+  const clientPatterns = useMemo(() => {
+    console.log('🧮 [PATTERN-CALC] Computing client patterns...', {
+      clientsLength: clients?.length || 0,
+      appointmentsLength: appointments?.length || 0,
+      salesLength: sales?.length || 0
+    });
+
+    if (!clients || !appointments || !sales) {
+      console.warn('⚠️ [PATTERN-CALC] Missing base data for pattern calculation');
+      return [];
+    }
+
+    if (clients.length === 0) {
+      console.warn('⚠️ [PATTERN-CALC] No clients found, returning empty patterns');
+      return [];
+    }
+
+    const patterns = clients.map(client => {
       const clientAppointments = appointments
         .filter(apt => apt.client_id === client.id)
         .sort((a, b) => new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime());
 
       const clientSales = sales.filter(sale => sale.client_id === client.id);
+
+      console.log(`🔍 [PATTERN-CALC] Client ${client.name}:`, {
+        appointments: clientAppointments.length,
+        sales: clientSales.length,
+        hasValidData: clientAppointments.length > 0 || clientSales.length > 0
+      });
 
       if (clientAppointments.length < 2) {
         return {
@@ -147,11 +201,26 @@ export const useAIAnalytics = () => {
         preferredTimes
       };
     });
+
+    console.log(`🧮 [PATTERN-CALC] Computed ${patterns.length} client patterns`);
+    return patterns;
   }, [clients, appointments, sales]);
 
-  // Análise de horários
+  // ============= FASE 2: VALIDAÇÃO DOS SCHEDULE INSIGHTS =============
   const scheduleInsights = useMemo(() => {
-    if (!appointments) return [];
+    console.log('📅 [SCHEDULE-CALC] Computing schedule insights...', {
+      appointmentsLength: appointments?.length || 0
+    });
+
+    if (!appointments) {
+      console.warn('⚠️ [SCHEDULE-CALC] No appointments data available');
+      return [];
+    }
+
+    if (appointments.length === 0) {
+      console.warn('⚠️ [SCHEDULE-CALC] No appointments found, returning empty insights');
+      return [];
+    }
 
     const timeSlotStats: Record<string, { total: number; revenue: number }> = {};
     const daysOfWeek = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -191,16 +260,22 @@ export const useAIAnalytics = () => {
     }).filter(insight => insight.suggestedAction);
   }, [appointments]);
 
-  // Buscar dados diretamente do banco
+  // ============= FASE 1: BUSCA ROBUSTA DOS DADOS BASE =============
   const fetchData = async () => {
-    if (!profile?.barbershop_id) return;
+    if (!profile?.barbershop_id) {
+      console.warn('⚠️ [FETCH] No barbershop ID available');
+      return;
+    }
 
+    console.log('🔄 [FETCH] Starting data fetch for barbershop:', profile.barbershop_id);
+    logDataDiagnostics(); // Diagnóstico antes da busca
+    
     setLoading(true);
     setError(null);
 
     try {
-      // Buscar dados em paralelo
-      const [clientsRes, appointmentsRes, salesRes] = await Promise.all([
+      // Buscar dados em paralelo com timeouts
+      const fetchPromise = Promise.all([
         supabase
           .from('clients')
           .select('id, name, phone, email, created_at')
@@ -217,6 +292,15 @@ export const useAIAnalytics = () => {
           .gte('created_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
       ]);
 
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Fetch timeout')), 15000)
+      );
+
+      const [clientsRes, appointmentsRes, salesRes] = await Promise.race([
+        fetchPromise,
+        timeoutPromise
+      ]);
+
       if (clientsRes.error) throw clientsRes.error;
       if (appointmentsRes.error) throw appointmentsRes.error;
       if (salesRes.error) throw salesRes.error;
@@ -225,15 +309,18 @@ export const useAIAnalytics = () => {
       setAppointments(appointmentsRes.data || []);
       setSales(salesRes.data || []);
 
-      console.log('📊 Dados carregados para IA:', {
+      console.log('📊 [FETCH] Dados carregados com sucesso:', {
         clients: clientsRes.data?.length || 0,
         appointments: appointmentsRes.data?.length || 0,
         sales: salesRes.data?.length || 0
       });
 
+      // Diagnóstico pós-carregamento
+      logDataDiagnostics();
+
     } catch (err) {
-      console.error('Erro ao buscar dados:', err);
-      setError('Erro ao buscar dados para análise');
+      console.error('🚨 [FETCH] Erro ao buscar dados:', err);
+      setError(`Erro ao buscar dados: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
     }
@@ -311,21 +398,37 @@ export const useAIAnalytics = () => {
     };
   };
 
-  // SISTEMA DE PROCESSAMENTO HÍBRIDO - LOCAL PRIMEIRO, EDGE COMO BONUS
+  // ============= FASE 4: SISTEMA DE PROCESSAMENTO HÍBRIDO OTIMIZADO =============
   const processAIInsights = async (retryCount = 0) => {
     setLoading(true);
     setError(null);
 
-    // VERIFICAÇÃO CRÍTICA: Dados disponíveis
+    console.log('🚀 [PROCESS] Starting AI insights processing...', {
+      retryCount,
+      hasProfile: !!profile,
+      barbershopId: profile?.barbershop_id
+    });
+
+    // FASE 1: VERIFICAÇÃO CRÍTICA DOS DADOS BASE
+    logDataDiagnostics();
+    
     if (!clients.length && !appointments.length && !sales.length) {
-      console.log('🚨 [CRITICAL] No data available, fetching...');
+      console.log('🚨 [CRITICAL] No base data available, triggering fetch...');
       await fetchData();
       return;
     }
 
-    // FALLBACK IMEDIATO: Se não há padrões suficientes, usar processamento local básico
+    console.log('📊 [PROCESS] Data availability check:', {
+      clientsCount: clients.length,
+      appointmentsCount: appointments.length,
+      salesCount: sales.length,
+      clientPatternsCount: clientPatterns.length,
+      scheduleInsightsCount: scheduleInsights.length
+    });
+
+    // FASE 2: VALIDAÇÃO DOS PADRÕES COMPUTADOS
     if (!clientPatterns.length && !scheduleInsights.length) {
-      console.log('🏠 [LOCAL AI] Insufficient patterns, processing locally...');
+      console.log('⚠️ [PROCESS] No computed patterns available, using basic local processing...');
       const localInsights = processLocalAIInsights([], []);
       setInsights(localInsights);
       setLoading(false);
@@ -372,15 +475,36 @@ export const useAIAnalytics = () => {
           // FASE 2: ESTRATÉGIA DE ENVIO ROBUSTA
           console.log('🚀 [SEND-STRATEGY] Preparing robust sending strategy...');
           
+          // ============= FASE 3: CORREÇÃO DA SERIALIZAÇÃO =============
+          // Sanitizar Date objects antes da serialização
+          const sanitizedClientPatterns = clientPatterns.slice(0, 15).map(pattern => ({
+            ...pattern,
+            lastVisit: pattern.lastVisit ? pattern.lastVisit.toISOString() : null,
+            nextPredictedVisit: pattern.nextPredictedVisit ? pattern.nextPredictedVisit.toISOString() : null
+          }));
+          
           const payload = {
             barbershopId: profile.barbershop_id,
-            clientPatterns: clientPatterns.slice(0, 15), // Reduzir payload
+            clientPatterns: sanitizedClientPatterns,
             scheduleInsights: scheduleInsights.slice(0, 15)
           };
           
-          // Verificação do tamanho do payload JSON
-          const payloadString = JSON.stringify(payload);
-          const payloadSize = new Blob([payloadString]).size;
+          // Verificação rigorosa da serialização JSON
+          let payloadString: string;
+          let payloadSize: number;
+          
+          try {
+            payloadString = JSON.stringify(payload, null, 0);
+            payloadSize = new Blob([payloadString]).size;
+            
+            // Validar se o JSON é válido e não está corrompido
+            const testParse = JSON.parse(payloadString);
+            console.log('✅ [SERIALIZATION] JSON validation passed');
+            
+          } catch (serializationError) {
+            console.error('🚨 [SERIALIZATION] JSON serialization failed:', serializationError);
+            throw new Error(`Serialization failed: ${serializationError.message}`);
+          }
           
           console.log('📦 [SEND-STRATEGY] Payload info:', {
             size: payloadSize,
