@@ -1,42 +1,9 @@
 {
-  "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    {
-      "source": "/(.+)/agendamento",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/app/(.+)/agendamento",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/app/(.*)",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/prestador/(.*)",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/super-admin/(.*)",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/login",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/register",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/review/(.*)",
-      "destination": "/index.html"
-    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
