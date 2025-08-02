@@ -65,147 +65,216 @@ function App() {
             {/* Public review routes - outside SessionGuard */}
             <Route path="/review/:slug" element={<PublicReviewPage />} />
             
-            {/* All other routes wrapped in SessionGuard */}
-            <Route path="/*" element={
+            {/* Redirect invalid /dashboard route */}
+            <Route path="/dashboard" element={
               <SessionGuard>
-                <Routes>
-                  {/* Redirect invalid /dashboard route */}
-                  <Route path="/dashboard" element={<DashboardRedirect />} />
-                  
-                  {/* Protected Routes */}
-                  <Route path="/app/:slug" element={
-                    <ProtectedRoute>
-                      <DashboardPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/app/:slug/agenda/:date?" element={
-                    <ProtectedRoute>
-                      <SchedulePageWithLayout />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/app/:slug/prestadores" element={
-                    <ProtectedRoute requiresRole="admin">
-                      <ProvidersPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/app/:slug/metas" element={
-                    <ProtectedRoute requiresRole="admin">
-                      <GoalsPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/app/:slug/clients" element={
-                    <ProtectedRoute>
-                      <ClientsPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/app/:slug/services" element={
-                    <ProtectedRoute requiresRole="admin">
-                      <ServicesPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/app/:slug/servicos" element={
-                    <ProtectedRoute requiresRole="admin">
-                      <ServicesPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/app/:slug/produtos" element={
-                    <ProtectedRoute requiresRole="admin">
-                      <ProductsPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/app/:slug/comandas" element={
-                    <ProtectedRoute>
-                      <CommandsPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/app/:slug/caixa" element={
-                    <ProtectedRoute>
-                      <CaixaPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/app/:slug/settings" element={
-                    <ProtectedRoute requiresRole="admin">
-                      <SettingsPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/app/:slug/whatsapp" element={
-                    <ProtectedRoute requiresRole="admin">
-                      <WhatsAppPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/app/:slug/crm" element={
-                    <ProtectedRoute requiresRole="admin">
-                      <CRMPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/app/:slug/ai" element={
-                    <ProtectedRoute requiresRole="admin">
-                      <AIPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/app/:slug/financial" element={
-                    <ProtectedRoute requiresRole="admin">
-                      <FinancialPage />
-                    </ProtectedRoute>
-                  } />
-                  
-                  {/* Provider Routes - Portuguese */}
-                  <Route path="/prestador/:slug/login" element={<ProviderLoginPage />} />
-                  <Route path="/prestador/:slug/painel" element={
-                    <ProviderProtectedRoute>
-                      <ProviderDashboardLayout activeTab="painel">
-                        <ProviderDashboard />
-                      </ProviderDashboardLayout>
-                    </ProviderProtectedRoute>
-                  } />
-                  <Route path="/prestador/:slug/agenda" element={
-                    <ProviderProtectedRoute>
-                      <ProviderDashboardLayout activeTab="agenda">
-                        <ProviderSchedulePage />
-                      </ProviderDashboardLayout>
-                    </ProviderProtectedRoute>
-                  } />
-                  <Route path="/prestador/:slug/metas" element={
-                    <ProviderProtectedRoute>
-                      <ProviderDashboardLayout activeTab="metas">
-                        <ProviderGoalsManagement />
-                      </ProviderDashboardLayout>
-                    </ProviderProtectedRoute>
-                  } />
-                  <Route path="/prestador/:slug/comissoes" element={
-                    <ProviderProtectedRoute>
-                      <ProviderDashboardLayout activeTab="comissoes">
-                        <ProviderCommissionsPage />
-                      </ProviderDashboardLayout>
-                    </ProviderProtectedRoute>
-                  } />
-                  <Route path="/prestador/:slug/clientes" element={
-                    <ProviderProtectedRoute>
-                      <ProviderDashboardLayout activeTab="clientes">
-                        <ProviderClientsPage />
-                      </ProviderDashboardLayout>
-                    </ProviderProtectedRoute>
-                  } />
-
-                  {/* Legacy Provider Routes - Redirect to Portuguese */}
-                  <Route path="/provider/:slug/login" element={<Navigate to="/prestador/:slug/login" replace />} />
-                  <Route path="/provider/:slug/*" element={<Navigate to="/prestador/:slug/painel" replace />} />
-                  
-                  {/* Super Admin Routes */}
-                  <Route path="/super-admin" element={<SuperAdminPage />} />
-                  <Route path="/super-admin/barbershops" element={<SuperAdminBarbershopsPage />} />
-                  <Route path="/super-admin/users" element={<SuperAdminUsersPage />} />
-                  <Route path="/super-admin/financial" element={<SuperAdminFinancialPage />} />
-                  <Route path="/super-admin/monitoring" element={<SuperAdminMonitoringPage />} />
-                  <Route path="/super-admin/audit" element={<SuperAdminAuditPage />} />
-                  <Route path="/super-admin/settings" element={<SuperAdminSettingsPage />} />
-                  <Route path="/super-admin/historical-data" element={<SuperAdminHistoricalDataPage />} />
-                  
-                  {/* Catch-all route */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+                <DashboardRedirect />
               </SessionGuard>
             } />
+            
+            {/* Protected Routes - All wrapped in SessionGuard */}
+            <Route path="/app/:slug" element={
+              <SessionGuard>
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/agenda/:date?" element={
+              <SessionGuard>
+                <ProtectedRoute>
+                  <SchedulePageWithLayout />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/prestadores" element={
+              <SessionGuard>
+                <ProtectedRoute requiresRole="admin">
+                  <ProvidersPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/metas" element={
+              <SessionGuard>
+                <ProtectedRoute requiresRole="admin">
+                  <GoalsPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/clients" element={
+              <SessionGuard>
+                <ProtectedRoute>
+                  <ClientsPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/services" element={
+              <SessionGuard>
+                <ProtectedRoute requiresRole="admin">
+                  <ServicesPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/servicos" element={
+              <SessionGuard>
+                <ProtectedRoute requiresRole="admin">
+                  <ServicesPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/produtos" element={
+              <SessionGuard>
+                <ProtectedRoute requiresRole="admin">
+                  <ProductsPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/comandas" element={
+              <SessionGuard>
+                <ProtectedRoute>
+                  <CommandsPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/caixa" element={
+              <SessionGuard>
+                <ProtectedRoute>
+                  <CaixaPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/settings" element={
+              <SessionGuard>
+                <ProtectedRoute requiresRole="admin">
+                  <SettingsPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/whatsapp" element={
+              <SessionGuard>
+                <ProtectedRoute requiresRole="admin">
+                  <WhatsAppPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/crm" element={
+              <SessionGuard>
+                <ProtectedRoute requiresRole="admin">
+                  <CRMPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/ai" element={
+              <SessionGuard>
+                <ProtectedRoute requiresRole="admin">
+                  <AIPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/financial" element={
+              <SessionGuard>
+                <ProtectedRoute requiresRole="admin">
+                  <FinancialPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            
+            {/* Provider Routes - Portuguese */}
+            <Route path="/prestador/:slug/login" element={<ProviderLoginPage />} />
+            <Route path="/prestador/:slug/painel" element={
+              <SessionGuard>
+                <ProviderProtectedRoute>
+                  <ProviderDashboardLayout activeTab="painel">
+                    <ProviderDashboard />
+                  </ProviderDashboardLayout>
+                </ProviderProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/prestador/:slug/agenda" element={
+              <SessionGuard>
+                <ProviderProtectedRoute>
+                  <ProviderDashboardLayout activeTab="agenda">
+                    <ProviderSchedulePage />
+                  </ProviderDashboardLayout>
+                </ProviderProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/prestador/:slug/metas" element={
+              <SessionGuard>
+                <ProviderProtectedRoute>
+                  <ProviderDashboardLayout activeTab="metas">
+                    <ProviderGoalsManagement />
+                  </ProviderDashboardLayout>
+                </ProviderProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/prestador/:slug/comissoes" element={
+              <SessionGuard>
+                <ProviderProtectedRoute>
+                  <ProviderDashboardLayout activeTab="comissoes">
+                    <ProviderCommissionsPage />
+                  </ProviderDashboardLayout>
+                </ProviderProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/prestador/:slug/clientes" element={
+              <SessionGuard>
+                <ProviderProtectedRoute>
+                  <ProviderDashboardLayout activeTab="clientes">
+                    <ProviderClientsPage />
+                  </ProviderDashboardLayout>
+                </ProviderProtectedRoute>
+              </SessionGuard>
+            } />
+
+            {/* Legacy Provider Routes - Redirect to Portuguese */}
+            <Route path="/provider/:slug/login" element={<Navigate to="/prestador/:slug/login" replace />} />
+            <Route path="/provider/:slug/*" element={<Navigate to="/prestador/:slug/painel" replace />} />
+            
+            {/* Super Admin Routes */}
+            <Route path="/super-admin" element={
+              <SessionGuard>
+                <SuperAdminPage />
+              </SessionGuard>
+            } />
+            <Route path="/super-admin/barbershops" element={
+              <SessionGuard>
+                <SuperAdminBarbershopsPage />
+              </SessionGuard>
+            } />
+            <Route path="/super-admin/users" element={
+              <SessionGuard>
+                <SuperAdminUsersPage />
+              </SessionGuard>
+            } />
+            <Route path="/super-admin/financial" element={
+              <SessionGuard>
+                <SuperAdminFinancialPage />
+              </SessionGuard>
+            } />
+            <Route path="/super-admin/monitoring" element={
+              <SessionGuard>
+                <SuperAdminMonitoringPage />
+              </SessionGuard>
+            } />
+            <Route path="/super-admin/audit" element={
+              <SessionGuard>
+                <SuperAdminAuditPage />
+              </SessionGuard>
+            } />
+            <Route path="/super-admin/settings" element={
+              <SessionGuard>
+                <SuperAdminSettingsPage />
+              </SessionGuard>
+            } />
+            <Route path="/super-admin/historical-data" element={
+              <SessionGuard>
+                <SuperAdminHistoricalDataPage />
+              </SessionGuard>
+            } />
+            
+            {/* Catch-all route */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
