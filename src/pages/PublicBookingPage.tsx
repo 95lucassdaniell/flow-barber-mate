@@ -92,11 +92,11 @@ const PublicBookingContent = ({ barbershopData }: { barbershopData: any }) => {
               <img 
                 src={barbershopData.logo_url} 
                 alt={barbershopData.name}
-                className="w-20 h-20 rounded-full mx-auto border-4 border-white/20"
+                className="w-32 h-32 rounded-full mx-auto border-4 border-white/20"
               />
             ) : (
-              <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto">
-                <Scissors className="w-10 h-10" />
+              <div className="w-32 h-32 bg-white/20 rounded-full flex items-center justify-center mx-auto">
+                <Scissors className="w-16 h-16" />
               </div>
             )}
             
