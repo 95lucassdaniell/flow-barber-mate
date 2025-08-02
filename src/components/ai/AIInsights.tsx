@@ -32,7 +32,7 @@ import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export const AIInsights: React.FC = () => {
-  console.log('🔥 [AI INSIGHTS] Componente carregado - Sistema 100% local ativo');
+  console.log('🚀 [AI INSIGHTS DEFINITIVO] Componente carregado - Sistema 100% local sem edge functions');
   
   const { insights, loading, error, refreshInsights, clientPatterns, scheduleInsights } = useAIAnalytics();
   const { metrics: crmMetrics, loading: crmLoading } = useCRMMetrics();

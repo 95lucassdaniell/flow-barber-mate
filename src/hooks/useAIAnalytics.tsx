@@ -398,15 +398,37 @@ export const useAIAnalytics = () => {
     };
   };
 
-  // ============= PROCESSAMENTO 100% LOCAL OTIMIZADO =============
+  // ============= SISTEMA 100% LOCAL - DEFINITIVO =============
   const processAIInsights = async () => {
-    console.log('✅ [SISTEMA LOCAL] Processando insights 100% localmente - SEM edge function');
+    console.log('🚀 [SISTEMA LOCAL DEFINITIVO] Iniciando processamento 100% local');
     setLoading(true);
+    setError(null);
     
-    // Sistema local aprimorado com algoritmos mais sofisticados
-    const enhancedLocalInsights = processAdvancedLocalInsights(clientPatterns, scheduleInsights);
-    console.log('✅ [SISTEMA LOCAL] Insights processados com sucesso:', enhancedLocalInsights);
-    setInsights(enhancedLocalInsights);
+    try {
+      // Validação de dados antes do processamento
+      if (!clientPatterns || !scheduleInsights) {
+        console.log('⚠️ [SISTEMA LOCAL] Aguardando dados para processamento');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('📊 [SISTEMA LOCAL] Dados disponíveis - processando localmente');
+      
+      // Sistema local aprimorado com algoritmos mais sofisticados
+      const enhancedLocalInsights = processAdvancedLocalInsights(clientPatterns, scheduleInsights);
+      
+      console.log('✅ [SISTEMA LOCAL DEFINITIVO] Insights processados com sucesso:', {
+        predictedRevenue: enhancedLocalInsights.predictedMonthlyRevenue,
+        churnRiskCount: enhancedLocalInsights.churnRiskClients.length,
+        actionsCount: enhancedLocalInsights.recommendedActions.length
+      });
+      
+      setInsights(enhancedLocalInsights);
+      
+    } catch (error) {
+      console.error('❌ [SISTEMA LOCAL] Erro no processamento:', error);
+      setError('Erro no processamento local dos insights');
+    }
     
     setLoading(false);
   };
