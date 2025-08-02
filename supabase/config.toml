@@ -57,8 +57,6 @@ port = 54327
 vector_port = 54328
 backend = "postgres"
 
-[functions.ai-analytics]
-verify_jwt = false
 
 [functions.historical-data-generator]
 verify_jwt = false
