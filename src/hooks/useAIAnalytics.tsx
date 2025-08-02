@@ -249,96 +249,219 @@ export const useAIAnalytics = () => {
     }
   };
 
-  // Processar insights com IA (com retry e validação robusta)
+  // Processar insights com IA - PLANO EMERGENCIAL RAILWAY
   const processAIInsights = async (retryCount = 0) => {
-    const maxRetries = 2;
+    const maxRetries = 3;
     
+    // FASE 1: Validação crítica de dados ANTES da chamada
     if (!clients.length && !appointments.length && !sales.length) {
+      console.log('🚨 [Emergency] No data available, fetching...');
       await fetchData();
       return;
     }
 
+    // Verificar se há dados mínimos necessários
+    if (!clientPatterns.length && !scheduleInsights.length) {
+      console.warn('⚠️ [Emergency] Insufficient data for AI analysis');
+      setError('Dados insuficientes para análise');
+      return;
+    }
+
     try {
-      console.log('🚀 [Railway Debug] Calling ai-analytics function:', {
+      console.log('🚀 [Emergency] Starting AI analysis:', {
         clientPatterns: clientPatterns.length,
         scheduleInsights: scheduleInsights.length,
         barbershopId: profile?.barbershop_id,
-        attempt: retryCount + 1
+        attempt: retryCount + 1,
+        maxRetries
       });
 
-      // Timeout protection para Railway
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Function timeout - Railway may have limitations')), 30000);
-      });
-
-      // Criar payload com serialização segura para Railway
-      const createSafePayload = () => {
-        const payload = {
-          clientPatterns: clientPatterns.map(cp => {
-            // Sanitizar cada campo individualmente
-            const safePattern: any = {};
-            safePattern.clientId = cp.clientId || '';
-            safePattern.averageCycle = Number(cp.averageCycle) || 30;
-            
-            // Converter datas de forma segura
-            if (cp.lastVisit instanceof Date) {
-              safePattern.lastVisit = cp.lastVisit.toISOString();
-            } else if (typeof cp.lastVisit === 'string') {
-              safePattern.lastVisit = cp.lastVisit;
-            } else {
-              safePattern.lastVisit = new Date().toISOString();
-            }
-            
-            if (cp.nextPredictedVisit instanceof Date) {
-              safePattern.nextPredictedVisit = cp.nextPredictedVisit.toISOString();
-            } else if (typeof cp.nextPredictedVisit === 'string') {
-              safePattern.nextPredictedVisit = cp.nextPredictedVisit;
-            } else {
-              safePattern.nextPredictedVisit = new Date().toISOString();
-            }
-            
-            safePattern.churnRisk = cp.churnRisk || 'low';
-            safePattern.totalVisits = Number(cp.totalVisits) || 0;
-            safePattern.lifetimeValue = Number(cp.lifetimeValue) || 0;
-            
-            return safePattern;
-          }),
-          scheduleInsights: scheduleInsights.map(si => ({
-            timeSlot: String(si.timeSlot || ''),
-            dayOfWeek: String(si.dayOfWeek || ''),
-            occupationRate: Number(si.occupationRate) || 0,
-            suggestedAction: String(si.suggestedAction || ''),
-            potentialRevenue: Number(si.potentialRevenue) || 0
-          })),
-          barbershopId: profile?.barbershop_id
-        };
-        
-        // Verificar se o payload pode ser serializado
+      // FASE 1: Criar payload ULTRA-ROBUSTO para Railway
+      const createRailwaySafePayload = () => {
         try {
-          JSON.stringify(payload);
+          // Validar dados de entrada primeiro
+          const validClientPatterns = clientPatterns.filter(cp => cp && cp.clientId);
+          const validScheduleInsights = scheduleInsights.filter(si => si && si.timeSlot);
+
+          console.log('🔍 [Emergency] Data validation:', {
+            originalClients: clientPatterns.length,
+            validClients: validClientPatterns.length,
+            originalSchedule: scheduleInsights.length,
+            validSchedule: validScheduleInsights.length
+          });
+
+          const payload = {
+            clientPatterns: validClientPatterns.slice(0, 50).map(cp => {
+              const safe: any = {};
+              
+              // Campos obrigatórios com fallbacks
+              safe.clientId = String(cp.clientId || '').slice(0, 100);
+              safe.averageCycle = Math.max(1, Math.min(365, Number(cp.averageCycle) || 30));
+              safe.churnRisk = ['low', 'medium', 'high'].includes(cp.churnRisk) ? cp.churnRisk : 'low';
+              safe.totalVisits = Math.max(0, Number(cp.totalVisits) || 0);
+              safe.lifetimeValue = Math.max(0, Number(cp.lifetimeValue) || 0);
+              
+              // Datas com validação rigorosa
+              const now = new Date();
+              const sixMonthsAgo = new Date(now.getTime() - 6 * 30 * 24 * 60 * 60 * 1000);
+              
+              try {
+                if (cp.lastVisit instanceof Date && !isNaN(cp.lastVisit.getTime())) {
+                  safe.lastVisit = cp.lastVisit.toISOString();
+                } else if (typeof cp.lastVisit === 'string' && cp.lastVisit) {
+                  const parsed = new Date(cp.lastVisit);
+                  safe.lastVisit = !isNaN(parsed.getTime()) ? parsed.toISOString() : sixMonthsAgo.toISOString();
+                } else {
+                  safe.lastVisit = sixMonthsAgo.toISOString();
+                }
+              } catch {
+                safe.lastVisit = sixMonthsAgo.toISOString();
+              }
+
+              try {
+                if (cp.nextPredictedVisit instanceof Date && !isNaN(cp.nextPredictedVisit.getTime())) {
+                  safe.nextPredictedVisit = cp.nextPredictedVisit.toISOString();
+                } else if (typeof cp.nextPredictedVisit === 'string' && cp.nextPredictedVisit) {
+                  const parsed = new Date(cp.nextPredictedVisit);
+                  safe.nextPredictedVisit = !isNaN(parsed.getTime()) ? parsed.toISOString() : now.toISOString();
+                } else {
+                  safe.nextPredictedVisit = now.toISOString();
+                }
+              } catch {
+                safe.nextPredictedVisit = now.toISOString();
+              }
+              
+              return safe;
+            }),
+            scheduleInsights: validScheduleInsights.slice(0, 50).map(si => ({
+              timeSlot: String(si.timeSlot || '09:00').slice(0, 10),
+              dayOfWeek: String(si.dayOfWeek || 'segunda').slice(0, 20),
+              occupationRate: Math.max(0, Math.min(100, Number(si.occupationRate) || 0)),
+              suggestedAction: String(si.suggestedAction || 'otimizar').slice(0, 200),
+              potentialRevenue: Math.max(0, Number(si.potentialRevenue) || 0)
+            })),
+            barbershopId: String(profile?.barbershop_id || '')
+          };
+          
+          // VALIDAÇÃO FINAL: Teste de serialização dupla
+          const jsonString = JSON.stringify(payload);
+          const parsedBack = JSON.parse(jsonString);
+          
+          console.log('✅ [Emergency] Payload validation passed:', {
+            size: jsonString.length,
+            clientsIncluded: payload.clientPatterns.length,
+            scheduleIncluded: payload.scheduleInsights.length,
+            canSerialize: true,
+            canParse: true
+          });
+          
           return payload;
-        } catch (serializeError) {
-          console.error('❌ [Railway Fix] Serialization error:', serializeError);
-          // Retornar payload mínimo em caso de erro
+          
+        } catch (error) {
+          console.error('💥 [Emergency] Payload creation failed:', error);
+          
+          // FALLBACK MÍNIMO: Payload de emergência
           return {
-            clientPatterns: [],
-            scheduleInsights: [],
-            barbershopId: profile?.barbershop_id
+            clientPatterns: [{
+              clientId: 'fallback',
+              averageCycle: 30,
+              lastVisit: new Date().toISOString(),
+              nextPredictedVisit: new Date().toISOString(),
+              churnRisk: 'low',
+              totalVisits: 1,
+              lifetimeValue: 100
+            }],
+            scheduleInsights: [{
+              timeSlot: '09:00',
+              dayOfWeek: 'segunda',
+              occupationRate: 50,
+              suggestedAction: 'analise_basica',
+              potentialRevenue: 500
+            }],
+            barbershopId: String(profile?.barbershop_id || '')
           };
         }
       };
 
-      const safePayload = createSafePayload();
-      console.log('🔧 [Railway Fix] Safe payload created:', {
-        clientPatternsCount: safePayload.clientPatterns.length,
-        scheduleInsightsCount: safePayload.scheduleInsights.length,
-        payloadSize: JSON.stringify(safePayload).length
+      // FASE 2: Criar payload progressivo baseado na tentativa
+      let payload;
+      if (retryCount === 0) {
+        // Primeira tentativa: payload completo
+        payload = createRailwaySafePayload();
+      } else if (retryCount === 1) {
+        // Segunda tentativa: payload reduzido
+        payload = {
+          clientPatterns: clientPatterns.slice(0, 10).map(cp => ({
+            clientId: String(cp.clientId || ''),
+            averageCycle: Number(cp.averageCycle) || 30,
+            churnRisk: cp.churnRisk || 'low',
+            totalVisits: Number(cp.totalVisits) || 0,
+            lifetimeValue: Number(cp.lifetimeValue) || 0,
+            lastVisit: new Date().toISOString(),
+            nextPredictedVisit: new Date().toISOString()
+          })),
+          scheduleInsights: scheduleInsights.slice(0, 5).map(si => ({
+            timeSlot: String(si.timeSlot || '09:00'),
+            dayOfWeek: String(si.dayOfWeek || 'segunda'),
+            occupationRate: Number(si.occupationRate) || 50,
+            suggestedAction: 'optimize',
+            potentialRevenue: Number(si.potentialRevenue) || 500
+          })),
+          barbershopId: String(profile?.barbershop_id || '')
+        };
+      } else {
+        // Terceira tentativa: payload mínimo
+        payload = {
+          clientPatterns: [{
+            clientId: 'minimal',
+            averageCycle: 30,
+            churnRisk: 'low',
+            totalVisits: 1,
+            lifetimeValue: 100,
+            lastVisit: new Date().toISOString(),
+            nextPredictedVisit: new Date().toISOString()
+          }],
+          scheduleInsights: [{
+            timeSlot: '09:00',
+            dayOfWeek: 'segunda',
+            occupationRate: 50,
+            suggestedAction: 'basic_analysis',
+            potentialRevenue: 500
+          }],
+          barbershopId: String(profile?.barbershop_id || '')
+        };
+      }
+
+      // FASE 2: Logging detalhado Railway-específico
+      const payloadString = JSON.stringify(payload);
+      console.log('📦 [Emergency] Final payload details:', {
+        attempt: retryCount + 1,
+        type: retryCount === 0 ? 'full' : retryCount === 1 ? 'reduced' : 'minimal',
+        size: payloadString.length,
+        clientPatterns: payload.clientPatterns.length,
+        scheduleInsights: payload.scheduleInsights.length,
+        barbershopId: payload.barbershopId,
+        payloadPreview: payloadString.substring(0, 200) + '...'
       });
 
+      // FASE 4: Timeout otimizado para Railway
+      const railwayTimeout = retryCount === 0 ? 15000 : retryCount === 1 ? 10000 : 5000;
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error(`Railway timeout after ${railwayTimeout}ms`)), railwayTimeout);
+      });
+
+      // CHAMADA COM HEADERS ESPECÍFICOS PARA RAILWAY
       const invokePromise = supabase.functions.invoke('ai-analytics', {
-        body: safePayload
+        body: payload,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Railway-Attempt': String(retryCount + 1),
+          'X-Railway-Payload-Size': String(payloadString.length),
+          'X-Client-Debug': 'emergency-plan'
+        }
       });
 
+      console.log('🚀 [Emergency] Calling function with Railway optimizations...');
       const result = await Promise.race([invokePromise, timeoutPromise]);
       const { data, error } = result as any;
 

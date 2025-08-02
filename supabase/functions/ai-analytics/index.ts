@@ -3,8 +3,27 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-railway-attempt, x-railway-payload-size, x-client-debug',
 };
+
+// RAILWAY EMERGENCY LOGGING SYSTEM
+function logEmergencyDebug(stage: string, data: any, requestId?: string) {
+  const timestamp = new Date().toISOString();
+  const prefix = `🚨 [EMERGENCY-${stage}]`;
+  
+  try {
+    const logData = {
+      timestamp,
+      requestId: requestId || crypto.randomUUID().slice(0, 8),
+      stage,
+      environment: Deno.env.get('DENO_DEPLOYMENT_ID') || 'local',
+      data: typeof data === 'object' ? JSON.stringify(data).substring(0, 500) : String(data).substring(0, 500)
+    };
+    console.log(prefix, logData);
+  } catch (logError) {
+    console.log(prefix, { timestamp, stage, error: 'Failed to log', original: String(data).substring(0, 100) });
+  }
+}
 
 interface ClientPattern {
   clientId: string;
@@ -25,59 +44,127 @@ interface ScheduleInsight {
 }
 
 serve(async (req) => {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    logEmergencyDebug('CORS', 'Preflight request handled', requestId);
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    // Log detalhado para debugging Railway
-    console.log('🔍 [Railway Fix] Request details:', {
-      method: req.method,
-      headers: Object.fromEntries(req.headers.entries()),
-      contentType: req.headers.get('content-type'),
-      timestamp: new Date().toISOString()
-    });
+  logEmergencyDebug('START', {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries(req.headers.entries())
+  }, requestId);
 
-    // Validação robusta de entrada específica para Railway
+  try {
+    // FASE 1: DETECÇÃO RAILWAY ULTRA-ROBUSTA
     let requestBody;
     let rawBody;
     
     try {
-      // Primeiro tentar ler como texto para debugging
-      rawBody = await req.text();
-      console.log('📥 [Railway Fix] Raw body received:', {
-        length: rawBody.length,
-        firstChars: rawBody.substring(0, 100),
-        isEmptyOrWhitespace: !rawBody.trim()
+      // Detectar Railway pelo headers
+      const railwayHeaders = {
+        railwayAttempt: req.headers.get('x-railway-attempt'),
+        railwayPayloadSize: req.headers.get('x-railway-payload-size'),
+        clientDebug: req.headers.get('x-client-debug'),
+        contentLength: req.headers.get('content-length'),
+        userAgent: req.headers.get('user-agent')
+      };
+      
+      logEmergencyDebug('RAILWAY-DETECTION', railwayHeaders, requestId);
+      
+      // LEITURA SUPER-SEGURA DO BODY
+      const timeout = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Body read timeout')), 5000);
       });
       
-      // Verificar se o body está vazio
-      if (!rawBody.trim()) {
-        throw new Error('Empty request body');
+      const bodyPromise = req.text();
+      rawBody = await Promise.race([bodyPromise, timeout]) as string;
+      
+      logEmergencyDebug('BODY-READ', {
+        length: rawBody?.length || 0,
+        isEmpty: !rawBody?.trim(),
+        firstChars: rawBody?.substring(0, 150) || 'EMPTY',
+        contentType: req.headers.get('content-type')
+      }, requestId);
+      
+      // VALIDAÇÃO CRÍTICA: Body vazio
+      if (!rawBody || !rawBody.trim()) {
+        logEmergencyDebug('EMPTY-BODY-ERROR', {
+          rawBody: rawBody || 'NULL',
+          contentLength: req.headers.get('content-length'),
+          method: req.method
+        }, requestId);
+        
+        return new Response(JSON.stringify({ 
+          error: 'Empty request body',
+          details: `No data received. Content-Length: ${req.headers.get('content-length')}`,
+          predictions: null,
+          fallback: true,
+          requestId,
+          debug: {
+            bodyLength: rawBody?.length || 0,
+            bodyTrimmed: rawBody?.trim() || 'EMPTY',
+            headers: railwayHeaders
+          }
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
       
-      // Tentar fazer parse do JSON
-      requestBody = JSON.parse(rawBody);
-      console.log('✅ [Railway Fix] JSON parsed successfully:', {
-        hasClientPatterns: Array.isArray(requestBody.clientPatterns),
-        hasScheduleInsights: Array.isArray(requestBody.scheduleInsights),
-        hasBarbershopId: !!requestBody.barbershopId
-      });
+      // PARSE JSON ULTRA-ROBUSTO
+      try {
+        requestBody = JSON.parse(rawBody);
+        logEmergencyDebug('JSON-PARSE-SUCCESS', {
+          hasClientPatterns: Array.isArray(requestBody?.clientPatterns),
+          clientPatternsLength: requestBody?.clientPatterns?.length || 0,
+          hasScheduleInsights: Array.isArray(requestBody?.scheduleInsights),
+          scheduleInsightsLength: requestBody?.scheduleInsights?.length || 0,
+          hasBarbershopId: !!requestBody?.barbershopId,
+          bodyKeys: Object.keys(requestBody || {})
+        }, requestId);
+      } catch (jsonError) {
+        logEmergencyDebug('JSON-PARSE-ERROR', {
+          error: jsonError.message,
+          rawBodyLength: rawBody.length,
+          rawBodySample: rawBody.substring(0, 300),
+          isValidString: typeof rawBody === 'string',
+          startsWithBrace: rawBody.trim().startsWith('{'),
+          endsWithBrace: rawBody.trim().endsWith('}')
+        }, requestId);
+        
+        return new Response(JSON.stringify({ 
+          error: 'Invalid JSON in request body',
+          details: `JSON parse failed: ${jsonError.message}`,
+          predictions: null,
+          fallback: true,
+          requestId,
+          debug: {
+            jsonError: jsonError.message,
+            bodyPreview: rawBody.substring(0, 200),
+            bodyLength: rawBody.length
+          }
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       
-    } catch (parseError) {
-      console.error('❌ [Railway Fix] JSON parse error details:', {
-        error: parseError.message,
-        rawBodyLength: rawBody?.length || 0,
-        rawBodySample: rawBody?.substring(0, 200) || 'no body'
-      });
+    } catch (bodyReadError) {
+      logEmergencyDebug('BODY-READ-ERROR', {
+        error: bodyReadError.message,
+        stack: bodyReadError.stack
+      }, requestId);
       
       return new Response(JSON.stringify({ 
-        error: 'Invalid JSON in request body',
-        details: parseError.message,
+        error: 'Failed to read request body',
+        details: bodyReadError.message,
         predictions: null,
         fallback: true,
-        requestId: crypto.randomUUID()
+        requestId
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
