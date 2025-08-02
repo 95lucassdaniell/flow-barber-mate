@@ -1,8 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import SessionGuard from "./components/auth/SessionGuard";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Index from "./pages/Index";
@@ -43,20 +42,16 @@ import ProviderClientsPage from "./components/providers/clients/ProviderClientsP
 import { PublicBookingPage } from "./pages/PublicBookingPage";
 import PublicReviewPage from "./pages/PublicReviewPage";
 
-const queryClient = new QueryClient();
-
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Public routes - outside SessionGuard */}
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <Routes>
+        {/* Public routes - outside SessionGuard */}
+        <Route path="/" element={<Index />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
             
             {/* Public booking routes - outside SessionGuard */}
             <Route path="/app/:slug/agendamento" element={<PublicBookingPage />} />
@@ -272,13 +267,11 @@ function App() {
                 <SuperAdminHistoricalDataPage />
               </SessionGuard>
             } />
-            
-            {/* Catch-all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+        
+        {/* Catch-all route */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </TooltipProvider>
   );
 }
 
