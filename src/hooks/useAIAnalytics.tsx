@@ -432,7 +432,7 @@ export const useAIAnalytics = () => {
         };
       }
 
-      // FASE 2: Logging detalhado Railway-específico
+  // FASE 2: Logging detalhado Railway-específico
       const payloadString = JSON.stringify(payload);
       console.log('📦 [Emergency] Final payload details:', {
         attempt: retryCount + 1,
@@ -444,26 +444,80 @@ export const useAIAnalytics = () => {
         payloadPreview: payloadString.substring(0, 200) + '...'
       });
 
-      // FASE 4: Timeout otimizado para Railway
+      // FASE 3: Diagnóstico CRÍTICO imediatamente antes da chamada
+      console.log('🔍 [Emergency] Pre-call diagnostics:', {
+        payloadType: typeof payload,
+        payloadIsObject: payload && typeof payload === 'object',
+        payloadKeys: Object.keys(payload || {}),
+        jsonStringified: !!payloadString,
+        jsonCanParse: (() => {
+          try { JSON.parse(payloadString); return true; } catch { return false; }
+        })(),
+        clientPatternsValid: Array.isArray(payload.clientPatterns),
+        scheduleInsightsValid: Array.isArray(payload.scheduleInsights)
+      });
+
+      // FASE 4: Implementar HTTP direto como FALLBACK primário
+      const callWithDirectHTTP = async () => {
+        const fullUrl = 'https://yzqwmxffjufefocgkevz.supabase.co/functions/v1/ai-analytics';
+        console.log('🌐 [Emergency] Using direct HTTP call to:', fullUrl);
+        
+        const response = await fetch(fullUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6cXdteGZmanVmZWZvY2drZXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyOTk5NzUsImV4cCI6MjA2ODg3NTk3NX0.f4UD5xQ16wInFkwkAYcqIfAFyhJ2uuefc-l6n4pSJpY`,
+            'X-Railway-Attempt': String(retryCount + 1),
+            'X-Railway-Payload-Size': String(payloadString.length),
+            'X-Client-Debug': 'emergency-plan-direct-http'
+          },
+          body: payloadString
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return await response.json();
+      };
+
+      // FASE 5: Timeout otimizado para Railway
       const railwayTimeout = retryCount === 0 ? 15000 : retryCount === 1 ? 10000 : 5000;
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error(`Railway timeout after ${railwayTimeout}ms`)), railwayTimeout);
       });
 
-      // CHAMADA COM HEADERS ESPECÍFICOS PARA RAILWAY
-      const invokePromise = supabase.functions.invoke('ai-analytics', {
-        body: payload,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Railway-Attempt': String(retryCount + 1),
-          'X-Railway-Payload-Size': String(payloadString.length),
-          'X-Client-Debug': 'emergency-plan'
-        }
-      });
+      // CHAMADA PRIMÁRIA: Tentar supabase.functions.invoke primeiro
+      let result: any;
+      try {
+        console.log('🚀 [Emergency] Trying supabase.functions.invoke...');
+        const invokePromise = supabase.functions.invoke('ai-analytics', {
+          body: payload,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Railway-Attempt': String(retryCount + 1),
+            'X-Railway-Payload-Size': String(payloadString.length),
+            'X-Client-Debug': 'emergency-plan'
+          }
+        });
 
-      console.log('🚀 [Emergency] Calling function with Railway optimizations...');
-      const result = await Promise.race([invokePromise, timeoutPromise]);
-      const { data, error } = result as any;
+        result = await Promise.race([invokePromise, timeoutPromise]);
+        console.log('✅ [Emergency] supabase.functions.invoke succeeded');
+      } catch (invokeError) {
+        console.warn('⚠️ [Emergency] supabase.functions.invoke failed, trying direct HTTP...', invokeError);
+        
+        // FALLBACK: Tentar HTTP direto
+        try {
+          const directResult = await Promise.race([callWithDirectHTTP(), timeoutPromise]);
+          result = { data: directResult, error: null };
+          console.log('✅ [Emergency] Direct HTTP succeeded');
+        } catch (httpError) {
+          console.error('💥 [Emergency] Both methods failed:', { invokeError, httpError });
+          throw httpError;
+        }
+      }
+
+      const { data, error } = result;
 
       console.log('📡 [Railway Debug] Function response:', {
         hasData: !!data,
