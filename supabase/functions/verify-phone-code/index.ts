@@ -60,12 +60,10 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (codeError || !verificationCodes || verificationCodes.length === 0) {
       // Increment attempts for rate limiting
-      await supabase
-        .from('phone_verification_codes')
-        .update({ attempts: supabase.sql`attempts + 1` })
-        .eq('phone', phone)
-        .eq('barbershop_id', barbershop.id)
-        .eq('verified', false);
+      await supabase.rpc('increment_verification_attempts', {
+        phone_input: phone,
+        barbershop_id_input: barbershop.id
+      });
 
       return new Response(
         JSON.stringify({ error: 'Código inválido ou expirado' }),
