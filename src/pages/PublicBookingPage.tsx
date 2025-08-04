@@ -11,19 +11,51 @@ import { Scissors, Calendar, Star, Clock } from 'lucide-react';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { RobustSlugValidator } from '@/components/booking/RobustSlugValidator';
 import { useEnvironmentDetection } from '@/components/booking/EnvironmentDetector';
+import { supabase } from '@/integrations/supabase/client';
 
 const PublicBookingContent = ({ barbershopData }: { barbershopData: any }) => {
   const { slug } = useParams<{ slug: string }>();
   const { isAuthenticated, client, barbershop, validateSession, isLoading: authLoading } = usePhoneAuth();
   const [initialized, setInitialized] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [sessionGenerating, setSessionGenerating] = useState(false);
   const envInfo = useEnvironmentDetection();
 
   useEffect(() => {
     const checkSession = async () => {
       // Check for session_id in URL
       const urlParams = new URLSearchParams(window.location.search);
-      const sessionId = urlParams.get('session_id');
+      let sessionId = urlParams.get('session_id');
+      
+      const generateAnonymousSession = async () => {
+        if (sessionGenerating) return;
+        
+        setSessionGenerating(true);
+        try {
+          console.log('🚀 Generating anonymous session for:', slug);
+          const { data, error } = await supabase.functions.invoke('generate-anonymous-session', {
+            body: { barbershopSlug: slug }
+          });
+
+          if (error) {
+            console.error('Error generating anonymous session:', error);
+            return;
+          }
+
+          if (data?.success && data?.sessionId) {
+            console.log('✅ Anonymous session generated:', data.sessionId);
+            // Update URL with session ID
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('session_id', data.sessionId);
+            window.history.replaceState({}, '', newUrl.toString());
+            sessionId = data.sessionId;
+          }
+        } catch (error) {
+          console.error('Failed to generate anonymous session:', error);
+        } finally {
+          setSessionGenerating(false);
+        }
+      };
       
       if (sessionId && !sessionChecked) {
         console.log('🔑 Session ID detected in URL:', sessionId);
@@ -31,19 +63,22 @@ const PublicBookingContent = ({ barbershopData }: { barbershopData: any }) => {
         
         const success = await validateSession(sessionId);
         if (success) {
-          // Remove session_id from URL
-          urlParams.delete('session_id');
-          const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
-          window.history.replaceState({}, '', newUrl);
-          console.log('✅ Session authenticated, URL cleaned');
+          // Keep session_id in URL for anonymous sessions
+          console.log('✅ Session validated');
         }
+      } else if (!sessionId && !sessionChecked && !sessionGenerating && slug) {
+        console.log('🆔 No session ID found, generating anonymous session...');
+        await generateAnonymousSession();
+        setSessionChecked(true);
       } else {
         setSessionChecked(true);
       }
     };
 
-    checkSession();
-  }, [validateSession, sessionChecked]);
+    if (slug) {
+      checkSession();
+    }
+  }, [validateSession, sessionChecked, slug, sessionGenerating]);
 
   useEffect(() => {
     // Debug logs for production

@@ -178,18 +178,33 @@ export const PhoneAuthProvider = ({ children }: { children: ReactNode }) => {
 
       console.log('✅ Session validated successfully');
       
-      // Set auth state
+      // Set barbershop data
       setState(prev => ({
         ...prev,
-        isAuthenticated: true,
-        client: data.client,
         barbershop: data.barbershop,
         isLoading: false,
         error: null
       }));
       
-      // Persist data for mobile
-      persistBarbershopData(data);
+      // Only set client and authenticate if it's not anonymous
+      if (data.client && data.client.phone !== 'anonymous_visitor') {
+        setState(prev => ({
+          ...prev,
+          isAuthenticated: true,
+          client: data.client,
+        }));
+        
+        // Persist data for mobile
+        persistBarbershopData(data);
+      } else {
+        // Anonymous session - barbershop is set but not authenticated yet
+        console.log('📝 Anonymous session detected, waiting for phone authentication');
+        setState(prev => ({
+          ...prev,
+          isAuthenticated: false,
+          client: null,
+        }));
+      }
 
       return true;
     } catch (error: any) {
