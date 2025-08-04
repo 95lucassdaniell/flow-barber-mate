@@ -1,4 +1,14 @@
-import { resetApplicationState } from '@/utils/errorInterceptor';
+// Função para resetar a aplicação
+const resetApplicationState = () => {
+  // Limpar localStorage
+  localStorage.clear();
+  
+  // Limpar sessionStorage
+  sessionStorage.clear();
+  
+  // Recarregar página sem cache
+  window.location.reload();
+};
 
 const EmergencyStopUI = () => {
   return (

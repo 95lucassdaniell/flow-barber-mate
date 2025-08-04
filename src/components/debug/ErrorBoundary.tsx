@@ -1,6 +1,18 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { clearNfeCache, resetApplicationState } from '@/utils/errorInterceptor';
 import EmergencyStopUI from './EmergencyStopUI';
+
+// Função para limpar cache NFe
+const clearNfeCache = () => {
+  localStorage.clear();
+  sessionStorage.clear();
+  return true;
+};
+
+// Função para resetar a aplicação
+const resetApplicationState = () => {
+  clearNfeCache();
+  window.location.reload();
+};
 
 interface Props {
   children: ReactNode;
