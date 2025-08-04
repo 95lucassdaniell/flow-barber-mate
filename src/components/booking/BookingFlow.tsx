@@ -36,13 +36,13 @@ export const BookingFlow = () => {
   const [bookingData, setBookingData] = useState<BookingData>({});
   
   const { client, barbershop } = usePhoneAuth();
-  const { services, providers, getAvailableProviders, getServicePrice, isLoading: isBookingDataLoading } = useBookingAvailability(barbershop?.id || '');
+  const { services, providers, getAvailableProviders, getServicePrice, isLoading, error } = useBookingAvailability(barbershop?.id || '');
   
   console.log('📋 BookingFlow state:', { 
     currentStep, 
     barbershopId: barbershop?.id, 
     hasBarbershop: !!barbershop, 
-    isBookingDataLoading,
+    isLoading,
     servicesCount: services.length,
     providersCount: providers.length
   });
@@ -132,7 +132,33 @@ export const BookingFlow = () => {
 
       {/* Content */}
       <div className="max-w-md mx-auto px-4 py-6">
-        {currentStep === 'service' && (
+        {/* Loading State */}
+        {isLoading && (
+          <div className="text-center py-8">
+            <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando serviços...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !isLoading && (
+          <div className="text-center py-8 space-y-4">
+            <div className="text-destructive">
+              <p className="text-lg font-medium">Erro ao carregar dados</p>
+              <p className="text-sm">{error}</p>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.reload()}
+              className="mx-auto"
+            >
+              Tentar novamente
+            </Button>
+          </div>
+        )}
+
+        {/* Service Selection Step */}
+        {currentStep === 'service' && !isLoading && !error && (
           <ServiceSelection
             services={services}
             selectedServiceId={bookingData.serviceId}

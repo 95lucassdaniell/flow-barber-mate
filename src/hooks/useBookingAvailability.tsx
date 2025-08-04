@@ -50,44 +50,72 @@ export const useBookingAvailability = (barbershopId: string) => {
     setError(null);
 
     try {
-      // Fetch services
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('services')
-        .select('id, name, duration_minutes')
-        .eq('barbershop_id', barbershopId)
-        .eq('is_active', true);
+      // Fetch all data in parallel for better performance
+      const [servicesResult, providersResult] = await Promise.allSettled([
+        supabase
+          .from('services')
+          .select('id, name, duration_minutes')
+          .eq('barbershop_id', barbershopId)
+          .eq('is_active', true),
+        supabase
+          .from('profiles')
+          .select('id, full_name')
+          .eq('barbershop_id', barbershopId)
+          .eq('role', 'barber')
+          .eq('is_active', true)
+      ]);
 
-      if (servicesError) throw servicesError;
+      // Handle services result
+      let servicesData: Service[] = [];
+      if (servicesResult.status === 'fulfilled' && !servicesResult.value.error) {
+        servicesData = servicesResult.value.data || [];
+      } else {
+        console.error('❌ Error fetching services:', servicesResult.status === 'fulfilled' ? servicesResult.value.error : servicesResult.reason);
+      }
 
-      // Fetch providers (barbers)
-      const { data: providersData, error: providersError } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .eq('barbershop_id', barbershopId)
-        .eq('role', 'barber')
-        .eq('is_active', true);
+      // Handle providers result
+      let providersData: Provider[] = [];
+      if (providersResult.status === 'fulfilled' && !providersResult.value.error) {
+        providersData = providersResult.value.data || [];
+      } else {
+        console.error('❌ Error fetching providers:', providersResult.status === 'fulfilled' ? providersResult.value.error : providersResult.reason);
+      }
 
-      if (providersError) throw providersError;
+      // Fetch provider services only if we have providers, but don't block services loading
+      let providerServicesData: ProviderService[] = [];
+      if (providersData.length > 0) {
+        const { data: psData, error: providerServicesError } = await supabase
+          .from('provider_services')
+          .select('provider_id, service_id, price, is_active')
+          .in('provider_id', providersData.map(p => p.id))
+          .eq('is_active', true);
 
-      // Fetch provider services
-      const { data: providerServicesData, error: providerServicesError } = await supabase
-        .from('provider_services')
-        .select('provider_id, service_id, price, is_active')
-        .in('provider_id', providersData?.map(p => p.id) || [])
-        .eq('is_active', true);
+        if (!providerServicesError) {
+          providerServicesData = psData || [];
+        } else {
+          console.error('❌ Error fetching provider services:', providerServicesError);
+          // Don't throw error - services can still be shown even without provider services
+        }
+      }
 
-      if (providerServicesError) throw providerServicesError;
-
-      setServices(servicesData || []);
-      setProviders(providersData || []);
-      setProviderServices(providerServicesData || []);
+      // Always set services and providers, even if provider_services fails
+      setServices(servicesData);
+      setProviders(providersData);
+      setProviderServices(providerServicesData);
       
       console.log('✅ fetchInitialData completed:', {
-        services: servicesData?.length || 0,
-        providers: providersData?.length || 0,
-        providerServices: providerServicesData?.length || 0
+        services: servicesData.length,
+        providers: providersData.length,
+        providerServices: providerServicesData.length,
+        servicesAvailable: servicesData.length > 0
       });
+
+      // Clear error if we successfully loaded services
+      if (servicesData.length > 0) {
+        setError(null);
+      }
     } catch (error: any) {
+      console.error('❌ fetchInitialData error:', error);
       setError(error.message || 'Erro ao carregar dados');
     } finally {
       setIsLoading(false);

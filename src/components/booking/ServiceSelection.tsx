@@ -59,8 +59,14 @@ export const ServiceSelection = ({ services, selectedServiceId, onSelect }: Serv
       </div>
 
       {services.length === 0 && (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">Nenhum serviço disponível no momento</p>
+        <div className="text-center py-8 space-y-4">
+          <div className="text-muted-foreground">
+            <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p className="text-lg font-medium">Nenhum serviço disponível</p>
+            <p className="text-sm">
+              Os serviços estão sendo carregados ou não há serviços ativos no momento.
+            </p>
+          </div>
         </div>
       )}
     </div>
