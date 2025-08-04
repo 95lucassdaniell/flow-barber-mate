@@ -5,48 +5,13 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://yzqwmxffjufefocgkevz.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6cXdteGZmanVmZWZvY2drZXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyOTk5NzUsImV4cCI6MjA2ODg3NTk3NX0.f4UD5xQ16wInFkwkAYcqIfAFyhJ2uuefc-l6n4pSJpY";
 
-// NUCLEAR PROTECTION - Verificar se há referências ao projeto antigo
-const OLD_PROJECT_ID = 'qtasdgvngwsukvqdzkdn';
-if (SUPABASE_URL.includes(OLD_PROJECT_ID)) {
-  console.error('🚨🚨🚨 CRITICAL ERROR: Supabase client has old project ID!');
-  throw new Error('NUCLEAR: Old project ID detected in client');
-}
-
-console.log('✅ NUCLEAR: Supabase client initialized with correct project:', SUPABASE_URL);
-
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-// Create the standard client
-const baseClient = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
   }
 });
-
-// NUCLEAR INTERCEPT only for functions.invoke
-const originalInvoke = baseClient.functions.invoke.bind(baseClient.functions);
-baseClient.functions.invoke = function(functionName: string, options?: any) {
-  console.log('🔍 NUCLEAR: Function call intercepted:', functionName, options);
-  
-  // NUCLEAR BLOCK for cancel-nfe
-  if (functionName === 'cancel-nfe') {
-    console.error('🚨 NUCLEAR: cancel-nfe call DESTROYED at client level');
-    return Promise.resolve({
-      data: { 
-        success: true, 
-        nuclear: true, 
-        message: 'NUCLEAR: cancel-nfe call intercepted and destroyed' 
-      },
-      error: null
-    });
-  }
-  
-  // For other functions, call normally
-  console.log('✅ NUCLEAR: Allowing function call:', functionName);
-  return originalInvoke(functionName, options);
-};
-
-export const supabase = baseClient;
