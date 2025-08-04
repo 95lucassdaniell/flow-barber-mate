@@ -288,7 +288,7 @@ const RegisterForm = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-3 mb-4">
-            <img src={logo} alt="Salão.ai" className="w-10 h-10" />
+            <img src={logo} alt="Salão.ai" className="w-[250px] h-auto" />
             
           </div>
           <h1 className="text-2xl font-bold mb-2">
