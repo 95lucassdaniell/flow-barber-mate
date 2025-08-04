@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import logo from "@/assets/salao-ai-logo.png";
+const logo = "https://res.cloudinary.com/dghn7y0xb/image/upload/v1754334824/salao.ai_l17xsc.png";
 import usePageTitle from "@/hooks/usePageTitle";
 
 const RegisterForm = () => {

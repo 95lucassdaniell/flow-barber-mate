@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Scissors, Calendar, MessageCircle, TrendingUp, Users, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-barbershop.jpg";
-import logo from "@/assets/salao-ai-logo.png";
+const logo = "https://res.cloudinary.com/dghn7y0xb/image/upload/v1754334824/salao.ai_l17xsc.png";
 import usePageTitle from "@/hooks/usePageTitle";
 const LandingPage = () => {
   usePageTitle();
