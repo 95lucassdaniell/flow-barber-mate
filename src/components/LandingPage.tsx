@@ -12,7 +12,7 @@ const LandingPage = () => {
       <header className="border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <img src={logo} alt="Salão.ai" className="w-8 h-8" />
+            <img src={logo} alt="Salão.ai" className="w-[100px] h-auto" />
             
           </div>
           <nav className="hidden md:flex items-center space-x-6">
