@@ -6,6 +6,9 @@ import './index.css'
 import { LoadingProvider } from './contexts/LoadingContext'
 import { CacheManager } from './utils/cacheManager'
 
+// INTERCEPTAÇÃO ULTRA PRECOCE - Antes de qualquer coisa
+CacheManager.blockAllOldProjectCalls();
+
 // Configurar interceptação de chamadas para projeto antigo
 CacheManager.detectOldProjectCalls();
 

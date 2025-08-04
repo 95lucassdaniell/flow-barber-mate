@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ErrorBoundary from "@/components/debug/ErrorBoundary";
+import NetworkMonitor from "@/components/debug/NetworkMonitor";
 import SessionGuard from "./components/auth/SessionGuard";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Index from "./pages/Index";
@@ -48,6 +49,7 @@ function App() {
   return (
     <ErrorBoundary>
       <TooltipProvider>
+        <NetworkMonitor />
         <Toaster />
         <Sonner />
       <Routes>
