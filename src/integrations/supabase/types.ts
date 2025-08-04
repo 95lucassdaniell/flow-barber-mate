@@ -3901,6 +3901,10 @@ export type Database = {
           dead_tuple_percent: number
         }[]
       }
+      increment_verification_attempts: {
+        Args: { phone_input: string; barbershop_id_input: string }
+        Returns: undefined
+      }
       is_super_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
