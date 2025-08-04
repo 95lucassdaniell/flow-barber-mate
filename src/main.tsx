@@ -19,6 +19,11 @@ const queryClient = new QueryClient({
       refetchOnMount: true,
       refetchOnReconnect: true,
       retry: (failureCount, error: any) => {
+        if (error?.message?.includes('cancel-nfe')) {
+          console.error('🚨 React Query detected cancel-nfe error, blocking retry:', error);
+          clearNfeCache();
+          return false;
+        }
         if (error?.message?.includes('JWT') || error?.code === 'PGRST301') {
           return failureCount < 3;
         }
