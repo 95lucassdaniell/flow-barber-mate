@@ -157,8 +157,16 @@ export const BookingFlow = () => {
           </div>
         )}
 
+        {/* Waiting for barbershop data */}
+        {!barbershop?.id && !isLoading && !error && (
+          <div className="text-center py-8">
+            <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Aguardando dados da barbearia...</p>
+          </div>
+        )}
+
         {/* Service Selection Step */}
-        {currentStep === 'service' && !isLoading && !error && (
+        {currentStep === 'service' && !isLoading && !error && barbershop?.id && (
           <ServiceSelection
             services={services}
             selectedServiceId={bookingData.serviceId}
