@@ -12,7 +12,8 @@ import {
   Target, 
   Users, 
   LogOut,
-  BarChart3
+  BarChart3,
+  CreditCard
 } from 'lucide-react';
 
 interface ProviderDashboardLayoutProps {
@@ -39,6 +40,12 @@ const ProviderDashboardLayout = ({ children, activeTab }: ProviderDashboardLayou
       href: `/prestador/${slug}/agenda`,
       icon: Calendar,
       current: activeTab === 'agenda'
+    },
+    {
+      name: 'Assinaturas',
+      href: `/prestador/${slug}/assinaturas`,
+      icon: CreditCard,
+      current: activeTab === 'assinaturas'
     },
     {
       name: 'Comissões',

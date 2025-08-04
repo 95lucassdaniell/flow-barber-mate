@@ -1138,6 +1138,51 @@ export type Database = {
           },
         ]
       }
+      client_subscriptions: {
+        Row: {
+          barbershop_id: string
+          client_id: string
+          created_at: string
+          end_date: string
+          id: string
+          last_reset_date: string
+          plan_id: string
+          provider_id: string
+          remaining_services: number
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          barbershop_id: string
+          client_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          last_reset_date?: string
+          plan_id: string
+          provider_id: string
+          remaining_services?: number
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          barbershop_id?: string
+          client_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          last_reset_date?: string
+          plan_id?: string
+          provider_id?: string
+          remaining_services?: number
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           barbershop_id: string
@@ -2299,6 +2344,51 @@ export type Database = {
           },
         ]
       }
+      provider_subscription_plans: {
+        Row: {
+          barbershop_id: string
+          commission_percentage: number
+          created_at: string
+          description: string | null
+          enabled_service_ids: string[] | null
+          id: string
+          included_services_count: number
+          is_active: boolean
+          monthly_price: number
+          name: string
+          provider_id: string
+          updated_at: string
+        }
+        Insert: {
+          barbershop_id: string
+          commission_percentage?: number
+          created_at?: string
+          description?: string | null
+          enabled_service_ids?: string[] | null
+          id?: string
+          included_services_count?: number
+          is_active?: boolean
+          monthly_price: number
+          name: string
+          provider_id: string
+          updated_at?: string
+        }
+        Update: {
+          barbershop_id?: string
+          commission_percentage?: number
+          created_at?: string
+          description?: string | null
+          enabled_service_ids?: string[] | null
+          id?: string
+          included_services_count?: number
+          is_active?: boolean
+          monthly_price?: number
+          name?: string
+          provider_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       public_client_reviews: {
         Row: {
           barber_id: string | null
@@ -3151,6 +3241,90 @@ export type Database = {
           },
         ]
       }
+      subscription_financial_records: {
+        Row: {
+          amount: number
+          barbershop_id: string
+          commission_amount: number
+          created_at: string
+          due_date: string
+          id: string
+          net_amount: number
+          notes: string | null
+          payment_date: string | null
+          payment_method: string | null
+          provider_id: string
+          status: string
+          subscription_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          barbershop_id: string
+          commission_amount?: number
+          created_at?: string
+          due_date: string
+          id?: string
+          net_amount?: number
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          provider_id: string
+          status?: string
+          subscription_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          barbershop_id?: string
+          commission_amount?: number
+          created_at?: string
+          due_date?: string
+          id?: string
+          net_amount?: number
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          provider_id?: string
+          status?: string
+          subscription_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subscription_usage_history: {
+        Row: {
+          command_id: string | null
+          created_at: string
+          discounted_price: number
+          id: string
+          original_price: number
+          service_id: string
+          subscription_id: string
+          used_at: string
+        }
+        Insert: {
+          command_id?: string | null
+          created_at?: string
+          discounted_price?: number
+          id?: string
+          original_price?: number
+          service_id: string
+          subscription_id: string
+          used_at?: string
+        }
+        Update: {
+          command_id?: string | null
+          created_at?: string
+          discounted_price?: number
+          id?: string
+          original_price?: number
+          service_id?: string
+          subscription_id?: string
+          used_at?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           barbershop_id: string
@@ -3739,6 +3913,10 @@ export type Database = {
         Args: { event_type: string; details?: Json }
         Returns: undefined
       }
+      process_overdue_subscriptions: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       process_pending_whatsapp_configurations: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -3746,6 +3924,10 @@ export type Database = {
       replace_template_variables: {
         Args: { template_content: string; appointment_id: string }
         Returns: string
+      }
+      reset_monthly_subscription_services: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       set_provider_password: {
         Args: { provider_id: string; new_password: string }
