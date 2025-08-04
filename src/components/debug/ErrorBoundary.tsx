@@ -1,4 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { clearNfeCache, resetApplicationState } from '@/utils/errorInterceptor';
+import EmergencyStopUI from './EmergencyStopUI';
 
 interface Props {
   children: ReactNode;
@@ -31,52 +33,62 @@ class ErrorBoundary extends Component<Props, State> {
     });
 
     // Verificar se o erro está relacionado a cancel-nfe
-    if (error.message.includes('cancel-nfe') || error.stack?.includes('cancel-nfe')) {
-      console.error('🚨 Detected cancel-nfe error - clearing potential cached data');
+    if (error.message.includes('cancel-nfe') || 
+        error.stack?.includes('cancel-nfe') ||
+        error.message.includes('FunctionsHttpError')) {
+      console.error('🚨 Detected cancel-nfe or Functions error - clearing cache and resetting');
       
-      // Limpar possíveis dados em cache que podem estar causando o problema
-      try {
-        localStorage.removeItem('supabase.auth.token');
-        sessionStorage.clear();
-        
-        // Forçar reload da página após limpar cache
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      } catch (cleanupError) {
-        console.error('Error during cleanup:', cleanupError);
-      }
+      // Limpar cache imediatamente
+      clearNfeCache();
+      
+      // Mostrar UI de emergência
+      setTimeout(() => {
+        resetApplicationState();
+      }, 2000);
     }
   }
 
   public render() {
     if (this.state.hasError) {
-      return this.props.fallback || (
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <div className="text-center p-6 max-w-md">
-            <h2 className="text-xl font-semibold text-destructive mb-2">
-              Algo deu errado
-            </h2>
-            <p className="text-muted-foreground mb-4">
-              Ocorreu um erro inesperado. Limpando cache e recarregando...
-            </p>
-            <button 
-              onClick={() => {
-                // Limpar cache e recarregar
-                localStorage.clear();
-                sessionStorage.clear();
-                window.location.reload();
-              }}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-            >
-              Limpar Cache e Recarregar
-            </button>
-          </div>
-        </div>
+      return (
+        <>
+          <EmergencyStopUI />
+          {this.props.fallback || (
+            <div className="min-h-screen flex items-center justify-center bg-background">
+              <div className="text-center p-6 max-w-md">
+                <h2 className="text-xl font-semibold text-destructive mb-2">
+                  Erro Detectado
+                </h2>
+                <p className="text-muted-foreground mb-4">
+                  Detectamos um erro relacionado a NFe. Limpando cache...
+                </p>
+                <div className="space-y-2">
+                  <button 
+                    onClick={resetApplicationState}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 w-full"
+                  >
+                    🔄 Reset Completo
+                  </button>
+                  <button 
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/90 w-full"
+                  >
+                    🔃 Recarregar Página
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       );
     }
 
-    return this.props.children;
+    return (
+      <>
+        <EmergencyStopUI />
+        {this.props.children}
+      </>
+    );
   }
 }
 
