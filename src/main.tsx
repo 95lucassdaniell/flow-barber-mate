@@ -4,6 +4,13 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import './index.css'
 import { LoadingProvider } from './contexts/LoadingContext'
+import { setupErrorInterceptor, clearNfeCache } from './utils/errorInterceptor'
+
+// Configurar interceptor de erro ao inicializar
+setupErrorInterceptor();
+
+// Limpar cache de NFe ao inicializar
+clearNfeCache();
 
 const queryClient = new QueryClient({
   defaultOptions: {

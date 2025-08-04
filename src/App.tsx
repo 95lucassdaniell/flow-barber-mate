@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Routes, Route, Navigate } from "react-router-dom";
+import ErrorBoundary from "@/components/debug/ErrorBoundary";
 import SessionGuard from "./components/auth/SessionGuard";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Index from "./pages/Index";
@@ -45,9 +46,10 @@ import PublicReviewPage from "./pages/PublicReviewPage";
 
 function App() {
   return (
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
+    <ErrorBoundary>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
       <Routes>
         {/* Public routes - outside SessionGuard */}
         <Route path="/" element={<Index />} />
@@ -279,7 +281,8 @@ function App() {
         {/* Catch-all route */}
         <Route path="*" element={<NotFound />} />
       </Routes>
-    </TooltipProvider>
+      </TooltipProvider>
+    </ErrorBoundary>
   );
 }
 
