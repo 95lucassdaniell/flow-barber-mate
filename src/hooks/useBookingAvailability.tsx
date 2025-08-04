@@ -44,12 +44,8 @@ export const useBookingAvailability = (barbershopId: string) => {
     
     // Wait for a valid barbershopId before fetching
     if (barbershopId && barbershopId.trim() !== '' && barbershopId !== 'undefined') {
-      // Add a small delay to ensure the ID is properly set
-      const timeoutId = setTimeout(() => {
-        fetchInitialData();
-      }, 100);
-      
-      return () => clearTimeout(timeoutId);
+      console.log('✅ Valid barbershopId detected, fetching data...');
+      fetchInitialData();
     } else {
       console.warn('⚠️ useBookingAvailability: waiting for valid barbershopId:', barbershopId);
       // Reset state when waiting for valid ID
@@ -57,6 +53,7 @@ export const useBookingAvailability = (barbershopId: string) => {
       setProviders([]);
       setProviderServices([]);
       setError(null);
+      setIsLoading(false);
     }
   }, [barbershopId]);
 
