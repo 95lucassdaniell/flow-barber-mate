@@ -75,16 +75,29 @@ serve(async (req) => {
         });
       }
 
-      // Check status from Evolution API
+      // Check status from Evolution API with timeout and better error handling
       try {
+        console.log(`Checking Evolution API status for instance: ${instance.evolution_instance_name}`);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+        
         const statusResponse = await fetch(`${evolutionApiUrl}/instance/connectionState/${instance.evolution_instance_name}`, {
           method: 'GET',
           headers: {
             'apikey': evolutionApiKey
-          }
+          },
+          signal: controller.signal
         });
 
+        clearTimeout(timeoutId);
+
+        if (!statusResponse.ok) {
+          throw new Error(`Evolution API returned ${statusResponse.status}: ${statusResponse.statusText}`);
+        }
+
         const statusData = await statusResponse.json();
+        console.log('Evolution API response:', statusData);
         
         let newStatus = 'disconnected';
         let phoneNumber = null;
@@ -121,13 +134,16 @@ serve(async (req) => {
         });
       } catch (error) {
         console.error('Evolution API Status Error:', error);
+        
+        // Return current database status on API failure to avoid unnecessary disconnections
         return new Response(JSON.stringify({ 
-          status: 'error',
-          connected: false,
-          error: 'Failed to check Evolution API status',
-          api_type: 'evolution'
+          status: instance.status || 'disconnected',
+          connected: instance.status === 'connected',
+          phone_number: instance.phone_number,
+          api_type: 'evolution',
+          api_error: true,
+          error_message: error.message || 'Failed to check Evolution API status'
         }), {
-          status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }

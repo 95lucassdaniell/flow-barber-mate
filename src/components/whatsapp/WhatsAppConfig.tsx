@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Loader2, CheckCircle, XCircle, QrCode, Smartphone } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, QrCode, Smartphone, Wifi, WifiOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { cacheManager } from "@/lib/globalState";
 
 interface WhatsAppConfigProps {
   isConnected: boolean;
@@ -19,6 +20,8 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [instanceStatus, setInstanceStatus] = useState<string>('disconnected');
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+  const [statusInterval, setStatusInterval] = useState<NodeJS.Timeout | null>(null);
   const [settings, setSettings] = useState({
     businessName: "",
     autoReply: false,
@@ -34,11 +37,38 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
   useEffect(() => {
     checkConnectionStatus();
     loadSettings();
-  }, []);
+    
+    // Setup intelligent polling (30 seconds instead of 3)
+    const interval = setInterval(() => {
+      if (!document.hidden && !checkingStatus) {
+        checkConnectionStatus();
+      }
+    }, 30000);
+    
+    setStatusInterval(interval);
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [checkingStatus]);
 
-  const checkConnectionStatus = async () => {
+  const checkConnectionStatus = useCallback(async () => {
+    // Prevent multiple simultaneous calls
+    if (checkingStatus) return;
+    
+    // Check cache first (5 minute TTL)
+    const cacheKey = 'whatsapp_connection_status';
+    const cachedStatus = cacheManager.get<{status: string, connected: boolean, phone_number: string | null}>(cacheKey);
+    if (cachedStatus) {
+      setInstanceStatus(cachedStatus.status);
+      setIsConnected(cachedStatus.connected);
+      setPhoneNumber(cachedStatus.phone_number);
+      return;
+    }
+    
+    setCheckingStatus(true);
+    
     try {
-      // Primeiro, verificar se há instância pendente de configuração
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return;
 
@@ -61,7 +91,7 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
         return;
       }
 
-      // Se a instância está pendente de configuração, tentar configurar automaticamente
+      // Auto-configuration only if needed
       if (instance && instance.status === 'pending_configuration') {
         console.log('Instance pending configuration, triggering auto-configurator...');
         
@@ -74,8 +104,8 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
             console.error('Auto-configurator error:', autoConfigError);
           } else {
             console.log('Auto-configurator result:', autoConfigResult);
-            // Recarregar dados após configuração
-            setTimeout(() => checkConnectionStatus(), 3000);
+            // Delay next check to allow configuration
+            setTimeout(() => checkConnectionStatus(), 5000);
             return;
           }
         } catch (error) {
@@ -83,21 +113,40 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
         }
       }
 
-      // Verificar status real via função whatsapp-status
-      const { data, error } = await supabase.functions.invoke('whatsapp-status');
+      // Check status with timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Status check timeout')), 10000);
+      });
+      
+      const statusPromise = supabase.functions.invoke('whatsapp-status');
+      
+      const { data, error } = await Promise.race([statusPromise, timeoutPromise]) as any;
       
       if (error) {
         console.error('Error checking status:', error);
         return;
       }
 
+      const statusData = {
+        status: data.status,
+        connected: data.connected,
+        phone_number: data.phone_number
+      };
+      
+      // Cache the result for 5 minutes
+      cacheManager.set(cacheKey, statusData, 300000);
+      
       setInstanceStatus(data.status);
       setIsConnected(data.connected);
       setPhoneNumber(data.phone_number);
+      
     } catch (error) {
       console.error('Error checking connection status:', error);
+      // In case of error, don't update the UI to avoid flickering
+    } finally {
+      setCheckingStatus(false);
     }
-  };
+  }, [checkingStatus, setIsConnected]);
 
   const loadSettings = async () => {
     try {
@@ -152,27 +201,28 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
       setQrCode(data.qr_code);
       setInstanceStatus(data.status);
       
-      // Start checking status periodically only when component is visible
-      let statusInterval: NodeJS.Timeout;
+      // Start checking status periodically with optimized timing
+      let qrStatusInterval: NodeJS.Timeout;
       let timeoutId: NodeJS.Timeout;
 
       const startStatusCheck = () => {
-        statusInterval = setInterval(async () => {
-          if (!document.hidden) { // Only check when tab is active
+        qrStatusInterval = setInterval(async () => {
+          if (!document.hidden && !checkingStatus) {
             await checkConnectionStatus();
             if (instanceStatus === 'connected') {
-              clearInterval(statusInterval);
+              clearInterval(qrStatusInterval);
               clearTimeout(timeoutId);
               setQrCode(null);
               toast.success("WhatsApp conectado com sucesso!");
             }
           }
-        }, 3000);
+        }, 5000); // Increased to 5 seconds during QR scanning
 
         // Clear interval after 5 minutes
         timeoutId = setTimeout(() => {
-          clearInterval(statusInterval);
+          clearInterval(qrStatusInterval);
           setQrCode(null);
+          toast.info("QR Code expirou. Gere um novo código se necessário.");
         }, 300000);
       };
 
@@ -180,7 +230,7 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
 
       // Cleanup function
       return () => {
-        if (statusInterval) clearInterval(statusInterval);
+        if (qrStatusInterval) clearInterval(qrStatusInterval);
         if (timeoutId) clearTimeout(timeoutId);
       };
       
@@ -250,13 +300,19 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
               </CardDescription>
             </div>
             <div className="flex items-center space-x-2">
-              {isConnected ? (
-                <CheckCircle className="h-5 w-5 text-green-500" />
+              {checkingStatus ? (
+                <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+              ) : isConnected ? (
+                <Wifi className="h-5 w-5 text-green-500" />
               ) : (
-                <XCircle className="h-5 w-5 text-red-500" />
+                <WifiOff className="h-5 w-5 text-red-500" />
               )}
-              <span className={isConnected ? "text-green-500" : "text-red-500"}>
-                {isConnected ? "Conectado" : "Desconectado"}
+              <span className={
+                checkingStatus ? "text-blue-500" : 
+                isConnected ? "text-green-500" : "text-red-500"
+              }>
+                {checkingStatus ? "Verificando..." : 
+                 isConnected ? "Conectado" : "Desconectado"}
               </span>
             </div>
           </div>
