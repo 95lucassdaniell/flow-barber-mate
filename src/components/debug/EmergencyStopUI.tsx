@@ -1,6 +1,6 @@
 import { resetApplicationState } from '@/utils/errorInterceptor';
 
-export const EmergencyStopUI = () => {
+const EmergencyStopUI = () => {
   return (
     <div 
       style={{

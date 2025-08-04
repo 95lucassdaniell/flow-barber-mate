@@ -11,7 +11,7 @@ import { SimpleGridScheduleView } from './SimpleGridScheduleView';
 import { useBarbershopSettings } from '@/hooks/useBarbershopSettings';
 import { toast } from "sonner";
 import { useLoadingContext } from '@/contexts/LoadingContext';
-import { EmergencyStopUI } from '@/components/debug/EmergencyStopUI';
+import EmergencyStopUI from '@/components/debug/EmergencyStopUI';
 
 const SchedulePage = () => {
   const { profile } = useAuth();
