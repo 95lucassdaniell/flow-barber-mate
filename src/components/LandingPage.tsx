@@ -5,18 +5,15 @@ import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-barbershop.jpg";
 import logo from "@/assets/salao-ai-logo.png";
 import usePageTitle from "@/hooks/usePageTitle";
-
 const LandingPage = () => {
   usePageTitle();
-  
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <img src={logo} alt="Salão.ai" className="w-8 h-8" />
-            <span className="text-xl font-bold text-foreground">Salão.ai</span>
+            
           </div>
           <nav className="hidden md:flex items-center space-x-6">
             <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -38,10 +35,9 @@ const LandingPage = () => {
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-background text-foreground">
         <div className="absolute inset-0 bg-muted/20"></div>
-        <div 
-          className="absolute inset-0 bg-cover bg-center opacity-15 grayscale"
-          style={{ backgroundImage: `url(${heroImage})` }}
-        ></div>
+        <div className="absolute inset-0 bg-cover bg-center opacity-15 grayscale" style={{
+        backgroundImage: `url(${heroImage})`
+      }}></div>
         <div className="relative container mx-auto px-4 py-20 md:py-32">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
@@ -168,8 +164,6 @@ const LandingPage = () => {
           <p>&copy; 2024 Salão.ai. Transformando salões em negócios digitais inteligentes.</p>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default LandingPage;
