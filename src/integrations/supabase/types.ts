@@ -3736,6 +3736,10 @@ export type Database = {
         Args: { years_to_keep?: number }
         Returns: number
       }
+      cleanup_expired_verification_codes: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       create_monthly_partition: {
         Args: { table_name: string; start_date: string }
         Returns: undefined
@@ -3931,6 +3935,10 @@ export type Database = {
       }
       reset_monthly_subscription_services: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      reset_verification_attempts: {
+        Args: { phone_input: string; barbershop_id_input: string }
         Returns: undefined
       }
       set_provider_password: {

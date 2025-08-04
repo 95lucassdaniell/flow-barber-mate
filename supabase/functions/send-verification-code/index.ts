@@ -66,21 +66,28 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Rate limiting: check recent attempts
+    // Clean up expired codes first
+    await supabase.rpc('cleanup_expired_verification_codes');
+
+    // Rate limiting: check recent attempts (only non-expired codes)
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     const { data: recentAttempts } = await supabase
       .from('phone_verification_codes')
-      .select('id')
+      .select('id, created_at, expires_at')
       .eq('phone', phone)
       .eq('barbershop_id', barbershop.id)
-      .gte('created_at', tenMinutesAgo);
+      .gte('created_at', tenMinutesAgo)
+      .gt('expires_at', new Date().toISOString()); // Only non-expired codes
 
     console.log('Rate limiting check:', { recentAttempts: recentAttempts?.length || 0 });
 
     if (recentAttempts && recentAttempts.length >= 3) {
       console.log('Rate limit exceeded for phone:', phone.substring(0, 5) + '***');
       return new Response(
-        JSON.stringify({ error: 'Muitas tentativas. Tente novamente em 10 minutos.' }),
+        JSON.stringify({ 
+          error: 'Muitas tentativas. Tente novamente em 10 minutos.',
+          retryAfter: 600 // seconds
+        }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
