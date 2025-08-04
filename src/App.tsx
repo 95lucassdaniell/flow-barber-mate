@@ -5,6 +5,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import ErrorBoundary from "@/components/debug/ErrorBoundary";
 import NetworkMonitor from "@/components/debug/NetworkMonitor";
 import NuclearMonitor from "@/components/debug/NuclearMonitor";
+import NuclearReset from "@/components/debug/NuclearReset";
 import SessionGuard from "./components/auth/SessionGuard";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Index from "./pages/Index";
@@ -52,6 +53,7 @@ function App() {
       <TooltipProvider>
         <NetworkMonitor />
         <NuclearMonitor />
+        <NuclearReset />
         <Toaster />
         <Sonner />
       <Routes>
