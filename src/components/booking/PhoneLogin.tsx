@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Phone, MessageCircle } from 'lucide-react';
+import { Phone, MessageCircle, CheckCircle, AlertCircle } from 'lucide-react';
 import { usePhoneAuth } from '@/hooks/usePhoneAuth';
+import { toast } from 'sonner';
 
 interface PhoneLoginProps {
   barbershopSlug: string;
@@ -38,6 +39,7 @@ export const PhoneLogin = ({ barbershopSlug, onSuccess }: PhoneLoginProps) => {
 
     const success = await sendVerificationCode(cleanPhone, barbershopSlug);
     if (success) {
+      toast.success('Código enviado! Verifique seu WhatsApp.');
       setStep('code');
       setCountdown(300); // 5 minutes
       
@@ -50,6 +52,8 @@ export const PhoneLogin = ({ barbershopSlug, onSuccess }: PhoneLoginProps) => {
           return prev - 1;
         });
       }, 1000);
+    } else {
+      toast.error('Erro ao enviar código. Tente novamente.');
     }
   };
 
@@ -73,6 +77,7 @@ export const PhoneLogin = ({ barbershopSlug, onSuccess }: PhoneLoginProps) => {
     const cleanPhone = phone.replace(/\D/g, '');
     const success = await sendVerificationCode(cleanPhone, barbershopSlug);
     if (success) {
+      toast.success('Código reenviado!');
       setCountdown(300);
       const timer = setInterval(() => {
         setCountdown(prev => {
@@ -83,6 +88,8 @@ export const PhoneLogin = ({ barbershopSlug, onSuccess }: PhoneLoginProps) => {
           return prev - 1;
         });
       }, 1000);
+    } else {
+      toast.error('Erro ao reenviar código.');
     }
   };
 

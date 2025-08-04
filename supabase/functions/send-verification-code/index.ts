@@ -31,14 +31,18 @@ function formatPhoneNumber(phone: string): string {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  console.log('=== SEND VERIFICATION CODE STARTED ===');
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { phone, barbershopSlug }: VerificationRequest = await req.json();
+    console.log('Request data:', { phone: phone?.substring(0, 5) + '***', barbershopSlug });
 
     if (!phone || !barbershopSlug) {
+      console.error('Missing required fields:', { phone: !!phone, barbershopSlug: !!barbershopSlug });
       return new Response(
         JSON.stringify({ error: 'Phone and barbershop slug are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -52,7 +56,10 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('slug', barbershopSlug)
       .single();
 
+    console.log('Barbershop lookup:', { barbershop, error: barbershopError });
+
     if (barbershopError || !barbershop) {
+      console.error('Barbershop not found:', barbershopError);
       return new Response(
         JSON.stringify({ error: 'Barbershop not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -68,7 +75,10 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('barbershop_id', barbershop.id)
       .gte('created_at', tenMinutesAgo);
 
+    console.log('Rate limiting check:', { recentAttempts: recentAttempts?.length || 0 });
+
     if (recentAttempts && recentAttempts.length >= 3) {
+      console.log('Rate limit exceeded for phone:', phone.substring(0, 5) + '***');
       return new Response(
         JSON.stringify({ error: 'Muitas tentativas. Tente novamente em 10 minutos.' }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -80,6 +90,7 @@ const handler = async (req: Request): Promise<Response> => {
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutes
 
     // Save verification code
+    console.log('Saving verification code for phone:', phone.substring(0, 5) + '***');
     const { error: saveError } = await supabase
       .from('phone_verification_codes')
       .insert({
@@ -97,19 +108,35 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    console.log('Verification code saved successfully');
+
     // Get WhatsApp instance for this barbershop
-    const { data: whatsappInstance } = await supabase
+    console.log('Looking for WhatsApp instance for barbershop:', barbershop.id);
+    const { data: whatsappInstance, error: whatsappError } = await supabase
       .from('whatsapp_instances')
-      .select('evolution_instance_name, instance_token')
+      .select('evolution_instance_name, instance_token, status')
       .eq('barbershop_id', barbershop.id)
       .eq('status', 'connected')
       .single();
 
+    console.log('WhatsApp instance lookup:', { 
+      found: !!whatsappInstance, 
+      status: whatsappInstance?.status,
+      hasToken: !!whatsappInstance?.instance_token,
+      error: whatsappError 
+    });
+
+    let whatsappSent = false;
+    let whatsappError_details = null;
+
     if (whatsappInstance?.instance_token) {
       try {
+        console.log('Attempting to send WhatsApp message...');
         const formattedPhone = formatPhoneNumber(phone);
         const message = `🔐 Seu código de verificação para ${barbershop.name} é: *${code}*\n\nO código expira em 5 minutos.\n\nSe você não solicitou este código, ignore esta mensagem.`;
 
+        console.log('Sending to phone:', formattedPhone.substring(0, 7) + '***');
+        
         const whatsappResponse = await fetch(`${evolutionApiUrl}/message/sendText/${whatsappInstance.evolution_instance_name}`, {
           method: 'POST',
           headers: {
@@ -122,18 +149,39 @@ const handler = async (req: Request): Promise<Response> => {
           })
         });
 
-        if (!whatsappResponse.ok) {
-          console.error('WhatsApp API error:', await whatsappResponse.text());
+        if (whatsappResponse.ok) {
+          console.log('WhatsApp message sent successfully');
+          whatsappSent = true;
+        } else {
+          const errorText = await whatsappResponse.text();
+          console.error('WhatsApp API error:', errorText);
+          whatsappError_details = errorText;
         }
-      } catch (whatsappError) {
-        console.error('Error sending WhatsApp message:', whatsappError);
+      } catch (whatsappSendError) {
+        console.error('Error sending WhatsApp message:', whatsappSendError);
+        whatsappError_details = whatsappSendError.message;
       }
+    } else {
+      console.log('No WhatsApp instance found or not connected');
+      whatsappError_details = 'WhatsApp not configured or disconnected';
     }
+
+    // Always return success if code was saved, even if WhatsApp failed
+    const responseMessage = whatsappSent 
+      ? 'Código de verificação enviado via WhatsApp'
+      : 'Código de verificação gerado. Se configurado, foi enviado via WhatsApp.';
+
+    console.log('Returning response:', { 
+      success: true, 
+      whatsappSent, 
+      whatsappError: whatsappError_details 
+    });
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Código de verificação enviado via WhatsApp',
+        message: responseMessage,
+        whatsappSent,
         expiresIn: 300 // seconds
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
