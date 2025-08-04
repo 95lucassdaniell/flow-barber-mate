@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFinancialData } from "@/hooks/useFinancialData";
+import { useSubscriptionFinancialData } from "@/hooks/useSubscriptionFinancialData";
 import FinancialStats from "./FinancialStats";
+import SubscriptionFinancialStats from "./SubscriptionFinancialStats";
 import CommissionHistory from "./CommissionHistory";
 import FinancialFilters from "./FinancialFilters";
 import BarberRankings from "./BarberRankings";
@@ -32,6 +34,14 @@ export default function AdminFinancialDashboard() {
     selectedBarber || undefined
   );
 
+  const {
+    stats: subscriptionStats,
+    loading: subscriptionLoading
+  } = useSubscriptionFinancialData(
+    dateRange.startDate,
+    dateRange.endDate
+  );
+
   // Debug logs para verificar os dados
   console.log('AdminFinancialDashboard - Date range:', dateRange);
   console.log('AdminFinancialDashboard - Selected barber:', selectedBarber);
@@ -59,11 +69,25 @@ export default function AdminFinancialDashboard() {
 
       <FinancialStats stats={stats} />
 
+      {/* Estatísticas de Assinaturas */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Receita de Assinaturas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SubscriptionFinancialStats 
+            stats={subscriptionStats} 
+            loading={subscriptionLoading} 
+          />
+        </CardContent>
+      </Card>
+
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="rankings">Rankings</TabsTrigger>
           <TabsTrigger value="commissions">Comissões</TabsTrigger>
+          <TabsTrigger value="subscriptions">Assinaturas</TabsTrigger>
           <TabsTrigger value="expenses">Despesas</TabsTrigger>
           <TabsTrigger value="cash-history">Histórico de Caixa</TabsTrigger>
         </TabsList>
@@ -160,6 +184,25 @@ export default function AdminFinancialDashboard() {
                   Nenhuma comissão encontrada para o período selecionado
                 </p>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="subscriptions" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Detalhes das Assinaturas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SubscriptionFinancialStats 
+                stats={subscriptionStats} 
+                loading={subscriptionLoading} 
+              />
+              <div className="mt-6 text-sm text-muted-foreground">
+                <p>• Receita mensal recorrente baseada em assinaturas ativas</p>
+                <p>• Serviços utilizados via assinatura no período selecionado</p>
+                <p>• Ticket médio calculado sobre valor mensal das assinaturas ativas</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

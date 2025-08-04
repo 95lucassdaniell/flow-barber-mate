@@ -3,6 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCashRegister } from "@/hooks/useCashRegister";
+import { useSubscriptionValidation } from "@/hooks/useSubscriptionValidation";
 
 export interface CommandItem {
   id: string;
@@ -67,6 +68,7 @@ export const useCommands = () => {
   const { toast } = useToast();
   const { profile } = useAuth();
   const { currentCashRegister, updateCashRegisterTotals } = useCashRegister();
+  const { validateServiceUsage, useSubscriptionService } = useSubscriptionValidation();
 
   const fetchCommands = async (status?: string, date?: Date) => {
     if (!profile?.barbershop_id) return;
@@ -124,7 +126,49 @@ export const useCommands = () => {
 
   const addItemToCommand = async (commandId: string, itemData: CreateCommandItemData): Promise<boolean> => {
     try {
-      const totalPrice = itemData.quantity * itemData.unit_price;
+      // Buscar informações da comanda para validação de assinatura
+      const { data: command, error: commandError } = await supabase
+        .from('commands')
+        .select('client_id, barber_id')
+        .eq('id', commandId)
+        .single();
+
+      if (commandError) throw commandError;
+
+      let finalUnitPrice = itemData.unit_price;
+      let subscriptionUsed = false;
+      let subscriptionId: string | null = null;
+
+      // Se for um serviço, verificar se tem assinatura ativa
+      if (itemData.item_type === 'service' && itemData.service_id) {
+        const validation = await validateServiceUsage(
+          command.client_id,
+          command.barber_id,
+          itemData.service_id,
+          itemData.unit_price
+        );
+
+        if (validation.isValid && validation.subscription) {
+          // Cliente tem assinatura ativa e serviço disponível
+          finalUnitPrice = 0; // Serviço gratuito via assinatura
+          subscriptionUsed = true;
+          subscriptionId = validation.subscription.id;
+          
+          toast({
+            title: "Assinatura Aplicada",
+            description: `Serviço gratuito via assinatura. Restam ${validation.subscription.remaining_services - 1} serviços.`,
+          });
+        } else if (validation.message) {
+          // Mostrar mensagem de validação (ex: sem saldo, serviço não incluído)
+          toast({
+            title: "Informação",
+            description: validation.message,
+            variant: "default",
+          });
+        }
+      }
+
+      const totalPrice = itemData.quantity * finalUnitPrice;
       const commissionAmount = totalPrice * (itemData.commission_rate / 100);
 
       const { error } = await supabase
@@ -135,7 +179,7 @@ export const useCommands = () => {
           service_id: itemData.service_id,
           product_id: itemData.product_id,
           quantity: itemData.quantity,
-          unit_price: itemData.unit_price,
+          unit_price: finalUnitPrice,
           total_price: totalPrice,
           commission_rate: itemData.commission_rate,
           commission_amount: commissionAmount,
@@ -143,12 +187,24 @@ export const useCommands = () => {
 
       if (error) throw error;
 
+      // Se usou assinatura, decrementar o contador e registrar uso
+      if (subscriptionUsed && subscriptionId) {
+        await useSubscriptionService(
+          subscriptionId,
+          itemData.service_id!,
+          commandId,
+          itemData.unit_price // Preço original para histórico
+        );
+      }
+
       // Atualizar total da comanda
       await updateCommandTotal(commandId);
       
       toast({
         title: "Sucesso",
-        description: "Item adicionado à comanda",
+        description: subscriptionUsed 
+          ? "Serviço adicionado via assinatura" 
+          : "Item adicionado à comanda",
       });
 
       await fetchCommands();

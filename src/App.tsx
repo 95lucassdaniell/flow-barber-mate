@@ -39,6 +39,7 @@ import ProviderSchedulePage from "./components/providers/schedule/ProviderSchedu
 import ProviderGoalsManagement from "./components/providers/goals/ProviderGoalsManagement";
 import ProviderCommissionsPage from "./components/providers/commissions/ProviderCommissionsPage";
 import ProviderClientsPage from "./components/providers/clients/ProviderClientsPage";
+import ProviderSubscriptionsPage from "./pages/ProviderSubscriptionsPage";
 import { PublicBookingPage } from "./pages/PublicBookingPage";
 import PublicReviewPage from "./pages/PublicReviewPage";
 
@@ -218,6 +219,13 @@ function App() {
                   <ProviderDashboardLayout activeTab="clientes">
                     <ProviderClientsPage />
                   </ProviderDashboardLayout>
+                </ProviderProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/prestador/:slug/assinaturas" element={
+              <SessionGuard>
+                <ProviderProtectedRoute>
+                  <ProviderSubscriptionsPage />
                 </ProviderProtectedRoute>
               </SessionGuard>
             } />
