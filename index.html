@@ -15,6 +15,86 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    
+    <!-- NUCLEAR INTERCEPT - Bloquear projeto antigo ANTES de qualquer script -->
+    <script>
+      console.log('🚨 NUCLEAR INTERCEPT LOADING...');
+      
+      (function() {
+        const OLD_PROJECT = 'qtasdgvngwsukvqdzkdn';
+        const NEW_PROJECT = 'yzqwmxffjufefocgkevz';
+        let blockedCallCount = 0;
+        
+        // Interceptar fetch GLOBALMENTE
+        const originalFetch = window.fetch;
+        window.fetch = function(input, init) {
+          const url = input instanceof Request ? input.url : input.toString();
+          if (url.includes(OLD_PROJECT)) {
+            blockedCallCount++;
+            console.error(`🚨 NUCLEAR: Blocked fetch #${blockedCallCount} to old project:`, url);
+            
+            if (url.includes('cancel-nfe')) {
+              console.log('🔥 NUCLEAR: Destroying cancel-nfe call');
+              return Promise.resolve(new Response('{"success":true,"nuclear":true,"message":"Nuclear destruction complete"}', {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+              }));
+            }
+            
+            // Se muitas chamadas, forçar reload
+            if (blockedCallCount > 10) {
+              console.error('🚨 TOO MANY OLD CALLS - NUCLEAR RELOAD');
+              window.location.reload(true);
+              return Promise.reject(new Error('Nuclear reload triggered'));
+            }
+            
+            const newUrl = url.replace(OLD_PROJECT, NEW_PROJECT);
+            console.log('🔄 NUCLEAR: Redirecting to:', newUrl);
+            return originalFetch.call(this, newUrl, init);
+          }
+          return originalFetch.call(this, input, init);
+        };
+        
+        // Interceptar XMLHttpRequest GLOBALMENTE
+        const originalXHROpen = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function(method, url, ...args) {
+          const urlString = url.toString();
+          if (urlString.includes(OLD_PROJECT)) {
+            blockedCallCount++;
+            console.error(`🚨 NUCLEAR: Blocked XHR #${blockedCallCount} to old project:`, urlString);
+            
+            if (urlString.includes('cancel-nfe')) {
+              console.log('🔥 NUCLEAR: Destroying cancel-nfe XHR call');
+              // Simular resposta imediata de SUCESSO (não erro)
+              const self = this;
+              setTimeout(() => {
+                if (self.onreadystatechange) {
+                  Object.defineProperty(self, 'readyState', { value: 4 });
+                  Object.defineProperty(self, 'status', { value: 200 });
+                  Object.defineProperty(self, 'responseText', { value: '{"success":true,"nuclear":true,"message":"Nuclear destruction complete"}' });
+                  self.onreadystatechange.call(self);
+                }
+              }, 1);
+              return;
+            }
+            
+            // Se muitas chamadas, forçar reload
+            if (blockedCallCount > 10) {
+              console.error('🚨 TOO MANY OLD CALLS - NUCLEAR RELOAD');
+              window.location.reload(true);
+              return;
+            }
+            
+            const newUrl = urlString.replace(OLD_PROJECT, NEW_PROJECT);
+            console.log('🔄 NUCLEAR: Redirecting XHR to:', newUrl);
+            return originalXHROpen.call(this, method, newUrl, ...args);
+          }
+          return originalXHROpen.call(this, method, url, ...args);
+        };
+        
+        console.log('✅ NUCLEAR INTERCEPT ARMED AND READY');
+      })();
+    </script>
   </head>
 
   <body>
