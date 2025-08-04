@@ -1,4 +1,4 @@
-import { useState, createContext, useContext, ReactNode } from 'react';
+import { useState, createContext, useContext, ReactNode, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Client {
@@ -8,6 +8,7 @@ interface Client {
   email?: string;
   birth_date?: string;
   notes?: string;
+  barbershop_id: string;
 }
 
 interface Barbershop {
@@ -28,6 +29,7 @@ interface PhoneAuthState {
 interface PhoneAuthContextType extends PhoneAuthState {
   sendVerificationCode: (phone: string, barbershopSlug: string) => Promise<boolean>;
   verifyCode: (phone: string, code: string, barbershopSlug: string) => Promise<boolean>;
+  validateSession: (sessionId: string) => Promise<boolean>;
   logout: () => void;
   clearError: () => void;
 }
@@ -43,6 +45,50 @@ export const PhoneAuthProvider = ({ children }: { children: ReactNode }) => {
     isLoading: false,
     error: null,
   });
+
+  // Persist barbershop data in localStorage for mobile
+  const persistBarbershopData = (data: { client: Client; barbershop: Barbershop }) => {
+    try {
+      localStorage.setItem('phoneAuth_client', JSON.stringify(data.client));
+      localStorage.setItem('phoneAuth_barbershop', JSON.stringify(data.barbershop));
+      console.log('📱 Auth data persisted to localStorage');
+    } catch (error) {
+      console.warn('Failed to persist auth data:', error);
+    }
+  };
+
+  const loadPersistedData = () => {
+    try {
+      const clientData = localStorage.getItem('phoneAuth_client');
+      const barbershopData = localStorage.getItem('phoneAuth_barbershop');
+      
+      if (clientData && barbershopData) {
+        const client = JSON.parse(clientData);
+        const barbershop = JSON.parse(barbershopData);
+        setState(prev => ({
+          ...prev,
+          isAuthenticated: true,
+          client,
+          barbershop
+        }));
+        console.log('📱 Loaded persisted auth data:', { clientId: client.id, barbershopId: barbershop.id });
+        return true;
+      }
+    } catch (error) {
+      console.warn('Failed to load persisted auth data:', error);
+    }
+    return false;
+  };
+
+  const clearPersistedData = () => {
+    try {
+      localStorage.removeItem('phoneAuth_client');
+      localStorage.removeItem('phoneAuth_barbershop');
+      console.log('📱 Cleared persisted auth data');
+    } catch (error) {
+      console.warn('Failed to clear persisted auth data:', error);
+    }
+  };
 
   const sendVerificationCode = async (phone: string, barbershopSlug: string): Promise<boolean> => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
@@ -96,6 +142,9 @@ export const PhoneAuthProvider = ({ children }: { children: ReactNode }) => {
         error: null
       }));
 
+      // Persist data for mobile
+      persistBarbershopData({ client: data.client, barbershop: data.barbershop });
+
       return true;
     } catch (error: any) {
       setState(prev => ({ 
@@ -103,6 +152,49 @@ export const PhoneAuthProvider = ({ children }: { children: ReactNode }) => {
         error: error.message || 'Erro ao verificar código', 
         isLoading: false 
       }));
+      return false;
+    }
+  };
+
+  const validateSession = async (sessionId: string): Promise<boolean> => {
+    try {
+      setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+      console.log('🔑 Validating session:', sessionId);
+
+      const { data, error } = await supabase.functions.invoke('validate-session', {
+        body: { sessionId }
+      });
+
+      if (error) {
+        console.error('Session validation error:', error);
+        throw new Error('Failed to validate session');
+      }
+
+      if (!data.valid) {
+        console.log('❌ Invalid session:', data.error);
+        throw new Error(data.error || 'Invalid session');
+      }
+
+      console.log('✅ Session validated successfully');
+      
+      // Set auth state
+      setState(prev => ({
+        ...prev,
+        isAuthenticated: true,
+        client: data.client,
+        barbershop: data.barbershop,
+        isLoading: false,
+        error: null
+      }));
+      
+      // Persist data for mobile
+      persistBarbershopData(data);
+
+      return true;
+    } catch (error: any) {
+      console.error('Session validation error:', error);
+      setState(prev => ({ ...prev, error: error.message, isLoading: false }));
       return false;
     }
   };
@@ -116,17 +208,24 @@ export const PhoneAuthProvider = ({ children }: { children: ReactNode }) => {
       isLoading: false,
       error: null,
     });
+    clearPersistedData();
   };
 
   const clearError = () => {
     setState(prev => ({ ...prev, error: null }));
   };
 
+  // Load persisted data on mount
+  useEffect(() => {
+    loadPersistedData();
+  }, []);
+
   return (
     <PhoneAuthContext.Provider value={{
       ...state,
       sendVerificationCode,
       verifyCode,
+      validateSession,
       logout,
       clearError,
     }}>

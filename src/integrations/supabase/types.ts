@@ -3241,6 +3241,36 @@ export type Database = {
           },
         ]
       }
+      session_tokens: {
+        Row: {
+          barbershop_slug: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          phone: string
+          session_id: string
+          used_at: string | null
+        }
+        Insert: {
+          barbershop_slug: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          phone: string
+          session_id: string
+          used_at?: string | null
+        }
+        Update: {
+          barbershop_slug?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          phone?: string
+          session_id?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       subscription_financial_records: {
         Row: {
           amount: number
@@ -3734,6 +3764,10 @@ export type Database = {
       }
       cleanup_ancient_archives: {
         Args: { years_to_keep?: number }
+        Returns: number
+      }
+      cleanup_expired_session_tokens: {
+        Args: Record<PropertyKey, never>
         Returns: number
       }
       cleanup_expired_verification_codes: {

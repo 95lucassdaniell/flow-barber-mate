@@ -36,16 +36,28 @@ export const useBookingAvailability = (barbershopId: string) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const isMobile = window.innerWidth <= 768;
     console.log('🔄 useBookingAvailability useEffect:', { 
       barbershopId, 
       hasId: !!barbershopId,
-      isValidId: barbershopId && barbershopId.trim() !== '' && barbershopId !== 'undefined'
+      isValidId: barbershopId && barbershopId.trim() !== '' && barbershopId !== 'undefined',
+      isMobile,
+      userAgent: navigator.userAgent.substring(0, 50) + '...'
     });
     
     // Wait for a valid barbershopId before fetching
     if (barbershopId && barbershopId.trim() !== '' && barbershopId !== 'undefined') {
       console.log('✅ Valid barbershopId detected, fetching data...');
-      fetchInitialData();
+      
+      // Add mobile-specific retry logic
+      if (isMobile) {
+        // Small delay for mobile to ensure proper state management
+        setTimeout(() => {
+          fetchInitialData();
+        }, 200);
+      } else {
+        fetchInitialData();
+      }
     } else {
       console.warn('⚠️ useBookingAvailability: waiting for valid barbershopId:', barbershopId);
       // Reset state when waiting for valid ID

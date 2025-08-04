@@ -14,12 +14,40 @@ import { useEnvironmentDetection } from '@/components/booking/EnvironmentDetecto
 
 const PublicBookingContent = ({ barbershopData }: { barbershopData: any }) => {
   const { slug } = useParams<{ slug: string }>();
-  const { isAuthenticated, client, barbershop } = usePhoneAuth();
+  const { isAuthenticated, client, barbershop, validateSession, isLoading: authLoading } = usePhoneAuth();
   const [initialized, setInitialized] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const envInfo = useEnvironmentDetection();
 
   useEffect(() => {
+    const checkSession = async () => {
+      // Check for session_id in URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionId = urlParams.get('session_id');
+      
+      if (sessionId && !sessionChecked) {
+        console.log('🔑 Session ID detected in URL:', sessionId);
+        setSessionChecked(true);
+        
+        const success = await validateSession(sessionId);
+        if (success) {
+          // Remove session_id from URL
+          urlParams.delete('session_id');
+          const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+          window.history.replaceState({}, '', newUrl);
+          console.log('✅ Session authenticated, URL cleaned');
+        }
+      } else {
+        setSessionChecked(true);
+      }
+    };
+
+    checkSession();
+  }, [validateSession, sessionChecked]);
+
+  useEffect(() => {
     // Debug logs for production
+    const isMobile = window.innerWidth <= 768;
     console.log('🔄 PublicBookingPage mounted:', {
       slug,
       href: window.location.href,
@@ -28,12 +56,15 @@ const PublicBookingContent = ({ barbershopData }: { barbershopData: any }) => {
       isAuthenticated,
       userAgent: navigator.userAgent,
       documentReadyState: document.readyState,
-      environment: envInfo
+      environment: envInfo,
+      isMobile,
+      screenSize: `${window.innerWidth}x${window.innerHeight}`,
+      connection: (navigator as any)?.connection?.effectiveType
     });
 
     // Ensure DOM is ready
     const initializeApp = () => {
-      if (document.readyState === 'complete') {
+      if (document.readyState === 'complete' && sessionChecked) {
         setInitialized(true);
         console.log('✅ App initialized successfully');
       } else {
@@ -42,9 +73,11 @@ const PublicBookingContent = ({ barbershopData }: { barbershopData: any }) => {
     };
 
     initializeApp();
-  }, [slug, barbershopData, isAuthenticated]);
+  }, [slug, barbershopData, isAuthenticated, sessionChecked]);
 
-  if (!initialized) {
+  if (!initialized || !sessionChecked) {
+    const loadingMessage = !sessionChecked ? 'Verificando autenticação...' : 'Carregando...';
+    
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-md">
@@ -54,6 +87,7 @@ const PublicBookingContent = ({ barbershopData }: { barbershopData: any }) => {
                 <div className="w-16 h-16 bg-muted rounded-full mx-auto"></div>
                 <div className="h-4 bg-muted rounded w-3/4 mx-auto"></div>
                 <div className="h-3 bg-muted rounded w-1/2 mx-auto"></div>
+                <p className="text-sm text-muted-foreground mt-4">{loadingMessage}</p>
               </div>
             </CardContent>
           </Card>

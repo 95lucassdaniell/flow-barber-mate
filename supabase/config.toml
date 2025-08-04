@@ -87,3 +87,27 @@ verify_jwt = false
 
 [functions.whatsapp-automations]
 verify_jwt = false
+
+[functions.send-verification-code]
+verify_jwt = false
+
+[functions.verify-phone-code]
+verify_jwt = false
+
+[functions.send-review-request]
+verify_jwt = false
+
+[functions.subscription-automations]
+verify_jwt = false
+
+[functions.whatsapp-auto-configurator]
+verify_jwt = false
+
+[functions.whatsapp-reminders]
+verify_jwt = false
+
+[functions.generate-session-link]
+verify_jwt = false
+
+[functions.validate-session]
+verify_jwt = false
