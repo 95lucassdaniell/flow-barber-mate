@@ -4,6 +4,15 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import './index.css'
 import { LoadingProvider } from './contexts/LoadingContext'
+import { CacheManager } from './utils/cacheManager'
+
+// Configurar interceptação de chamadas para projeto antigo
+CacheManager.detectOldProjectCalls();
+
+// Limpar cache agressivamente na inicialização
+CacheManager.clearAllCaches().catch(error => {
+  console.error('Erro na limpeza inicial de cache:', error);
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {

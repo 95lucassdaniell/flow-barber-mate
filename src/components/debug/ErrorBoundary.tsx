@@ -1,17 +1,16 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import EmergencyStopUI from './EmergencyStopUI';
 
+import { CacheManager } from '@/utils/cacheManager';
+
 // Função para limpar cache NFe
 const clearNfeCache = () => {
-  localStorage.clear();
-  sessionStorage.clear();
-  return true;
+  return CacheManager.clearAllCaches();
 };
 
 // Função para resetar a aplicação
 const resetApplicationState = () => {
-  clearNfeCache();
-  window.location.reload();
+  CacheManager.emergencyReset();
 };
 
 interface Props {

@@ -1,13 +1,8 @@
+import { CacheManager } from '@/utils/cacheManager';
+
 // Função para resetar a aplicação
 const resetApplicationState = () => {
-  // Limpar localStorage
-  localStorage.clear();
-  
-  // Limpar sessionStorage
-  sessionStorage.clear();
-  
-  // Recarregar página sem cache
-  window.location.reload();
+  CacheManager.emergencyReset();
 };
 
 const EmergencyStopUI = () => {
