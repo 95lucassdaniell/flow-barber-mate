@@ -29,16 +29,21 @@ interface BillingFilters {
 
 export default function SubscriptionBillingList() {
   const [filters, setFilters] = useState<BillingFilters>({
-    status: '',
+    status: 'all',
     startDate: '',
     endDate: '',
-    providerId: ''
+    providerId: 'all'
   });
   
   const [selectedBilling, setSelectedBilling] = useState<string | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  const { billings, loading, updateBillingStatus } = useSubscriptionBilling(filters);
+  const { billings, loading, updateBillingStatus } = useSubscriptionBilling({
+    status: filters.status === 'all' ? undefined : filters.status,
+    startDate: filters.startDate || undefined,
+    endDate: filters.endDate || undefined,
+    providerId: filters.providerId === 'all' ? undefined : filters.providerId
+  });
   const { providers } = useProviders();
 
   const getStatusBadge = (status: string, dueDate: string) => {
@@ -136,7 +141,7 @@ export default function SubscriptionBillingList() {
                   <SelectValue placeholder="Todos os status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="pending">Pendente</SelectItem>
                   <SelectItem value="paid">Pago</SelectItem>
                   <SelectItem value="overdue">Vencido</SelectItem>
@@ -151,7 +156,7 @@ export default function SubscriptionBillingList() {
                   <SelectValue placeholder="Todos os prestadores" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   {providers.map((provider) => (
                     <SelectItem key={provider.id} value={provider.id}>
                       {provider.full_name}

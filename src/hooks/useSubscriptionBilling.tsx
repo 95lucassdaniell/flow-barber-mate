@@ -56,7 +56,7 @@ export const useSubscriptionBilling = (filters?: BillingFilters) => {
         .order('due_date', { ascending: false });
 
       // Aplicar filtros
-      if (filters?.status) {
+      if (filters?.status && filters.status !== 'all') {
         query = query.eq('status', filters.status);
       }
 
@@ -68,7 +68,7 @@ export const useSubscriptionBilling = (filters?: BillingFilters) => {
         query = query.lte('due_date', filters.endDate);
       }
 
-      if (filters?.providerId) {
+      if (filters?.providerId && filters.providerId !== 'all') {
         query = query.eq('client_subscriptions.provider_id', filters.providerId);
       }
 
