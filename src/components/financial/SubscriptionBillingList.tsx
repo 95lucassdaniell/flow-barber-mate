@@ -38,13 +38,27 @@ export default function SubscriptionBillingList() {
   const [selectedBilling, setSelectedBilling] = useState<string | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  const { billings, loading, updateBillingStatus } = useSubscriptionBilling({
+  console.group('🔍 [SubscriptionBillingList] Component render');
+  console.log('Current filters:', filters);
+  
+  const hookFilters = {
     status: filters.status === 'all' ? undefined : filters.status,
     startDate: filters.startDate || undefined,
     endDate: filters.endDate || undefined,
     providerId: filters.providerId === 'all' ? undefined : filters.providerId
-  });
+  };
+  console.log('Processed filters for hook:', hookFilters);
+
+  const { billings, loading, updateBillingStatus } = useSubscriptionBilling(hookFilters);
   const { providers } = useProviders();
+  
+  console.log('Component state:', {
+    billingsCount: billings?.length || 0,
+    loading,
+    providersCount: providers?.length || 0
+  });
+  console.log('Raw billings data:', billings);
+  console.groupEnd();
 
   const getStatusBadge = (status: string, dueDate: string) => {
     const today = new Date();

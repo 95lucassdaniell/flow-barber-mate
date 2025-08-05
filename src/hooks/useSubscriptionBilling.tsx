@@ -35,13 +35,21 @@ export const useSubscriptionBilling = (filters?: BillingFilters) => {
   const { toast } = useToast();
 
   const fetchBillings = async () => {
-    if (!profile?.barbershop_id) return;
+    if (!profile?.barbershop_id) {
+      console.log('🔍 [SubscriptionBilling] No barbershop_id found');
+      return;
+    }
+
+    console.group('🔍 [SubscriptionBilling] Fetching billings');
+    console.log('User barbershop_id:', profile.barbershop_id);
+    console.log('Applied filters:', filters);
 
     try {
       setLoading(true);
       setError(null);
 
       // Primeira query: buscar registros financeiros
+      console.log('📊 Step 1: Fetching financial records...');
       let financialQuery = supabase
         .from('subscription_financial_records')
         .select('*')
@@ -61,16 +69,24 @@ export const useSubscriptionBilling = (filters?: BillingFilters) => {
       }
 
       const { data: financialRecords, error: financialError } = await financialQuery;
+      console.log('📊 Financial records found:', financialRecords?.length || 0);
+      console.log('Financial records data:', financialRecords);
       
-      if (financialError) throw financialError;
+      if (financialError) {
+        console.error('❌ Financial records error:', financialError);
+        throw financialError;
+      }
       
       if (!financialRecords || financialRecords.length === 0) {
+        console.log('⚠️ No financial records found');
         setBillings([]);
+        console.groupEnd();
         return;
       }
 
       // Segunda query: buscar assinaturas relacionadas
       const subscriptionIds = financialRecords.map(r => r.subscription_id);
+      console.log('📊 Step 2: Fetching subscriptions for IDs:', subscriptionIds);
       
       let subscriptionsQuery = supabase
         .from('client_subscriptions')
@@ -84,50 +100,80 @@ export const useSubscriptionBilling = (filters?: BillingFilters) => {
       }
 
       const { data: subscriptions, error: subscriptionsError } = await subscriptionsQuery;
+      console.log('📊 Subscriptions found:', subscriptions?.length || 0);
+      console.log('Subscriptions data:', subscriptions);
       
-      if (subscriptionsError) throw subscriptionsError;
+      if (subscriptionsError) {
+        console.error('❌ Subscriptions error:', subscriptionsError);
+        throw subscriptionsError;
+      }
 
       if (!subscriptions || subscriptions.length === 0) {
+        console.log('⚠️ No matching subscriptions found for barbershop');
         setBillings([]);
+        console.groupEnd();
         return;
       }
 
       // Terceira query: buscar clientes
       const clientIds = subscriptions.map(s => s.client_id);
+      console.log('📊 Step 3: Fetching clients for IDs:', clientIds);
       const { data: clients, error: clientsError } = await supabase
         .from('clients')
         .select('id, name')
         .in('id', clientIds);
+      console.log('📊 Clients found:', clients?.length || 0);
       
-      if (clientsError) throw clientsError;
+      if (clientsError) {
+        console.error('❌ Clients error:', clientsError);
+        throw clientsError;
+      }
 
       // Quarta query: buscar providers
       const providerIds = subscriptions.map(s => s.provider_id);
+      console.log('📊 Step 4: Fetching providers for IDs:', providerIds);
       const { data: providers, error: providersError } = await supabase
         .from('profiles')
         .select('id, full_name')
         .in('id', providerIds);
+      console.log('📊 Providers found:', providers?.length || 0);
       
-      if (providersError) throw providersError;
+      if (providersError) {
+        console.error('❌ Providers error:', providersError);
+        throw providersError;
+      }
 
       // Quinta query: buscar planos
       const planIds = subscriptions.map(s => s.plan_id);
+      console.log('📊 Step 5: Fetching plans for IDs:', planIds);
       const { data: plans, error: plansError } = await supabase
         .from('provider_subscription_plans')
         .select('id, name')
         .in('id', planIds);
+      console.log('📊 Plans found:', plans?.length || 0);
       
-      if (plansError) throw plansError;
+      if (plansError) {
+        console.error('❌ Plans error:', plansError);
+        throw plansError;
+      }
 
       // Combinar os dados
+      console.log('📊 Step 6: Combining data...');
       const formattedBillings: SubscriptionBilling[] = financialRecords
         .map((record: any) => {
           const subscription = subscriptions.find(s => s.id === record.subscription_id);
-          if (!subscription) return null;
+          if (!subscription) {
+            console.warn('⚠️ Subscription not found for record:', record.subscription_id);
+            return null;
+          }
 
           const client = clients?.find(c => c.id === subscription.client_id);
           const provider = providers?.find(p => p.id === subscription.provider_id);
           const plan = plans?.find(p => p.id === subscription.plan_id);
+
+          if (!client) console.warn('⚠️ Client not found for ID:', subscription.client_id);
+          if (!provider) console.warn('⚠️ Provider not found for ID:', subscription.provider_id);
+          if (!plan) console.warn('⚠️ Plan not found for ID:', subscription.plan_id);
 
           return {
             id: record.id,
@@ -148,9 +194,14 @@ export const useSubscriptionBilling = (filters?: BillingFilters) => {
         })
         .filter(Boolean) as SubscriptionBilling[];
 
+      console.log('✅ Final formatted billings:', formattedBillings.length);
+      console.log('Final billings data:', formattedBillings);
+      console.groupEnd();
+
       setBillings(formattedBillings);
     } catch (error) {
-      console.error('Erro ao buscar cobranças:', error);
+      console.error('❌ [SubscriptionBilling] Error:', error);
+      console.groupEnd();
       setError('Erro ao carregar cobranças');
     } finally {
       setLoading(false);
