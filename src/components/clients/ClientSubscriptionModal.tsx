@@ -105,7 +105,7 @@ export default function ClientSubscriptionModal({
         .from("profiles")
         .select("id, full_name, email")
         .eq("barbershop_id", profile?.barbershop_id)
-        .eq("role", "provider")
+        .eq("role", "barber")
         .eq("is_active", true)
         .order("full_name");
 
