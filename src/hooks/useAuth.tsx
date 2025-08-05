@@ -21,7 +21,10 @@ export const useAuth = () => {
   const [authError, setAuthError] = useState<string | null>(null);
 
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
+    const circuitKey = `fetchProfile-${userId}`;
+    
     if (globalState.isEmergencyStopActive()) return null;
+    if (!globalState.checkCircuitBreaker(circuitKey, 5, 2000)) return null;
 
     const cacheKey = `profile-${userId}`;
     
@@ -50,49 +53,49 @@ export const useAuth = () => {
   useEffect(() => {
     let mounted = true;
     let retryCount = 0;
-    const maxRetries = 5;
+    const maxRetries = 3;
+    const authKey = 'useAuth-init';
+    
+    // Verificar rate limit para prevenir loops
+    if (!globalState.checkRateLimit(authKey, 3, 5000)) {
+      console.warn('🚨 Auth rate limit atingido, ignorando inicialização');
+      return;
+    }
     
     const initializeAuth = async () => {
       try {
-        console.log('🔐 Inicializando autenticação...');
-        
         // Verificação síncrona imediata do localStorage
         const storedSession = localStorage.getItem('sb-yzqwmxffjufefocgkevz-auth-token');
-        if (storedSession) {
-          console.log('🗄️ Sessão encontrada no localStorage');
-        }
 
         // Set up auth state listener FIRST
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           (event, session) => {
             if (!mounted) return;
             
-            console.log('🔄 Auth state change:', event, !!session);
             setAuthError(null);
             setSession(session);
             setUser(session?.user ?? null);
             
             if (session?.user) {
-              console.log('👤 Usuário autenticado, ID:', session.user.id);
-              // Fetch profile with timeout
-              setTimeout(async () => {
-                if (mounted) {
-                  let profileData = await fetchProfile(session.user.id);
-                  
-                  // If no profile exists, create one
-                  if (!profileData) {
-                    console.log('📋 No profile found, creating admin profile...');
-                    profileData = await ensureUserProfile(session.user.id);
-                  }
-                  
+              // Fetch profile with rate limit
+              const profileKey = `profile-${session.user.id}`;
+              if (globalState.checkRateLimit(profileKey, 2, 3000)) {
+                setTimeout(async () => {
                   if (mounted) {
-                    setProfile(profileData as Profile);
-                    console.log('📋 Perfil carregado:', profileData?.role, profileData?.barbershop_id);
+                    let profileData = await fetchProfile(session.user.id);
+                    
+                    // If no profile exists, create one
+                    if (!profileData) {
+                      profileData = await ensureUserProfile(session.user.id);
+                    }
+                    
+                    if (mounted) {
+                      setProfile(profileData as Profile);
+                    }
                   }
-                }
-              }, 0);
+                }, 100);
+              }
             } else {
-              console.log('❌ Usuário não autenticado');
               if (mounted) setProfile(null);
             }
             

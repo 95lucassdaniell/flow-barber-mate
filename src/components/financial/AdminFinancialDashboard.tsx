@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFinancialData } from "@/hooks/useFinancialData";
@@ -14,12 +14,18 @@ import SubscriptionBillingList from "./SubscriptionBillingList";
 import { format } from "date-fns";
 
 export default function AdminFinancialDashboard() {
-  // Definir período padrão para os últimos 30 dias
   const [dateRange, setDateRange] = useState({
     startDate: format(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd'),
   });
   const [selectedBarber, setSelectedBarber] = useState<string>("");
+
+  // Memoizar parâmetros para evitar re-renders desnecessários
+  const financialParams = useMemo(() => ({
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+    barberId: selectedBarber || undefined
+  }), [dateRange.startDate, dateRange.endDate, selectedBarber]);
 
   const { 
     stats, 
@@ -30,25 +36,18 @@ export default function AdminFinancialDashboard() {
     rankingsLoading, 
     commissionsLoading 
   } = useFinancialData(
-    dateRange.startDate,
-    dateRange.endDate,
-    selectedBarber || undefined
+    financialParams.startDate,
+    financialParams.endDate,
+    financialParams.barberId
   );
 
   const {
     stats: subscriptionStats,
     loading: subscriptionLoading
   } = useSubscriptionFinancialData(
-    dateRange.startDate,
-    dateRange.endDate
+    financialParams.startDate,
+    financialParams.endDate
   );
-
-  // Debug logs para verificar os dados
-  console.log('AdminFinancialDashboard - Date range:', dateRange);
-  console.log('AdminFinancialDashboard - Selected barber:', selectedBarber);
-  console.log('AdminFinancialDashboard - Stats:', stats);
-  console.log('AdminFinancialDashboard - Barber rankings:', barberRankings);
-  console.log('AdminFinancialDashboard - Commissions count:', commissions?.length);
 
   if (loading) {
     return (

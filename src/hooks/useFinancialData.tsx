@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { globalState } from "@/lib/globalState";
 
 export interface FinancialStats {
   totalRevenue: number;
@@ -61,33 +62,38 @@ export function useFinancialData(
   const [rankingsLoading, setRankingsLoading] = useState(false);
   const [commissionsLoading, setCommissionsLoading] = useState(false);
 
-  // ID único para rastrear requests
-  const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  
-  // Debug logs para os filtros
-  console.log(`[${requestId}] useFinancialData - Filters:`, { startDate, endDate, barberId });
+  // Memoizar filtros para evitar re-renders
+  const filters = useMemo(() => ({
+    barbershop_id: profile?.barbershop_id,
+    startDate,
+    endDate,
+    barberId
+  }), [profile?.barbershop_id, startDate, endDate, barberId]);
 
-  const fetchFinancialStats = async () => {
-    if (!profile?.barbershop_id) {
-      console.log(`[${requestId}] fetchFinancialStats: No barbershop_id found`);
-      return;
-    }
+  // Verificar se deve executar
+  const shouldFetch = useMemo(() => {
+    return Boolean(filters.barbershop_id) && 
+           globalState.checkRateLimit(`financial-${filters.barbershop_id}`, 2, 3000);
+  }, [filters.barbershop_id]);
+
+  const fetchFinancialStats = useCallback(async () => {
+    if (!shouldFetch || !filters.barbershop_id) return;
+
+    const circuitKey = `financial-stats-${filters.barbershop_id}`;
+    if (!globalState.checkCircuitBreaker(circuitKey, 3, 5000)) return;
 
     setStatsLoading(true);
-    console.log(`[${requestId}] fetchFinancialStats: Starting - barbershop:`, profile.barbershop_id);
-    console.log(`[${requestId}] fetchFinancialStats: Filters:`, { startDate, endDate, barberId });
     
     try {
-      // Buscar comandos primeiro com filtros aplicados
       let commandsQuery = supabase
         .from('commands')
         .select('id, total_amount, created_at, barber_id, status')
-        .eq('barbershop_id', profile.barbershop_id)
-        .eq('status', 'closed'); // Apenas comandos fechados
+        .eq('barbershop_id', filters.barbershop_id)
+        .eq('status', 'closed');
 
-      if (startDate) commandsQuery = commandsQuery.gte('created_at', startDate);
-      if (endDate) commandsQuery = commandsQuery.lte('created_at', endDate + ' 23:59:59');
-      if (barberId) commandsQuery = commandsQuery.eq('barber_id', barberId);
+      if (filters.startDate) commandsQuery = commandsQuery.gte('created_at', filters.startDate);
+      if (filters.endDate) commandsQuery = commandsQuery.lte('created_at', filters.endDate + ' 23:59:59');
+      if (filters.barberId) commandsQuery = commandsQuery.eq('barber_id', filters.barberId);
 
       const { data: commands, error: commandsError } = await commandsQuery;
       
@@ -95,15 +101,11 @@ export function useFinancialData(
         console.error('Error fetching commands for stats:', commandsError);
         return;
       }
-      
-      console.log('useFinancialData: Commands found for stats:', commands?.length || 0);
 
-      // Se há comandos, buscar command_items em lotes menores para evitar timeout
       let totalCommissions = 0;
       if (commands && commands.length > 0) {
         const commandIds = commands.map(command => command.id);
         
-        // Dividir em lotes de 500 IDs para evitar problemas de timeout
         const batchSize = 500;
         for (let i = 0; i < commandIds.length; i += batchSize) {
           const batch = commandIds.slice(i, i + batchSize);
@@ -114,11 +116,8 @@ export function useFinancialData(
               .select('commission_amount')
               .in('command_id', batch);
             
-            if (commandItemsError) {
-              console.error(`Error fetching command items batch ${i}-${i+batchSize}:`, commandItemsError);
-            } else {
-              console.log(`useFinancialData: Command items found in batch ${i}-${i+batchSize}:`, commandItems?.length || 0);
-              totalCommissions += commandItems?.reduce((sum, item) => sum + Number(item.commission_amount), 0) || 0;
+            if (!commandItemsError && commandItems) {
+              totalCommissions += commandItems.reduce((sum, item) => sum + Number(item.commission_amount), 0);
             }
           } catch (batchError) {
             console.error(`Batch error ${i}-${i+batchSize}:`, batchError);
@@ -130,8 +129,6 @@ export function useFinancialData(
       const totalSales = commands?.length || 0;
       const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
 
-      console.log(`[${requestId}] fetchFinancialStats: Calculated stats:`, { totalRevenue, totalCommissions, totalSales, averageTicket });
-
       setStats({
         totalRevenue,
         totalCommissions,
@@ -139,24 +136,22 @@ export function useFinancialData(
         averageTicket,
       });
     } catch (error) {
-      console.error(`[${requestId}] fetchFinancialStats: Error:`, error);
+      console.error('fetchFinancialStats error:', error);
     } finally {
       setStatsLoading(false);
     }
-  };
+  }, [shouldFetch, filters]);
 
-  const fetchBarberRankings = async () => {
-    if (!profile?.barbershop_id) return;
+  const fetchBarberRankings = useCallback(async () => {
+    if (!shouldFetch || !filters.barbershop_id) return;
+
+    const circuitKey = `barber-rankings-${filters.barbershop_id}`;
+    if (!globalState.checkCircuitBreaker(circuitKey, 3, 5000)) return;
 
     setRankingsLoading(true);
-    // Limpar rankings antes de buscar novos dados
     setBarberRankings([]);
     
-    console.log(`[${requestId}] fetchBarberRankings: Starting - barbershop:`, profile.barbershop_id);
-    console.log(`[${requestId}] fetchBarberRankings: Filters:`, { startDate, endDate, barberId });
-    
     try {
-      // Use JOIN para buscar command_items com dados de comandos diretamente
       let commandItemsQuery = supabase
         .from('command_items')
         .select(`
@@ -170,35 +165,28 @@ export function useFinancialData(
             status
           )
         `)
-        .eq('commands.barbershop_id', profile.barbershop_id)
+        .eq('commands.barbershop_id', filters.barbershop_id)
         .eq('commands.status', 'closed');
 
-      if (startDate) commandItemsQuery = commandItemsQuery.gte('commands.created_at', startDate);
-      if (endDate) commandItemsQuery = commandItemsQuery.lte('commands.created_at', endDate + ' 23:59:59');
-      if (barberId) commandItemsQuery = commandItemsQuery.eq('commands.barber_id', barberId);
+      if (filters.startDate) commandItemsQuery = commandItemsQuery.gte('commands.created_at', filters.startDate);
+      if (filters.endDate) commandItemsQuery = commandItemsQuery.lte('commands.created_at', filters.endDate + ' 23:59:59');
+      if (filters.barberId) commandItemsQuery = commandItemsQuery.eq('commands.barber_id', filters.barberId);
 
       const { data: commandItems, error: itemsError } = await commandItemsQuery;
       
       if (itemsError) {
-        console.error(`[${requestId}] fetchBarberRankings: Command items error:`, itemsError);
+        console.error('fetchBarberRankings error:', itemsError);
         return;
       }
 
-      console.log(`[${requestId}] fetchBarberRankings: Found command items:`, commandItems?.length || 0);
-
-      // Buscar perfis dos barbeiros
       const { data: providers } = await supabase
         .from('profiles')
         .select('id, full_name')
-        .eq('barbershop_id', profile.barbershop_id)
+        .eq('barbershop_id', filters.barbershop_id)
         .eq('role', 'barber');
 
-      console.log(`[${requestId}] fetchBarberRankings: Found providers:`, providers?.length || 0);
-
-      // Calcular rankings
       const barberStats = new Map();
 
-      // Inicializar todos os barbeiros com estatísticas zeradas
       providers?.forEach(provider => {
         barberStats.set(provider.id, {
           id: provider.id,
@@ -209,7 +197,6 @@ export function useFinancialData(
         });
       });
 
-      // Processar dados dos command_items
       const processedCommands = new Set();
       
       commandItems?.forEach((item: any) => {
@@ -219,10 +206,8 @@ export function useFinancialData(
         
         const stats = barberStats.get(barberId);
         if (stats) {
-          // Adicionar comissão
           stats.totalCommissions += item.commission_amount || 0;
           
-          // Adicionar dados de comando apenas uma vez por comando (evitar contagem dupla se múltiplos itens por comando)
           if (!processedCommands.has(commandId)) {
             stats.totalSales += command.total_amount || 0;
             stats.salesCount += 1;
@@ -231,24 +216,24 @@ export function useFinancialData(
         }
       });
 
-      // Converter para array e ordenar por total de comissões
       const rankings = Array.from(barberStats.values())
         .sort((a, b) => b.totalCommissions - a.totalCommissions);
 
-      console.log(`[${requestId}] fetchBarberRankings: Final rankings:`, rankings);
       setBarberRankings(rankings);
     } catch (error) {
-      console.error(`[${requestId}] fetchBarberRankings: Unexpected error:`, error);
+      console.error('fetchBarberRankings error:', error);
     } finally {
       setRankingsLoading(false);
     }
-  };
+  }, [shouldFetch, filters]);
 
-  const fetchCommissions = async () => {
-    if (!profile?.barbershop_id) return;
+  const fetchCommissions = useCallback(async () => {
+    if (!shouldFetch || !filters.barbershop_id) return;
+
+    const circuitKey = `commissions-${filters.barbershop_id}`;
+    if (!globalState.checkCircuitBreaker(circuitKey, 3, 5000)) return;
 
     setCommissionsLoading(true);
-    console.log(`[${requestId}] fetchCommissions: Starting`);
 
     try {
       let query = supabase
@@ -268,25 +253,24 @@ export function useFinancialData(
             clients!commands_client_id_fkey(name)
           )
         `)
-        .eq('commands.barbershop_id', profile.barbershop_id)
+        .eq('commands.barbershop_id', filters.barbershop_id)
         .eq('commands.status', 'closed');
 
-      if (startDate) query = query.gte('commands.created_at', startDate);
-      if (endDate) query = query.lte('commands.created_at', endDate + ' 23:59:59');
-      if (barberId) query = query.eq('commands.barber_id', barberId);
+      if (filters.startDate) query = query.gte('commands.created_at', filters.startDate);
+      if (filters.endDate) query = query.lte('commands.created_at', filters.endDate + ' 23:59:59');
+      if (filters.barberId) query = query.eq('commands.barber_id', filters.barberId);
 
-      // Buscar dados sem ordenação para evitar erro com joins
       const { data, error: commissionsError } = await query;
       
       if (commissionsError) {
-        console.error(`[${requestId}] fetchCommissions: Error:`, commissionsError);
+        console.error('fetchCommissions error:', commissionsError);
         return;
       }
       
       const formattedData = data?.map((item: any) => ({
         id: item.id,
         commission_amount: item.commission_amount,
-        commission_date: item.commands.created_at.split('T')[0], // Extrair apenas a data
+        commission_date: item.commands.created_at.split('T')[0],
         sale_id: item.commands.id,
         barber: { full_name: item.commands.profiles?.full_name || 'N/A' },
         sale: {
@@ -295,19 +279,22 @@ export function useFinancialData(
         }
       })) || [];
 
-      // Ordenar manualmente por data de comando (mais recente primeiro)
       formattedData.sort((a, b) => new Date(b.commission_date).getTime() - new Date(a.commission_date).getTime());
 
-      console.log(`[${requestId}] fetchCommissions: Formatted data:`, formattedData.length, 'commissions');
       setCommissions(formattedData);
     } catch (error) {
-      console.error(`[${requestId}] fetchCommissions: Error:`, error);
+      console.error('fetchCommissions error:', error);
     } finally {
       setCommissionsLoading(false);
     }
-  };
+  }, [shouldFetch, filters]);
 
   useEffect(() => {
+    if (!shouldFetch) {
+      setLoading(false);
+      return;
+    }
+
     const fetchData = async () => {
       setLoading(true);
       await Promise.all([
@@ -318,10 +305,8 @@ export function useFinancialData(
       setLoading(false);
     };
 
-    if (profile?.barbershop_id) {
-      fetchData();
-    }
-  }, [profile?.barbershop_id, startDate, endDate, barberId]);
+    fetchData();
+  }, [shouldFetch, fetchFinancialStats, fetchBarberRankings, fetchCommissions]);
 
   return {
     stats,

@@ -3,6 +3,8 @@ class GlobalStateManager {
   private static instance: GlobalStateManager;
   private emergencyStopActive = false;
   private operationTimeouts: Map<string, NodeJS.Timeout> = new Map();
+  private circuitBreakers = new Map<string, { count: number; lastReset: number; blocked: boolean }>();
+  private rateLimiters = new Map<string, { calls: number; lastReset: number }>();
 
   static getInstance(): GlobalStateManager {
     if (!GlobalStateManager.instance) {
@@ -11,7 +13,58 @@ class GlobalStateManager {
     return GlobalStateManager.instance;
   }
 
-  // Sistema simplificado - apenas Emergency Stop
+  // Circuit breaker para prevenir loops infinitos
+  checkCircuitBreaker(key: string, maxCalls: number = 10, timeWindow: number = 1000): boolean {
+    const now = Date.now();
+    const breaker = this.circuitBreakers.get(key) || { count: 0, lastReset: now, blocked: false };
+    
+    // Reset se passou o tempo limite
+    if (now - breaker.lastReset > timeWindow) {
+      breaker.count = 0;
+      breaker.lastReset = now;
+      breaker.blocked = false;
+    }
+    
+    // Se está bloqueado, rejeitar
+    if (breaker.blocked) {
+      return false;
+    }
+    
+    // Incrementar contador
+    breaker.count++;
+    
+    // Se excedeu o limite, bloquear
+    if (breaker.count > maxCalls) {
+      breaker.blocked = true;
+      console.warn(`🚨 Circuit breaker ativado para ${key}. Bloqueando execuções.`);
+      return false;
+    }
+    
+    this.circuitBreakers.set(key, breaker);
+    return true;
+  }
+
+  // Rate limiter para hooks
+  checkRateLimit(key: string, maxCalls: number = 5, timeWindow: number = 1000): boolean {
+    const now = Date.now();
+    const limiter = this.rateLimiters.get(key) || { calls: 0, lastReset: now };
+    
+    // Reset se passou o tempo limite
+    if (now - limiter.lastReset > timeWindow) {
+      limiter.calls = 0;
+      limiter.lastReset = now;
+    }
+    
+    // Se excedeu o limite, rejeitar
+    if (limiter.calls >= maxCalls) {
+      return false;
+    }
+    
+    limiter.calls++;
+    this.rateLimiters.set(key, limiter);
+    return true;
+  }
+
   activateEmergencyStop(): void {
     this.emergencyStopActive = true;
     console.error('🚨 EMERGENCY STOP ATIVADO');
@@ -35,9 +88,7 @@ class GlobalStateManager {
     return this.emergencyStopActive;
   }
 
-  // Timeout simples para operações
   setOperationTimeout(key: string, callback: () => void, timeoutMs: number = 3000): void {
-    // Limpar timeout anterior se existir
     const existing = this.operationTimeouts.get(key);
     if (existing) {
       clearTimeout(existing);
@@ -59,10 +110,11 @@ class GlobalStateManager {
     }
   }
 
-  // Reset completo do sistema
   fullReset(): void {
     this.operationTimeouts.clear();
     this.emergencyStopActive = false;
+    this.circuitBreakers.clear();
+    this.rateLimiters.clear();
     console.log('🔄 Sistema completamente resetado');
   }
 }

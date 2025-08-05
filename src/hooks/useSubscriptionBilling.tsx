@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { debugLogger } from "@/lib/debugLogger";
+import { globalState } from "@/lib/globalState";
 
 interface SubscriptionBilling {
   id: string;
@@ -44,13 +45,10 @@ export const useSubscriptionBilling = (filters?: BillingFilters) => {
   ]);
 
   const fetchBillings = useCallback(async () => {
-    if (!profile?.barbershop_id) {
-      debugLogger.subscription.warn('useSubscriptionBilling', 'Sem barbershop_id, abortando fetch');
-      return;
-    }
+    if (!profile?.barbershop_id) return;
 
-    debugLogger.subscription.debug('useSubscriptionBilling', 'barbershop_id', profile.barbershop_id);
-    debugLogger.subscription.debug('useSubscriptionBilling', 'filters aplicados', memoizedFilters);
+    const circuitKey = `billing-${profile.barbershop_id}`;
+    if (!globalState.checkCircuitBreaker(circuitKey, 3, 5000)) return;
 
     try {
         setLoading(true);
@@ -107,79 +105,45 @@ export const useSubscriptionBilling = (filters?: BillingFilters) => {
         }
 
         const { data: subscriptions, error: subscriptionsError } = await subscriptionsQuery;
-        debugLogger.subscription.info('useSubscriptionBilling', `Subscriptions encontradas: ${subscriptions?.length || 0}`);
-        debugLogger.subscription.debug('useSubscriptionBilling', 'Subscriptions data', subscriptions);
         
-        if (subscriptionsError) {
-          debugLogger.subscription.error('useSubscriptionBilling', 'Erro ao buscar subscriptions', subscriptionsError);
-          throw subscriptionsError;
-        }
+        if (subscriptionsError) throw subscriptionsError;
 
         if (!subscriptions || subscriptions.length === 0) {
-          debugLogger.subscription.warn('useSubscriptionBilling', 'Nenhuma subscription encontrada para este barbershop');
           setBillings([]);
           return;
         }
 
-        // Terceira query: buscar clientes
         const clientIds = subscriptions.map(s => s.client_id);
-        debugLogger.subscription.debug('useSubscriptionBilling', 'Query 3 - Buscando clients para IDs', clientIds);
-        const { data: clients, error: clientsError } = await supabase
-          .from('clients')
-          .select('id, name')
-          .in('id', clientIds);
-        debugLogger.subscription.info('useSubscriptionBilling', `Clients encontrados: ${clients?.length || 0}`);
-        
-        if (clientsError) {
-          debugLogger.subscription.error('useSubscriptionBilling', 'Erro ao buscar clients', clientsError);
-          throw clientsError;
-        }
-
-        // Quarta query: buscar providers
         const providerIds = subscriptions.map(s => s.provider_id);
-        debugLogger.subscription.debug('useSubscriptionBilling', 'Query 4 - Buscando providers para IDs', providerIds);
-        const { data: providers, error: providersError } = await supabase
-          .from('profiles')
-          .select('id, full_name')
-          .in('id', providerIds);
-        debugLogger.subscription.info('useSubscriptionBilling', `Providers encontrados: ${providers?.length || 0}`);
-        
-        if (providersError) {
-          debugLogger.subscription.error('useSubscriptionBilling', 'Erro ao buscar providers', providersError);
-          throw providersError;
-        }
-
-        // Quinta query: buscar planos
         const planIds = subscriptions.map(s => s.plan_id);
-        debugLogger.subscription.debug('useSubscriptionBilling', 'Query 5 - Buscando plans para IDs', planIds);
-        const { data: plans, error: plansError } = await supabase
-          .from('provider_subscription_plans')
-          .select('id, name')
-          .in('id', planIds);
-        debugLogger.subscription.info('useSubscriptionBilling', `Plans encontrados: ${plans?.length || 0}`);
-        
-        if (plansError) {
-          debugLogger.subscription.error('useSubscriptionBilling', 'Erro ao buscar plans', plansError);
-          throw plansError;
-        }
 
-        // Combinar os dados
-        debugLogger.subscription.debug('useSubscriptionBilling', 'Step 6: Combinando dados');
+        const [clientsResponse, providersResponse, plansResponse] = await Promise.all([
+          supabase.from('clients').select('id, name').in('id', clientIds),
+          supabase.from('profiles').select('id, full_name').in('id', providerIds),
+          supabase.from('provider_subscription_plans').select('id, name').in('id', planIds)
+        ]);
+        
+        if (clientsResponse.error) throw clientsResponse.error;
+        if (providersResponse.error) throw providersResponse.error;
+        if (plansResponse.error) throw plansResponse.error;
+
+        const clients = clientsResponse.data || [];
+        const providers = providersResponse.data || [];
+        const plans = plansResponse.data || [];
+
+        // Criar mapas para lookup rápido
+        const clientsMap = new Map(clients.map(client => [client.id, client]));
+        const providersMap = new Map(providers.map(provider => [provider.id, provider]));
+        const plansMap = new Map(plans.map(plan => [plan.id, plan]));
+
         const formattedBillings: SubscriptionBilling[] = financialRecords
           .map((record: any) => {
             const subscription = subscriptions.find(s => s.id === record.subscription_id);
-            if (!subscription) {
-              debugLogger.subscription.warn('useSubscriptionBilling', `Subscription não encontrada para record: ${record.subscription_id}`);
-              return null;
-            }
+            if (!subscription) return null;
 
-            const client = clients?.find(c => c.id === subscription.client_id);
-            const provider = providers?.find(p => p.id === subscription.provider_id);
-            const plan = plans?.find(p => p.id === subscription.plan_id);
-
-            if (!client) debugLogger.subscription.warn('useSubscriptionBilling', `Client não encontrado para ID: ${subscription.client_id}`);
-            if (!provider) debugLogger.subscription.warn('useSubscriptionBilling', `Provider não encontrado para ID: ${subscription.provider_id}`);
-            if (!plan) debugLogger.subscription.warn('useSubscriptionBilling', `Plan não encontrado para ID: ${subscription.plan_id}`);
+            const client = clientsMap.get(subscription.client_id);
+            const provider = providersMap.get(subscription.provider_id);
+            const plan = plansMap.get(subscription.plan_id);
 
             return {
               id: record.id,
@@ -200,12 +164,9 @@ export const useSubscriptionBilling = (filters?: BillingFilters) => {
           })
           .filter(Boolean) as SubscriptionBilling[];
 
-        debugLogger.subscription.info('useSubscriptionBilling', `Final formatted billings: ${formattedBillings.length}`);
-        debugLogger.subscription.debug('useSubscriptionBilling', 'Final billings data', formattedBillings);
-
         setBillings(formattedBillings);
       } catch (error) {
-        debugLogger.subscription.error('useSubscriptionBilling', 'Erro durante fetch', error);
+        console.error('useSubscriptionBilling error:', error);
         setError('Erro ao carregar cobranças');
       } finally {
         setLoading(false);
