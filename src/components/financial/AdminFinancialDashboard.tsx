@@ -10,6 +10,7 @@ import FinancialFilters from "./FinancialFilters";
 import BarberRankings from "./BarberRankings";
 import ExpenseManagement from "./ExpenseManagement";
 import CashRegisterHistory from "./CashRegisterHistory";
+import SubscriptionBillingList from "./SubscriptionBillingList";
 import { format } from "date-fns";
 
 export default function AdminFinancialDashboard() {
@@ -189,22 +190,7 @@ export default function AdminFinancialDashboard() {
         </TabsContent>
 
         <TabsContent value="subscriptions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Detalhes das Assinaturas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <SubscriptionFinancialStats 
-                stats={subscriptionStats} 
-                loading={subscriptionLoading} 
-              />
-              <div className="mt-6 text-sm text-muted-foreground">
-                <p>• Receita mensal recorrente baseada em assinaturas ativas</p>
-                <p>• Serviços utilizados via assinatura no período selecionado</p>
-                <p>• Ticket médio calculado sobre valor mensal das assinaturas ativas</p>
-              </div>
-            </CardContent>
-          </Card>
+          <SubscriptionBillingList />
         </TabsContent>
 
         <TabsContent value="expenses" className="space-y-4">
