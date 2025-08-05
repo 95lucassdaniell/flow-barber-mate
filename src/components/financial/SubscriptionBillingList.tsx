@@ -15,6 +15,7 @@ import {
 import { useSubscriptionBilling } from "@/hooks/useSubscriptionBilling";
 import { useProviders } from "@/hooks/useProviders";
 import { formatCurrency } from "@/lib/utils";
+import { debugLogger } from "@/lib/debugLogger";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CreditCard, Eye, FileText, Calendar, User } from "lucide-react";
@@ -38,27 +39,37 @@ export default function SubscriptionBillingList() {
   const [selectedBilling, setSelectedBilling] = useState<string | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  console.group('🔍 [SubscriptionBillingList] Component render');
-  console.log('Current filters:', filters);
-  
+  debugLogger.billing.group('SubscriptionBillingList', 'Renderizando componente', () => {
+    debugLogger.billing.debug('SubscriptionBillingList', 'Current filters', filters);
+    
+    const hookFilters = {
+      status: filters.status === 'all' ? undefined : filters.status,
+      startDate: filters.startDate || undefined,
+      endDate: filters.endDate || undefined,
+      providerId: filters.providerId === 'all' ? undefined : filters.providerId
+    };
+    debugLogger.billing.debug('SubscriptionBillingList', 'Processed filters for hook', hookFilters);
+
+    const { billings, loading, updateBillingStatus } = useSubscriptionBilling(hookFilters);
+    const { providers } = useProviders();
+    
+    debugLogger.billing.debug('SubscriptionBillingList', 'Component state', {
+      billingsCount: billings?.length || 0,
+      loading,
+      providersCount: providers?.length || 0
+    });
+    debugLogger.billing.debug('SubscriptionBillingList', 'Raw billings data', billings);
+  });
+
   const hookFilters = {
     status: filters.status === 'all' ? undefined : filters.status,
     startDate: filters.startDate || undefined,
     endDate: filters.endDate || undefined,
     providerId: filters.providerId === 'all' ? undefined : filters.providerId
   };
-  console.log('Processed filters for hook:', hookFilters);
 
   const { billings, loading, updateBillingStatus } = useSubscriptionBilling(hookFilters);
   const { providers } = useProviders();
-  
-  console.log('Component state:', {
-    billingsCount: billings?.length || 0,
-    loading,
-    providersCount: providers?.length || 0
-  });
-  console.log('Raw billings data:', billings);
-  console.groupEnd();
 
   const getStatusBadge = (status: string, dueDate: string) => {
     const today = new Date();
