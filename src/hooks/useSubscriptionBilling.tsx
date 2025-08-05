@@ -41,57 +41,112 @@ export const useSubscriptionBilling = (filters?: BillingFilters) => {
       setLoading(true);
       setError(null);
 
-      let query = supabase
+      // Primeira query: buscar registros financeiros
+      let financialQuery = supabase
         .from('subscription_financial_records')
-        .select(`
-          *,
-          client_subscriptions!inner(
-            id,
-            clients!inner(name),
-            profiles!inner(full_name),
-            provider_subscription_plans!inner(name)
-          )
-        `)
-        .eq('client_subscriptions.barbershop_id', profile.barbershop_id)
+        .select('*')
         .order('due_date', { ascending: false });
 
-      // Aplicar filtros
+      // Aplicar filtros nos registros financeiros
       if (filters?.status && filters.status !== 'all') {
-        query = query.eq('status', filters.status);
+        financialQuery = financialQuery.eq('status', filters.status);
       }
 
       if (filters?.startDate) {
-        query = query.gte('due_date', filters.startDate);
+        financialQuery = financialQuery.gte('due_date', filters.startDate);
       }
 
       if (filters?.endDate) {
-        query = query.lte('due_date', filters.endDate);
+        financialQuery = financialQuery.lte('due_date', filters.endDate);
       }
 
+      const { data: financialRecords, error: financialError } = await financialQuery;
+      
+      if (financialError) throw financialError;
+      
+      if (!financialRecords || financialRecords.length === 0) {
+        setBillings([]);
+        return;
+      }
+
+      // Segunda query: buscar assinaturas relacionadas
+      const subscriptionIds = financialRecords.map(r => r.subscription_id);
+      
+      let subscriptionsQuery = supabase
+        .from('client_subscriptions')
+        .select('id, client_id, provider_id, plan_id')
+        .eq('barbershop_id', profile.barbershop_id)
+        .in('id', subscriptionIds);
+
+      // Aplicar filtro de provider se necessário
       if (filters?.providerId && filters.providerId !== 'all') {
-        query = query.eq('client_subscriptions.provider_id', filters.providerId);
+        subscriptionsQuery = subscriptionsQuery.eq('provider_id', filters.providerId);
       }
 
-      const { data, error } = await query;
+      const { data: subscriptions, error: subscriptionsError } = await subscriptionsQuery;
+      
+      if (subscriptionsError) throw subscriptionsError;
 
-      if (error) throw error;
+      if (!subscriptions || subscriptions.length === 0) {
+        setBillings([]);
+        return;
+      }
 
-      const formattedBillings: SubscriptionBilling[] = (data || []).map((record: any) => ({
-        id: record.id,
-        subscription_id: record.subscription_id,
-        client_name: record.client_subscriptions.clients.name,
-        provider_name: record.client_subscriptions.profiles.full_name,
-        plan_name: record.client_subscriptions.provider_subscription_plans.name,
-        amount: record.amount,
-        commission_amount: record.commission_amount,
-        net_amount: record.net_amount,
-        due_date: record.due_date,
-        status: record.status,
-        payment_date: record.payment_date,
-        payment_method: record.payment_method,
-        notes: record.notes,
-        created_at: record.created_at
-      }));
+      // Terceira query: buscar clientes
+      const clientIds = subscriptions.map(s => s.client_id);
+      const { data: clients, error: clientsError } = await supabase
+        .from('clients')
+        .select('id, name')
+        .in('id', clientIds);
+      
+      if (clientsError) throw clientsError;
+
+      // Quarta query: buscar providers
+      const providerIds = subscriptions.map(s => s.provider_id);
+      const { data: providers, error: providersError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', providerIds);
+      
+      if (providersError) throw providersError;
+
+      // Quinta query: buscar planos
+      const planIds = subscriptions.map(s => s.plan_id);
+      const { data: plans, error: plansError } = await supabase
+        .from('provider_subscription_plans')
+        .select('id, name')
+        .in('id', planIds);
+      
+      if (plansError) throw plansError;
+
+      // Combinar os dados
+      const formattedBillings: SubscriptionBilling[] = financialRecords
+        .map((record: any) => {
+          const subscription = subscriptions.find(s => s.id === record.subscription_id);
+          if (!subscription) return null;
+
+          const client = clients?.find(c => c.id === subscription.client_id);
+          const provider = providers?.find(p => p.id === subscription.provider_id);
+          const plan = plans?.find(p => p.id === subscription.plan_id);
+
+          return {
+            id: record.id,
+            subscription_id: record.subscription_id,
+            client_name: client?.name || 'Cliente não encontrado',
+            provider_name: provider?.full_name || 'Provider não encontrado',
+            plan_name: plan?.name || 'Plano não encontrado',
+            amount: record.amount,
+            commission_amount: record.commission_amount,
+            net_amount: record.net_amount,
+            due_date: record.due_date,
+            status: record.status,
+            payment_date: record.payment_date,
+            payment_method: record.payment_method,
+            notes: record.notes,
+            created_at: record.created_at
+          };
+        })
+        .filter(Boolean) as SubscriptionBilling[];
 
       setBillings(formattedBillings);
     } catch (error) {
