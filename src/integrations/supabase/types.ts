@@ -3328,7 +3328,15 @@ export type Database = {
           subscription_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_subscription_financial_records_subscription_id"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "client_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscription_usage_history: {
         Row: {
