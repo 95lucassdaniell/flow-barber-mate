@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -35,14 +35,22 @@ export const useSubscriptionBilling = (filters?: BillingFilters) => {
   const { profile } = useAuth();
   const { toast } = useToast();
 
-  const fetchBillings = async () => {
+  // Memorizar os filtros para evitar recriação
+  const memoizedFilters = useMemo(() => filters, [
+    filters?.status,
+    filters?.startDate,
+    filters?.endDate,
+    filters?.providerId
+  ]);
+
+  const fetchBillings = useCallback(async () => {
     if (!profile?.barbershop_id) {
       debugLogger.subscription.warn('useSubscriptionBilling', 'Sem barbershop_id, abortando fetch');
       return;
     }
 
     debugLogger.subscription.debug('useSubscriptionBilling', 'barbershop_id', profile.barbershop_id);
-    debugLogger.subscription.debug('useSubscriptionBilling', 'filters aplicados', filters);
+    debugLogger.subscription.debug('useSubscriptionBilling', 'filters aplicados', memoizedFilters);
 
     try {
         setLoading(true);
@@ -56,16 +64,16 @@ export const useSubscriptionBilling = (filters?: BillingFilters) => {
           .order('due_date', { ascending: false });
 
         // Aplicar filtros nos registros financeiros
-        if (filters?.status && filters.status !== 'all') {
-          financialQuery = financialQuery.eq('status', filters.status);
+        if (memoizedFilters?.status && memoizedFilters.status !== 'all') {
+          financialQuery = financialQuery.eq('status', memoizedFilters.status);
         }
 
-        if (filters?.startDate) {
-          financialQuery = financialQuery.gte('due_date', filters.startDate);
+        if (memoizedFilters?.startDate) {
+          financialQuery = financialQuery.gte('due_date', memoizedFilters.startDate);
         }
 
-        if (filters?.endDate) {
-          financialQuery = financialQuery.lte('due_date', filters.endDate);
+        if (memoizedFilters?.endDate) {
+          financialQuery = financialQuery.lte('due_date', memoizedFilters.endDate);
         }
 
         const { data: financialRecords, error: financialError } = await financialQuery;
@@ -94,8 +102,8 @@ export const useSubscriptionBilling = (filters?: BillingFilters) => {
           .in('id', subscriptionIds);
 
         // Aplicar filtro de provider se necessário
-        if (filters?.providerId && filters.providerId !== 'all') {
-          subscriptionsQuery = subscriptionsQuery.eq('provider_id', filters.providerId);
+        if (memoizedFilters?.providerId && memoizedFilters.providerId !== 'all') {
+          subscriptionsQuery = subscriptionsQuery.eq('provider_id', memoizedFilters.providerId);
         }
 
         const { data: subscriptions, error: subscriptionsError } = await subscriptionsQuery;
@@ -202,7 +210,7 @@ export const useSubscriptionBilling = (filters?: BillingFilters) => {
       } finally {
         setLoading(false);
       }
-  };
+  }, [profile?.barbershop_id, memoizedFilters]);
 
   const updateBillingStatus = async (
     billingId: string, 
@@ -283,7 +291,7 @@ export const useSubscriptionBilling = (filters?: BillingFilters) => {
     if (profile?.barbershop_id) {
       fetchBillings();
     }
-  }, [profile?.barbershop_id, filters]);
+  }, [fetchBillings]);
 
   return {
     billings,

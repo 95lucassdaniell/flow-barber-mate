@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,37 +39,29 @@ export default function SubscriptionBillingList() {
   const [selectedBilling, setSelectedBilling] = useState<string | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  debugLogger.billing.group('SubscriptionBillingList', 'Renderizando componente', () => {
-    debugLogger.billing.debug('SubscriptionBillingList', 'Current filters', filters);
-    
-    const hookFilters = {
-      status: filters.status === 'all' ? undefined : filters.status,
-      startDate: filters.startDate || undefined,
-      endDate: filters.endDate || undefined,
-      providerId: filters.providerId === 'all' ? undefined : filters.providerId
-    };
-    debugLogger.billing.debug('SubscriptionBillingList', 'Processed filters for hook', hookFilters);
-
-    const { billings, loading, updateBillingStatus } = useSubscriptionBilling(hookFilters);
-    const { providers } = useProviders();
-    
-    debugLogger.billing.debug('SubscriptionBillingList', 'Component state', {
-      billingsCount: billings?.length || 0,
-      loading,
-      providersCount: providers?.length || 0
-    });
-    debugLogger.billing.debug('SubscriptionBillingList', 'Raw billings data', billings);
-  });
-
-  const hookFilters = {
+  // Memorizar os filtros processados para o hook
+  const hookFilters = useMemo(() => ({
     status: filters.status === 'all' ? undefined : filters.status,
     startDate: filters.startDate || undefined,
     endDate: filters.endDate || undefined,
     providerId: filters.providerId === 'all' ? undefined : filters.providerId
-  };
+  }), [filters.status, filters.startDate, filters.endDate, filters.providerId]);
 
   const { billings, loading, updateBillingStatus } = useSubscriptionBilling(hookFilters);
   const { providers } = useProviders();
+
+  // Logs movidos para useEffect para evitar execução a cada render
+  useEffect(() => {
+    debugLogger.billing.group('SubscriptionBillingList', 'Component updated', () => {
+      debugLogger.billing.debug('SubscriptionBillingList', 'Current filters', filters);
+      debugLogger.billing.debug('SubscriptionBillingList', 'Processed filters for hook', hookFilters);
+      debugLogger.billing.debug('SubscriptionBillingList', 'Component state', {
+        billingsCount: billings?.length || 0,
+        loading,
+        providersCount: providers?.length || 0
+      });
+    });
+  }, [filters, hookFilters, billings?.length, loading, providers?.length]);
 
   const getStatusBadge = (status: string, dueDate: string) => {
     const today = new Date();
