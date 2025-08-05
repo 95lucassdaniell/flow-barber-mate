@@ -2387,7 +2387,15 @@ export type Database = {
           provider_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_provider_subscription_plans_provider_id"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       public_client_reviews: {
         Row: {
