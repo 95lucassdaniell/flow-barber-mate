@@ -1,12 +1,38 @@
-import { useEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { format } from "date-fns";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import AdminSubscriptionPlansPage from "@/components/admin/AdminSubscriptionPlansPage";
+import SubscriptionFinancialStats from "@/components/financial/SubscriptionFinancialStats";
+import SubscriptionBillingList from "@/components/financial/SubscriptionBillingList";
+import FinancialFilters from "@/components/financial/FinancialFilters";
+import { useSubscriptionFinancialData } from "@/hooks/useSubscriptionFinancialData";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TrendingUp, Settings, DollarSign } from "lucide-react";
 
 export default function FinancialSubscriptionsPage() {
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
+  const [dateRange, setDateRange] = useState({
+    startDate: format(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    endDate: format(new Date(), 'yyyy-MM-dd'),
+  });
+
+  // Memoizar parâmetros para evitar re-renders desnecessários
+  const financialParams = useMemo(() => ({
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+  }), [dateRange.startDate, dateRange.endDate]);
+
+  const {
+    stats: subscriptionStats,
+    loading: subscriptionLoading
+  } = useSubscriptionFinancialData(
+    financialParams.startDate,
+    financialParams.endDate
+  );
 
   useEffect(() => {
     if (!loading && !user) {
@@ -38,11 +64,56 @@ export default function FinancialSubscriptionsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Assinaturas</h1>
           <p className="text-muted-foreground">
-            Gerencie os planos de assinatura e controle de clientes
+            Gerencie planos de assinatura e acompanhe dados financeiros
           </p>
         </div>
 
-        <AdminSubscriptionPlansPage />
+        {/* Filtros */}
+        <FinancialFilters
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
+          selectedBarber=""
+          onBarberChange={() => {}}
+          showBarberFilter={false}
+        />
+
+        {/* Estatísticas Financeiras */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Estatísticas Financeiras
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SubscriptionFinancialStats 
+              stats={subscriptionStats} 
+              loading={subscriptionLoading} 
+            />
+          </CardContent>
+        </Card>
+
+        {/* Seções Principais */}
+        <Tabs defaultValue="billing" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="billing" className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Cobranças e Faturas
+            </TabsTrigger>
+            <TabsTrigger value="plans" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Gerenciar Planos
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="billing" className="space-y-4">
+            <SubscriptionBillingList />
+          </TabsContent>
+
+          <TabsContent value="plans" className="space-y-4">
+            <AdminSubscriptionPlansPage />
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );

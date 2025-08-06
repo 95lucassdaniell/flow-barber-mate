@@ -8,7 +8,6 @@ import FinancialStats from "./FinancialStats";
 import SubscriptionFinancialStats from "./SubscriptionFinancialStats";
 import CommissionHistory from "./CommissionHistory";
 import FinancialFilters from "./FinancialFilters";
-import SubscriptionBillingList from "./SubscriptionBillingList";
 import ProvidersFinancialDashboard from "./ProvidersFinancialDashboard";
 import ExpenseManagement from "./ExpenseManagement";
 import CashRegisterHistory from "./CashRegisterHistory";
@@ -170,16 +169,11 @@ export default function AdminFinancialDashboard() {
           </p>
         </div>
 
-        <Tabs defaultValue="subscriptions" className="space-y-4">
+        <Tabs defaultValue="commissions" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="subscriptions">Assinaturas</TabsTrigger>
             <TabsTrigger value="commissions">Comissões</TabsTrigger>
             <TabsTrigger value="providers">Prestadores</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="subscriptions" className="space-y-4">
-            <SubscriptionBillingList />
-          </TabsContent>
 
           <TabsContent value="commissions" className="space-y-4">
             <Card>
