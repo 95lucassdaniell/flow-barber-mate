@@ -18,7 +18,9 @@ import {
   Target,
   CreditCard,
   HandCoins,
-  UsersIcon
+  UsersIcon,
+  ChevronRight,
+  ChevronDown
 } from "lucide-react";
 import { NavLink, useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -139,6 +141,11 @@ const AppSidebar = ({ barbershopData, profile, handleLogout, slug }: {
                 >
                   <DollarSign className="w-5 h-5" />
                   <span>Financeiro</span>
+                  {financialMenuOpen ? (
+                    <ChevronDown className="w-4 h-4 ml-auto" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 ml-auto" />
+                  )}
                 </SidebarMenuButton>
                 {financialMenuOpen && (
                   <SidebarMenuSub>
