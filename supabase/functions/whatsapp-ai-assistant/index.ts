@@ -132,31 +132,35 @@ serve(async (req) => {
       .eq('is_active', true);
 
     // 4. Preparar prompt para OpenAI
-    const systemPrompt = `Você é a recepcionista virtual da ${barbershop?.name || 'barbearia'}. 
+    const systemPrompt = `Você é um assistente virtual especializado em agendamentos para a barbearia "${barbershop?.name}".
 
-INSTRUÇÕES IMPORTANTES:
-- Use linguagem educada e objetiva, sem emojis ou diminutivos
-- Mantenha respostas curtas e diretas
-- Você pode agendar, remarcar, cancelar agendamentos e responder dúvidas básicas
-- Se não souber responder algo, encaminhe para atendimento humano
-
-DADOS DA BARBEARIA:
+INFORMAÇÕES DA BARBEARIA:
 - Nome: ${barbershop?.name}
 - Endereço: ${barbershop?.address || 'Não informado'}
-- Horários: ${JSON.stringify(barbershop?.opening_hours)}
+- Horário de funcionamento: ${JSON.stringify(barbershop?.opening_hours || {})}
 
 SERVIÇOS DISPONÍVEIS:
-${services?.map(s => `- ${s.name}: ${s.duration_minutes}min, R$ ${s.price}`).join('\n') || 'Nenhum serviço cadastrado'}
+${services?.map(service => `- ${service.name}: R$ ${service.price || 'Consultar'} (${service.duration_minutes || 30} min)`).join('\n')}
 
 BARBEIROS DISPONÍVEIS:
-${providers?.map(p => `- ${p.full_name}`).join('\n') || 'Nenhum barbeiro cadastrado'}
+${providers?.map(provider => `- ${provider.full_name}`).join('\n')}
 
-CONTEXTO ATUAL:
-- Etapa: ${aiContext?.step}
-- Intenção detectada: ${aiContext?.intent || 'Não detectada'}
-- Dados coletados: ${JSON.stringify(aiContext?.collected_data)}
+INSTRUÇÕES:
+1. Seja sempre cordial, profissional e prestativo
+2. Ajude o cliente a agendar serviços ou responda dúvidas sobre a barbearia
+3. Para agendamentos, colete: nome completo, serviço desejado, barbeiro (opcional), data e horário preferido
+4. Quando tiver todos os dados, use a função 'check_availability' para verificar disponibilidade
+5. Se disponível, use 'create_booking' para confirmar o agendamento
+6. Confirme todos os detalhes antes de finalizar qualquer agendamento
+7. Se não souber algo específico, seja honesto e ofereça ajuda alternativa
+8. Mantenha conversas focadas em serviços da barbearia
+9. Se o cliente precisar de atendimento humano complexo, use a função 'request_human_assistance'
+10. Formate datas como YYYY-MM-DD e horários como HH:MM
 
-RESPONDA com base na mensagem do cliente e no contexto atual.`;
+CONTEXTO DA CONVERSA ANTERIOR:
+${JSON.stringify(aiContext?.collected_data) || 'Primeira interação com este cliente'}
+
+Responda de forma natural e conversacional, sempre em português brasileiro.`;
 
     // 5. Chamar OpenAI
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -173,29 +177,44 @@ RESPONDA com base na mensagem do cliente e no contexto atual.`;
         ],
         functions: [
           {
-            name: 'detect_intent',
-            description: 'Detecta a intenção do cliente e coleta dados',
+            name: 'check_availability',
+            description: 'Verificar disponibilidade de horário antes de agendar',
             parameters: {
               type: 'object',
               properties: {
-                intent: { 
-                  type: 'string', 
-                  enum: ['agendar', 'remarcar', 'cancelar', 'duvida', 'saudacao', 'transfer_human'] 
-                },
-                collected_data: {
-                  type: 'object',
-                  properties: {
-                    name: { type: 'string' },
-                    service: { type: 'string' },
-                    provider: { type: 'string' },
-                    date: { type: 'string' },
-                    time: { type: 'string' }
-                  }
-                },
-                next_step: { type: 'string' },
-                needs_human: { type: 'boolean' }
+                client_name: { type: 'string', description: 'Nome completo do cliente' },
+                service_name: { type: 'string', description: 'Nome do serviço desejado' },
+                barber_name: { type: 'string', description: 'Nome do barbeiro (opcional)' },
+                date: { type: 'string', description: 'Data desejada no formato YYYY-MM-DD' },
+                time: { type: 'string', description: 'Horário desejado no formato HH:MM' }
               },
-              required: ['intent']
+              required: ['client_name', 'service_name', 'date', 'time']
+            }
+          },
+          {
+            name: 'create_booking',
+            description: 'Confirmar agendamento após verificar disponibilidade',
+            parameters: {
+              type: 'object',
+              properties: {
+                client_name: { type: 'string', description: 'Nome completo do cliente' },
+                service_name: { type: 'string', description: 'Nome do serviço desejado' },
+                barber_name: { type: 'string', description: 'Nome do barbeiro (opcional)' },
+                date: { type: 'string', description: 'Data desejada no formato YYYY-MM-DD' },
+                time: { type: 'string', description: 'Horário desejado no formato HH:MM' }
+              },
+              required: ['client_name', 'service_name', 'date', 'time']
+            }
+          },
+          {
+            name: 'request_human_assistance',
+            description: 'Solicitar atendimento humano para casos complexos',
+            parameters: {
+              type: 'object',
+              properties: {
+                reason: { type: 'string', description: 'Motivo da solicitação de atendimento humano' }
+              },
+              required: ['reason']
             }
           }
         ],
@@ -213,87 +232,208 @@ RESPONDA com base na mensagem do cliente e no contexto atual.`;
     // 6. Processar function call se houver
     let updatedContext = aiContext;
     let appliedTags = [];
+    let extractedInfo = {};
 
-    if (functionCall && functionCall.name === 'detect_intent') {
-      const functionArgs = JSON.parse(functionCall.arguments);
-      console.log('Function Args:', functionArgs);
-
-      // Atualizar contexto da IA
-      const { data: newContext } = await supabase
-        .from('whatsapp_ai_context')
-        .update({
-          intent: functionArgs.intent,
-          collected_data: { 
-            ...aiContext.collected_data, 
-            ...functionArgs.collected_data 
+    if (functionCall) {
+      console.log('🤖 Function call detected:', functionCall);
+      
+      if (functionCall.name === 'check_availability') {
+        const appointmentData = JSON.parse(functionCall.arguments);
+        console.log('🔍 Checking availability for:', appointmentData);
+        
+        // Call booking API to check availability
+        const bookingResponse = await fetch('https://yzqwmxffjufefocgkevz.supabase.co/functions/v1/whatsapp-booking-api', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
           },
-          step: functionArgs.next_step || aiContext.step,
-          context_data: {
-            ...aiContext.context_data,
-            last_intent: functionArgs.intent,
-            needs_human: functionArgs.needs_human
-          }
-        })
-        .eq('id', aiContext.id)
-        .select()
-        .single();
+          body: JSON.stringify({
+            barbershop_id,
+            client_phone: phone,
+            client_name: appointmentData.client_name,
+            service_name: appointmentData.service_name,
+            barber_name: appointmentData.barber_name,
+            appointment_date: appointmentData.date,
+            start_time: appointmentData.time,
+            action: 'check_availability'
+          })
+        });
 
-      updatedContext = newContext;
+        const bookingResult = await bookingResponse.json();
+        console.log('📅 Availability check result:', bookingResult);
 
-      // Aplicar etiquetas baseadas na intenção
-      const intentTagMap = {
-        'agendar': 'Quer Agendar',
-        'remarcar': 'Remarcar', 
-        'cancelar': 'Cancelar',
-        'duvida': 'Dúvida'
-      };
+        if (bookingResult.success && bookingResult.available) {
+          extractedInfo = { 
+            type: 'availability_check', 
+            data: { ...appointmentData, ...bookingResult },
+            status: 'available'
+          };
+          aiResponse = `✅ Perfeito! O horário está disponível:
+          
+📅 **${appointmentData.date}** às **${appointmentData.time}**
+💇‍♂️ **Serviço:** ${bookingResult.service.name}
+👨‍💼 **Barbeiro:** ${bookingResult.barber.name}
+💰 **Valor:** R$ ${bookingResult.service.price}
+⏱️ **Duração:** ${bookingResult.service.duration} minutos
 
-      const tagName = intentTagMap[functionArgs.intent];
-      if (tagName) {
+Posso confirmar este agendamento para você?`;
+        } else {
+          extractedInfo = { 
+            type: 'availability_check', 
+            data: appointmentData,
+            status: 'unavailable'
+          };
+          aiResponse = `❌ Infelizmente este horário não está disponível. 
+
+Que tal escolher outro horário? Posso verificar outras opções para você.`;
+        }
+        
+        // Apply automatic tag
         const { data: tag } = await supabase
           .from('whatsapp_tags')
           .select('id')
+          .eq('name', 'Agendamento')
           .eq('barbershop_id', barbershop_id)
-          .eq('name', tagName)
           .single();
 
         if (tag) {
           await supabase
             .from('whatsapp_conversation_tags')
-            .upsert({
+            .insert({
               conversation_id: conversation.id,
               tag_id: tag.id
-            });
-          appliedTags.push(tagName);
+            })
+            .onConflict('conversation_id,tag_id')
+            .merge();
+          appliedTags.push('Agendamento');
         }
-      }
 
-      // Se precisa de humano, transferir
-      if (functionArgs.needs_human) {
-        await supabase
-          .from('whatsapp_conversations')
-          .update({ human_takeover: true })
-          .eq('id', conversation.id);
+      } else if (functionCall.name === 'create_booking') {
+        const appointmentData = JSON.parse(functionCall.arguments);
+        console.log('✅ Creating booking for:', appointmentData);
+        
+        // Call booking API to create appointment
+        const bookingResponse = await fetch('https://yzqwmxffjufefocgkevz.supabase.co/functions/v1/whatsapp-booking-api', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+          },
+          body: JSON.stringify({
+            barbershop_id,
+            client_phone: phone,
+            client_name: appointmentData.client_name,
+            service_name: appointmentData.service_name,
+            barber_name: appointmentData.barber_name,
+            appointment_date: appointmentData.date,
+            start_time: appointmentData.time,
+            action: 'create_booking'
+          })
+        });
 
-        const { data: humanTag } = await supabase
+        const bookingResult = await bookingResponse.json();
+        console.log('📅 Booking result:', bookingResult);
+
+        if (bookingResult.success) {
+          extractedInfo = { 
+            type: 'appointment_confirmed', 
+            data: { ...appointmentData, ...bookingResult.appointment },
+            status: 'confirmed'
+          };
+          aiResponse = `🎉 **Agendamento confirmado com sucesso!**
+
+📅 **Data:** ${bookingResult.appointment.date}
+🕒 **Horário:** ${bookingResult.appointment.start_time}
+💇‍♂️ **Serviço:** ${bookingResult.appointment.service}
+👨‍💼 **Barbeiro:** ${bookingResult.appointment.barber}
+💰 **Valor:** R$ ${bookingResult.appointment.total_price}
+
+${barbershop.name}
+${barbershop.address || ''}
+
+Até lá! 😊`;
+        } else {
+          extractedInfo = { 
+            type: 'appointment_error', 
+            data: appointmentData,
+            error: bookingResult.error
+          };
+          aiResponse = `❌ Não foi possível confirmar o agendamento: ${bookingResult.error}
+
+Por favor, tente novamente ou entre em contato conosco.`;
+        }
+        
+        // Apply automatic tag
+        const { data: tag } = await supabase
           .from('whatsapp_tags')
           .select('id')
+          .eq('name', 'Agendamento')
           .eq('barbershop_id', barbershop_id)
-          .eq('name', 'Atendimento Humano')
           .single();
 
-        if (humanTag) {
+        if (tag) {
           await supabase
             .from('whatsapp_conversation_tags')
-            .upsert({
+            .insert({
               conversation_id: conversation.id,
-              tag_id: humanTag.id
-            });
-          appliedTags.push('Atendimento Humano');
+              tag_id: tag.id
+            })
+            .onConflict('conversation_id,tag_id')
+            .merge();
+          appliedTags.push('Agendamento');
         }
 
-        aiResponse = "Entendi que você precisa de um atendimento mais personalizado. Vou transferir você para um de nossos atendentes que responderá em breve.";
+      } else if (functionCall.name === 'request_human_assistance') {
+        const assistanceData = JSON.parse(functionCall.arguments);
+        extractedInfo = { 
+          type: 'human_assistance_request', 
+          data: assistanceData 
+        };
+        
+        // Update conversation for human takeover
+        await supabase
+          .from('whatsapp_conversations')
+          .update({ 
+            human_takeover: true,
+            ai_enabled: false 
+          })
+          .eq('id', conversation.id);
+        
+        // Apply automatic tag
+        const { data: tag } = await supabase
+          .from('whatsapp_tags')
+          .select('id')
+          .eq('name', 'Assistência Humana')
+          .eq('barbershop_id', barbershop_id)
+          .single();
+
+        if (tag) {
+          await supabase
+            .from('whatsapp_conversation_tags')
+            .insert({
+              conversation_id: conversation.id,
+              tag_id: tag.id
+            })
+            .onConflict('conversation_id,tag_id')
+            .merge();
+          appliedTags.push('Assistência Humana');
+        }
+
+        aiResponse += '\n\n*Transferindo para atendimento humano...*';
       }
+
+      // Update AI context with extracted information
+      await supabase
+        .from('whatsapp_ai_context')
+        .update({
+          context_data: {
+            ...aiContext.context_data,
+            extracted_info: extractedInfo,
+            last_function_call: functionCall.name
+          }
+        })
+        .eq('id', aiContext.id);
     }
 
     // 7. Atualizar última mensagem da conversa
