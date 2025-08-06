@@ -21,7 +21,7 @@ import { useProviderServices } from '@/hooks/useProviderServices';
 import { useSales, type SaleFormData } from '@/hooks/useSales';
 import { useCashRegister } from '@/hooks/useCashRegister';
 import { useToast } from '@/hooks/use-toast';
-import { useDebounce } from '@/hooks/useDebounce';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { CashRegisterStatus } from '@/components/pdv/CashRegisterStatus';
 import { SalesHistory } from '@/components/pdv/SalesHistory';
@@ -53,8 +53,8 @@ const PDVPage = () => {
   const [showOpenCashModal, setShowOpenCashModal] = useState(false);
   
   const { isFullscreen, toggleFullscreen } = useFullscreen();
-  const debouncedServiceSearch = useDebounce(serviceSearchTerm, 300);
-  const debouncedProductSearch = useDebounce(productSearchTerm, 300);
+  const debouncedServiceSearch = useDebouncedValue(serviceSearchTerm, 300);
+  const debouncedProductSearch = useDebouncedValue(productSearchTerm, 300);
 
   const { clients } = useClients();
   const { providers } = useProviders();

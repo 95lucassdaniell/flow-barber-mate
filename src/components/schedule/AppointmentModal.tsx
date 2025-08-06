@@ -19,7 +19,7 @@ import {
   AlertCircle,
   Loader2
 } from "lucide-react";
-import { useDebounce } from "@/hooks/useDebounce";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
@@ -71,7 +71,7 @@ export const AppointmentModal = ({
   const { generateTimeSlots, isOpenOnDate } = useBarbershopSettings();
   
   // Debounce phone input para busca
-  const debouncedPhone = useDebounce(newClientData.phone, 500);
+  const debouncedPhone = useDebouncedValue(newClientData.phone, 500);
   
   const [appointmentData, setAppointmentData] = useState({
     barberId: selectedBarberId || "",
