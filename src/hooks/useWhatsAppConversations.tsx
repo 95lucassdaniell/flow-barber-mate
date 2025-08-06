@@ -88,14 +88,35 @@ export const useWhatsAppConversations = () => {
           console.log('- Profile ID:', profile?.id);
           console.log('- Barbershop ID:', barbershopId);
           
-          // Tentar query simplificada para debug
+          // Tentar fallback com função RPC
           try {
-            const { count } = await supabase
-              .from('whatsapp_conversations')
-              .select('*', { count: 'exact', head: true });
-            console.log('🔍 Total de conversas (sem filtro):', count);
-          } catch (debugError) {
-            console.log('🔍 Erro mesmo sem filtro:', debugError);
+            console.log('🔄 Tentando fallback com função RPC...');
+            const { data: fallbackData, error: fallbackError } = await supabase
+              .rpc('get_whatsapp_conversations_debug', { p_barbershop_id: barbershopId });
+            
+            if (fallbackError) {
+              console.error('❌ Fallback RPC também falhou:', fallbackError);
+            } else {
+              console.log('✅ Fallback RPC funcionou! Encontradas', fallbackData?.length || 0, 'conversas');
+              
+              // Usar dados do fallback se disponível
+              if (fallbackData && Array.isArray(fallbackData)) {
+                const conversationsWithDefaults = fallbackData.map(conv => ({
+                  ...conv,
+                  status: conv.status as 'active' | 'archived' | 'blocked',
+                  tags: [],
+                  lastMessage: undefined,
+                  unread_count: 0
+                }));
+                
+                console.log('✅ Usando dados do fallback RPC');
+                setConversations(conversationsWithDefaults);
+                setLoading(false);
+                return;
+              }
+            }
+          } catch (fallbackError) {
+            console.error('❌ Erro no fallback RPC:', fallbackError);
           }
         }
         

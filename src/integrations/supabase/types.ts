@@ -4119,6 +4119,22 @@ export type Database = {
           dead_tuple_percent: number
         }[]
       }
+      get_whatsapp_conversations_debug: {
+        Args: { p_barbershop_id: string }
+        Returns: {
+          id: string
+          barbershop_id: string
+          client_phone: string
+          client_name: string
+          status: string
+          ai_enabled: boolean
+          human_takeover: boolean
+          human_agent_id: string
+          last_message_at: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
       increment_verification_attempts: {
         Args: { phone_input: string; barbershop_id_input: string }
         Returns: undefined
