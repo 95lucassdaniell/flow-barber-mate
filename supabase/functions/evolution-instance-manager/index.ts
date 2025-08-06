@@ -122,14 +122,14 @@ serve(async (req) => {
           typebot: "",
           integration: "WHATSAPP-BAILEYS",
           webhookUrl: `${Deno.env.get('SUPABASE_URL')}/functions/v1/evolution-webhook`,
-          webhookByEvents: false,
+          webhookByEvents: true,
           events: [
-            "APPLICATION_STARTUP",
-            "QRCODE_UPDATED",
-            "CONNECTION_UPDATE",
-            "MESSAGES_UPSERT",
-            "MESSAGES_UPDATE",
-            "SEND_MESSAGE"
+            "application.startup",
+            "qrcode.updated",
+            "connection.update",
+            "messages.upsert",
+            "messages.update",
+            "send.message"
           ]
         };
 
