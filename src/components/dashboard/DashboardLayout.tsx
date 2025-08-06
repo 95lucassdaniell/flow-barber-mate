@@ -20,7 +20,8 @@ import {
   HandCoins,
   UsersIcon,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  FolderOpen
 } from "lucide-react";
 import { NavLink, useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,18 +60,22 @@ const AppSidebar = ({ barbershopData, profile, handleLogout, slug }: {
   const currentPath = location.pathname;
   const [financialMenuOpen, setFinancialMenuOpen] = useState(false);
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
+  const [cadastrosMenuOpen, setCadastrosMenuOpen] = useState(false);
 
   const navigation = [
     { id: "dashboard", name: "Dashboard", icon: BarChart3, href: `/app/${slug}` },
     { id: "agenda", name: "Agenda", icon: Calendar, href: `/app/${slug}/agenda` },
-    { id: "clients", name: "Clientes", icon: Users, href: `/app/${slug}/clients` },
     { id: "crm", name: "CRM", icon: TrendingUp, href: `/app/${slug}/crm` },
-    { id: "providers", name: "Prestadores", icon: Users, href: `/app/${slug}/prestadores` },
     { id: "metas", name: "Metas", icon: Target, href: `/app/${slug}/metas` },
-    { id: "services", name: "Serviços", icon: Scissors, href: `/app/${slug}/services` },
-    { id: "produtos", name: "Produtos", icon: Package, href: `/app/${slug}/produtos` },
     { id: "whatsapp", name: "WhatsApp", icon: MessageCircle, href: `/app/${slug}/whatsapp` },
     { id: "settings", name: "Configurações", icon: Settings, href: `/app/${slug}/settings` },
+  ];
+
+  const cadastrosSubItems = [
+    { id: "clients", name: "Clientes", icon: Users, href: `/app/${slug}/clients` },
+    { id: "providers", name: "Prestadores", icon: Users, href: `/app/${slug}/prestadores` },
+    { id: "produtos", name: "Produtos", icon: Package, href: `/app/${slug}/produtos` },
+    { id: "services", name: "Serviços", icon: Scissors, href: `/app/${slug}/services` },
   ];
 
   const aiSubItems = [
@@ -91,6 +96,7 @@ const AppSidebar = ({ barbershopData, profile, handleLogout, slug }: {
 
   const isFinancialActive = currentPath.includes('/financial') || currentPath.includes('/comandas') || currentPath.includes('/caixa');
   const isAIActive = currentPath.includes('/ai');
+  const isCadastrosActive = currentPath.includes('/clients') || currentPath.includes('/prestadores') || currentPath.includes('/produtos') || currentPath.includes('/services');
   const getNavCls = (href: string) => 
     currentPath === href ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/50";
 
@@ -102,7 +108,10 @@ const AppSidebar = ({ barbershopData, profile, handleLogout, slug }: {
     if (isAIActive) {
       setAiMenuOpen(true);
     }
-  }, [isFinancialActive, isAIActive]);
+    if (isCadastrosActive) {
+      setCadastrosMenuOpen(true);
+    }
+  }, [isFinancialActive, isAIActive, isCadastrosActive]);
 
   return (
     <Sidebar>
@@ -143,6 +152,40 @@ const AppSidebar = ({ barbershopData, profile, handleLogout, slug }: {
                   </SidebarMenuItem>
                 );
               })}
+              
+              {/* Cadastros submenu */}
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  onClick={() => setCadastrosMenuOpen(!cadastrosMenuOpen)}
+                  className={`cursor-pointer ${isCadastrosActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/50"}`}
+                >
+                  <FolderOpen className="w-5 h-5" />
+                  <span>Cadastros</span>
+                  {cadastrosMenuOpen ? (
+                    <ChevronDown className="w-4 h-4 ml-auto" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 ml-auto" />
+                  )}
+                </SidebarMenuButton>
+                {cadastrosMenuOpen && (
+                  <SidebarMenuSub>
+                    {cadastrosSubItems.map((subItem) => {
+                      const SubIcon = subItem.icon;
+                      
+                      return (
+                        <SidebarMenuSubItem key={subItem.id}>
+                          <SidebarMenuSubButton asChild>
+                            <NavLink to={subItem.href} className={getNavCls(subItem.href)}>
+                              <SubIcon className="w-4 h-4" />
+                              <span>{subItem.name}</span>
+                            </NavLink>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      );
+                    })}
+                  </SidebarMenuSub>
+                )}
+              </SidebarMenuItem>
               
               {/* AI submenu */}
               <SidebarMenuItem>
@@ -337,6 +380,7 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
       "financial-subscriptions": "Assinaturas", 
       "financial-commissions": "Comissões",
       "financial-providers": "Prestadores",
+      cadastros: "Cadastros",
       settings: "Configurações"
     };
     return tabNames[tabId] || "Dashboard";
