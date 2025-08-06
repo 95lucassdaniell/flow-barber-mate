@@ -58,19 +58,26 @@ const AppSidebar = ({ barbershopData, profile, handleLogout, slug }: {
   const location = useLocation();
   const currentPath = location.pathname;
   const [financialMenuOpen, setFinancialMenuOpen] = useState(false);
+  const [aiMenuOpen, setAiMenuOpen] = useState(false);
 
   const navigation = [
     { id: "dashboard", name: "Dashboard", icon: BarChart3, href: `/app/${slug}` },
     { id: "agenda", name: "Agenda", icon: Calendar, href: `/app/${slug}/agenda` },
     { id: "clients", name: "Clientes", icon: Users, href: `/app/${slug}/clients` },
     { id: "crm", name: "CRM", icon: TrendingUp, href: `/app/${slug}/crm` },
-    { id: "ai", name: "IA Preditiva", icon: Brain, href: `/app/${slug}/ai` },
     { id: "providers", name: "Prestadores", icon: Users, href: `/app/${slug}/prestadores` },
     { id: "metas", name: "Metas", icon: Target, href: `/app/${slug}/metas` },
     { id: "services", name: "Serviços", icon: Scissors, href: `/app/${slug}/services` },
     { id: "produtos", name: "Produtos", icon: Package, href: `/app/${slug}/produtos` },
     { id: "whatsapp", name: "WhatsApp", icon: MessageCircle, href: `/app/${slug}/whatsapp` },
     { id: "settings", name: "Configurações", icon: Settings, href: `/app/${slug}/settings` },
+  ];
+
+  const aiSubItems = [
+    { id: "ai-insights", name: "Insights", icon: Brain, href: `/app/${slug}/ai/insights` },
+    { id: "ai-clients", name: "Clientes", icon: Users, href: `/app/${slug}/ai/clientes` },
+    { id: "ai-sales", name: "Vendas", icon: TrendingUp, href: `/app/${slug}/ai/vendas` },
+    { id: "ai-automations", name: "Automações", icon: Target, href: `/app/${slug}/ai/automacoes` },
   ];
 
   const financialSubItems = [
@@ -83,15 +90,19 @@ const AppSidebar = ({ barbershopData, profile, handleLogout, slug }: {
   ];
 
   const isFinancialActive = currentPath.includes('/financial') || currentPath.includes('/comandas') || currentPath.includes('/caixa');
+  const isAIActive = currentPath.includes('/ai');
   const getNavCls = (href: string) => 
     currentPath === href ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/50";
 
-  // Auto-expand financial menu if user is on a financial page
+  // Auto-expand menus if user is on their respective pages
   useEffect(() => {
     if (isFinancialActive) {
       setFinancialMenuOpen(true);
     }
-  }, [isFinancialActive]);
+    if (isAIActive) {
+      setAiMenuOpen(true);
+    }
+  }, [isFinancialActive, isAIActive]);
 
   return (
     <Sidebar>
@@ -132,6 +143,40 @@ const AppSidebar = ({ barbershopData, profile, handleLogout, slug }: {
                   </SidebarMenuItem>
                 );
               })}
+              
+              {/* AI submenu */}
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  onClick={() => setAiMenuOpen(!aiMenuOpen)}
+                  className={`cursor-pointer ${isAIActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/50"}`}
+                >
+                  <Brain className="w-5 h-5" />
+                  <span>IA Preditiva</span>
+                  {aiMenuOpen ? (
+                    <ChevronDown className="w-4 h-4 ml-auto" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 ml-auto" />
+                  )}
+                </SidebarMenuButton>
+                {aiMenuOpen && (
+                  <SidebarMenuSub>
+                    {aiSubItems.map((subItem) => {
+                      const SubIcon = subItem.icon;
+                      
+                      return (
+                        <SidebarMenuSubItem key={subItem.id}>
+                          <SidebarMenuSubButton asChild>
+                            <NavLink to={subItem.href} className={getNavCls(subItem.href)}>
+                              <SubIcon className="w-4 h-4" />
+                              <span>{subItem.name}</span>
+                            </NavLink>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      );
+                    })}
+                  </SidebarMenuSub>
+                )}
+              </SidebarMenuItem>
               
               {/* Financial submenu */}
               <SidebarMenuItem>

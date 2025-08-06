@@ -33,6 +33,10 @@ import FinancialSubscriptionsPage from "./pages/FinancialSubscriptionsPage";
 import FinancialCommissionsPage from "./pages/FinancialCommissionsPage";
 import FinancialProvidersPage from "./pages/FinancialProvidersPage";
 import AIPage from "./pages/AIPage";
+import AIInsightsPage from "./pages/AIInsightsPage";
+import AIClientsPage from "./pages/AIClientsPage";
+import AISalesPage from "./pages/AISalesPage";
+import AIAutomationsPage from "./pages/AIAutomationsPage";
 import GoalsPage from "./pages/GoalsPage";
 import ProviderLoginPage from "./components/providers/ProviderLoginPage";
 import ProviderProtectedRoute from "./components/providers/ProviderProtectedRoute";
@@ -168,6 +172,34 @@ function App() {
               <SessionGuard>
                 <ProtectedRoute requiresRole="admin">
                   <AIPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/ai/insights" element={
+              <SessionGuard>
+                <ProtectedRoute requiresRole="admin">
+                  <AIInsightsPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/ai/clientes" element={
+              <SessionGuard>
+                <ProtectedRoute requiresRole="admin">
+                  <AIClientsPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/ai/vendas" element={
+              <SessionGuard>
+                <ProtectedRoute requiresRole="admin">
+                  <AISalesPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/ai/automacoes" element={
+              <SessionGuard>
+                <ProtectedRoute requiresRole="admin">
+                  <AIAutomationsPage />
                 </ProtectedRoute>
               </SessionGuard>
             } />
