@@ -188,6 +188,46 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
     }
   };
 
+  const resetAndReconnect = async () => {
+    setLoading(true);
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('barbershop_id')
+        .eq('user_id', user.user.id)
+        .single();
+
+      if (!profile?.barbershop_id) return;
+
+      const { data: resetData, error: resetError } = await supabase.functions.invoke('whatsapp-reset-instance', {
+        body: { barbershopId: profile.barbershop_id }
+      });
+      
+      if (resetError) {
+        console.error('Error resetting instance:', resetError);
+        toast.error('Erro ao resetar instância WhatsApp');
+        return;
+      }
+
+      console.log('Instance reset successfully:', resetData);
+      toast.success('Instância resetada com sucesso! Reconectando...');
+
+      // Wait a moment and then generate new QR code
+      setTimeout(async () => {
+        await generateQRCode();
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Erro ao resetar WhatsApp');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const generateQRCode = async () => {
     setQrLoading(true);
     try {
@@ -354,11 +394,18 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
                   <p className="text-muted-foreground">
                     Clique no botão abaixo para gerar o QR Code e conectar seu WhatsApp
                   </p>
-                  <Button onClick={generateQRCode} disabled={qrLoading}>
-                    {qrLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    <QrCode className="mr-2 h-4 w-4" />
-                    Gerar QR Code
-                  </Button>
+                  <div className="space-y-2">
+                    <Button onClick={generateQRCode} disabled={qrLoading}>
+                      {qrLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      <QrCode className="mr-2 h-4 w-4" />
+                      Gerar QR Code
+                    </Button>
+                    <Button onClick={resetAndReconnect} disabled={loading} variant="outline">
+                      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      <WifiOff className="mr-2 h-4 w-4" />
+                      Resetar e Reconectar
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>

@@ -12,13 +12,19 @@ serve(async (req) => {
   }
 
   try {
+    console.log('=== EVOLUTION WEBHOOK RECEIVED ===');
+    console.log('Request method:', req.method);
+    console.log('Request URL:', req.url);
+    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
+    
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     const webhookData = await req.json();
-    console.log('Evolution Webhook received:', JSON.stringify(webhookData, null, 2));
+    console.log('=== WEBHOOK DATA RECEIVED ===');
+    console.log('Full webhook data:', JSON.stringify(webhookData, null, 2));
 
     const { instance, event, data } = webhookData;
 
@@ -56,19 +62,25 @@ serve(async (req) => {
         break;
 
       case 'connection.update':
+        console.log('=== CONNECTION UPDATE EVENT ===');
+        console.log('Connection data:', JSON.stringify(data, null, 2));
+        
         let newStatus = 'disconnected';
         let phoneNumber = null;
 
         if (data?.state === 'open') {
           newStatus = 'connected';
           phoneNumber = data?.user?.id?.split('@')[0] || null;
+          console.log('WhatsApp connected successfully! Phone:', phoneNumber);
         } else if (data?.state === 'connecting') {
           newStatus = 'connecting';
+          console.log('WhatsApp connecting...');
         } else if (data?.state === 'close') {
           newStatus = 'disconnected';
+          console.log('WhatsApp disconnected');
         }
 
-        await supabase
+        const updateResult = await supabase
           .from('whatsapp_instances')
           .update({
             status: newStatus,
@@ -78,19 +90,37 @@ serve(async (req) => {
           })
           .eq('id', whatsappInstance.id);
 
-        console.log(`Connection updated for instance ${instance}: ${newStatus}`);
+        if (updateResult.error) {
+          console.error('Error updating connection status:', updateResult.error);
+        } else {
+          console.log(`Connection updated for instance ${instance}: ${newStatus} (Phone: ${phoneNumber})`);
+        }
         break;
 
       case 'messages.upsert':
+        console.log('=== MESSAGES UPSERT EVENT ===');
+        console.log('Messages data:', JSON.stringify(data, null, 2));
+        
         // Handle incoming messages
         if (data?.messages) {
+          console.log(`Processing ${data.messages.length} messages`);
+          
           for (const message of data.messages) {
+            console.log('Processing message:', JSON.stringify(message, null, 2));
+            
             if (message.key?.fromMe === false) {
+              console.log('=== INCOMING MESSAGE DETECTED ===');
+              
               // This is an incoming message
               const phoneNumber = message.key?.remoteJid?.split('@')[0];
               const messageContent = message.message?.conversation || 
                                   message.message?.extendedTextMessage?.text || 
                                   'Media message';
+              
+              console.log('Incoming message details:');
+              console.log('- Phone:', phoneNumber);
+              console.log('- Content:', messageContent);
+              console.log('- Push name:', message.pushName);
 
               // Create or get conversation
               const { data: conversation, error: convError } = await supabase
