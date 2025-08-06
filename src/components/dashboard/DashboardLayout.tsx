@@ -151,7 +151,7 @@ const AppSidebar = ({ barbershopData, profile, handleLogout, slug }: {
                   className={`cursor-pointer ${isAIActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/50"}`}
                 >
                   <Brain className="w-5 h-5" />
-                  <span>IA Preditiva</span>
+                  <span>Salão AI</span>
                   {aiMenuOpen ? (
                     <ChevronDown className="w-4 h-4 ml-auto" />
                   ) : (
