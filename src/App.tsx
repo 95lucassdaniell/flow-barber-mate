@@ -162,6 +162,13 @@ function App() {
                 </ProtectedRoute>
               </SessionGuard>
             } />
+            <Route path="/app/:slug/whatsapp-attendance" element={
+              <SessionGuard>
+                <ProtectedRoute>
+                  <WhatsAppAttendancePage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
             <Route path="/app/:slug/crm" element={
               <SessionGuard>
                 <ProtectedRoute requiresRole="admin">

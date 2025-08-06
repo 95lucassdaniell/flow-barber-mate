@@ -28,7 +28,7 @@ const WhatsAppManagement = () => {
               <Badge variant={isConnected ? "default" : "secondary"}>
                 {isConnected ? "Conectado" : "Desconectado"}
               </Badge>
-              <Link to="/whatsapp-attendance">
+              <Link to="whatsapp-attendance">
                 <Button variant="outline" size="sm">
                   <Bot className="h-4 w-4 mr-2" />
                   Atendimento IA

@@ -12,7 +12,15 @@ serve(async (req) => {
   }
 
   try {
-    const { phone, message, messageType = 'text', barbershop_id } = await req.json();
+    const { 
+      phone, 
+      message, 
+      messageType = 'text', 
+      barbershop_id,
+      conversation_id: conversationId,
+      ai_handled: aiHandled,
+      human_agent_id: humanAgentId 
+    } = await req.json();
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -173,22 +181,36 @@ serve(async (req) => {
       }
     }
 
-    // Save message to database
+    // Save message to database with conversation support
     const { error: dbError } = await supabase
       .from('whatsapp_messages')
       .insert({
+        conversation_id: conversationId,
         barbershop_id: targetBarbershopId,
         instance_id: instance.id,
         message_id: sendData.key?.id || sendData.value || null,
         phone_number: formattedPhone,
         message_type: messageType,
-        content: { text: message },
+        content: { conversation: message },
         direction: 'outgoing',
-        status: 'sent'
+        status: 'sent',
+        ai_handled: !!aiHandled,
+        human_agent_id: humanAgentId
       });
 
     if (dbError) {
       console.error('Error saving message:', dbError);
+    }
+
+    // Update conversation timestamp if provided
+    if (conversationId) {
+      await supabase
+        .from('whatsapp_conversations')
+        .update({ 
+          last_message_at: new Date().toISOString(),
+          human_agent_id: humanAgentId 
+        })
+        .eq('id', conversationId);
     }
 
     return new Response(JSON.stringify({

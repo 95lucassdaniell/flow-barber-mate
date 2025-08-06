@@ -92,20 +92,82 @@ serve(async (req) => {
                                   message.message?.extendedTextMessage?.text || 
                                   'Media message';
 
+              // Create or get conversation
+              const { data: conversation, error: convError } = await supabase
+                .from('whatsapp_conversations')
+                .upsert({
+                  barbershop_id: whatsappInstance.barbershop_id,
+                  client_phone: phoneNumber,
+                  client_name: message.pushName || null,
+                  last_message_at: new Date().toISOString()
+                }, {
+                  onConflict: 'barbershop_id,client_phone'
+                })
+                .select()
+                .single();
+
+              if (convError) {
+                console.error('Error creating/updating conversation:', convError);
+              }
+
               // Save incoming message to database
               await supabase
                 .from('whatsapp_messages')
                 .insert({
+                  conversation_id: conversation?.id,
                   instance_id: whatsappInstance.id,
                   phone_number: phoneNumber,
-                  message: messageContent,
-                  type: 'received',
-                  status: 'delivered',
-                  external_id: message.key?.id,
+                  contact_name: message.pushName || null,
+                  content: { conversation: messageContent },
+                  message_type: 'text',
+                  direction: 'incoming',
+                  status: 'received',
+                  message_id: message.key?.id,
                   barbershop_id: whatsappInstance.barbershop_id
                 });
 
               console.log(`Incoming message saved from ${phoneNumber}: ${messageContent}`);
+
+              // Process with AI if conversation allows it
+              if (conversation && 
+                  !conversation.human_takeover && 
+                  conversation.ai_enabled &&
+                  messageContent !== 'Media message') {
+                
+                console.log('Processing message with AI...');
+                
+                try {
+                  const aiResponse = await supabase.functions.invoke('whatsapp-ai-assistant', {
+                    body: {
+                      message: messageContent,
+                      phone: phoneNumber,
+                      barbershop_id: whatsappInstance.barbershop_id,
+                      message_type: 'text'
+                    }
+                  });
+
+                  if (aiResponse.error) {
+                    console.error('AI processing error:', aiResponse.error);
+                  } else {
+                    console.log('AI processed successfully');
+                    
+                    // Send AI response if available
+                    if (aiResponse.data?.ai_response && !aiResponse.data?.human_takeover) {
+                      await supabase.functions.invoke('send-whatsapp-message', {
+                        body: {
+                          phone: phoneNumber,
+                          message: aiResponse.data.ai_response,
+                          barbershop_id: whatsappInstance.barbershop_id,
+                          conversation_id: conversation.id,
+                          ai_handled: true
+                        }
+                      });
+                    }
+                  }
+                } catch (aiError) {
+                  console.error('Error calling AI assistant:', aiError);
+                }
+              }
             }
           }
         }
