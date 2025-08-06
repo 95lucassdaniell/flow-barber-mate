@@ -177,3 +177,190 @@ class CacheManager {
 }
 
 export const cacheManager = CacheManager.getInstance();
+
+// Sistema de Cache Inteligente com Invalidação Automática
+interface CacheItemWithTriggers<T> extends CacheItem<T> {
+  triggers: string[];
+  barbershopId?: string;
+}
+
+interface RealtimeSubscription {
+  channel: any;
+  callback: () => void;
+}
+
+class IntelligentCacheManager extends CacheManager {
+  private static intelligentInstance: IntelligentCacheManager;
+  private cacheWithTriggers: Map<string, CacheItemWithTriggers<any>> = new Map();
+  private triggerToKeysMap: Map<string, Set<string>> = new Map();
+  private realtimeSubscriptions: Map<string, RealtimeSubscription> = new Map();
+  private isListeningToRealtime = false;
+
+  static getInstance(): IntelligentCacheManager {
+    if (!IntelligentCacheManager.intelligentInstance) {
+      IntelligentCacheManager.intelligentInstance = new IntelligentCacheManager();
+    }
+    return IntelligentCacheManager.intelligentInstance;
+  }
+
+  // Cache com triggers de invalidação
+  setWithInvalidation<T>(
+    key: string, 
+    data: T, 
+    ttlMs: number = 300000, // 5 minutos default
+    triggers: string[] = [],
+    barbershopId?: string
+  ): void {
+    this.cacheWithTriggers.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl: ttlMs,
+      triggers,
+      barbershopId
+    });
+
+    // Mapear triggers para keys
+    triggers.forEach(trigger => {
+      if (!this.triggerToKeysMap.has(trigger)) {
+        this.triggerToKeysMap.set(trigger, new Set());
+      }
+      this.triggerToKeysMap.get(trigger)!.add(key);
+    });
+
+    this.ensureRealtimeSubscriptions();
+  }
+
+  // Buscar com verificação de invalidação
+  getIntelligent<T>(key: string): { data: T | null; fromCache: boolean } {
+    const item = this.cacheWithTriggers.get(key);
+    
+    if (!item) {
+      return { data: null, fromCache: false };
+    }
+
+    if (Date.now() - item.timestamp > item.ttl) {
+      this.cacheWithTriggers.delete(key);
+      return { data: null, fromCache: false };
+    }
+
+    return { data: item.data, fromCache: true };
+  }
+
+  // Invalidar cache por trigger
+  invalidateByTrigger(trigger: string, barbershopId?: string): void {
+    const keysToInvalidate = this.triggerToKeysMap.get(trigger);
+    
+    if (!keysToInvalidate) return;
+
+    keysToInvalidate.forEach(key => {
+      const item = this.cacheWithTriggers.get(key);
+      
+      // Se tem barbershopId, só invalidar se corresponder
+      if (item && (!barbershopId || item.barbershopId === barbershopId)) {
+        this.cacheWithTriggers.delete(key);
+        console.log(`🗑️ Cache invalidado: ${key} (trigger: ${trigger})`);
+      }
+    });
+
+    // Limpar referências vazias
+    keysToInvalidate.clear();
+  }
+
+  // Configurar subscriptions de realtime
+  private ensureRealtimeSubscriptions(): void {
+    if (this.isListeningToRealtime) return;
+
+    const tables = [
+      'commands', 'command_items', 'sales', 'commissions',
+      'subscription_financial_records', 'client_subscriptions',
+      'expenses', 'profiles', 'clients'
+    ];
+
+    // Importar supabase dinamicamente para evitar circular dependency
+    import('@/integrations/supabase/client').then(({ supabase }) => {
+      tables.forEach(table => {
+        const channel = supabase
+          .channel(`cache-invalidation-${table}`)
+          .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table
+          }, (payload) => this.handleRealtimeChange(table, payload))
+          .subscribe();
+
+        this.realtimeSubscriptions.set(table, {
+          channel,
+          callback: () => this.invalidateByTrigger(table)
+        });
+      });
+
+      this.isListeningToRealtime = true;
+      console.log('🔄 Realtime cache invalidation ativado');
+    });
+  }
+
+  // Manipular mudanças em tempo real
+  private handleRealtimeChange(table: string, payload: any): void {
+    const barbershopId = payload.new?.barbershop_id || payload.old?.barbershop_id;
+    
+    console.log(`🔔 Realtime change detected: ${table}`, payload.eventType);
+    
+    // Invalidar cache específico da barbearia
+    this.invalidateByTrigger(table, barbershopId);
+    
+    // Invalidar triggers relacionados
+    const relatedTriggers = this.getRelatedTriggers(table);
+    relatedTriggers.forEach(trigger => {
+      this.invalidateByTrigger(trigger, barbershopId);
+    });
+  }
+
+  // Mapear triggers relacionados
+  private getRelatedTriggers(table: string): string[] {
+    const triggerMap: Record<string, string[]> = {
+      'commands': ['financial-stats', 'barber-rankings', 'commissions'],
+      'command_items': ['financial-stats', 'barber-rankings', 'commissions'],
+      'sales': ['financial-stats'],
+      'subscription_financial_records': ['subscription-billing', 'subscription-stats'],
+      'client_subscriptions': ['subscription-stats', 'subscription-billing'],
+      'expenses': ['expense-data'],
+      'profiles': ['barber-rankings'],
+      'clients': ['commissions', 'subscription-billing']
+    };
+
+    return triggerMap[table] || [];
+  }
+
+  // Limpar subscriptions
+  destroy(): void {
+    this.realtimeSubscriptions.forEach(({ channel }) => {
+      try {
+        channel.unsubscribe();
+      } catch (error) {
+        console.warn('Erro ao desinscrever canal:', error);
+      }
+    });
+    
+    this.realtimeSubscriptions.clear();
+    this.cacheWithTriggers.clear();
+    this.triggerToKeysMap.clear();
+    this.isListeningToRealtime = false;
+  }
+
+  // Debug: obter estatísticas do cache
+  getCacheStats(): {
+    totalItems: number;
+    hitRate: number;
+    triggers: string[];
+    subscriptions: string[];
+  } {
+    return {
+      totalItems: this.cacheWithTriggers.size,
+      hitRate: 0, // Implementar se necessário
+      triggers: Array.from(this.triggerToKeysMap.keys()),
+      subscriptions: Array.from(this.realtimeSubscriptions.keys())
+    };
+  }
+}
+
+export const intelligentCache = IntelligentCacheManager.getInstance();
