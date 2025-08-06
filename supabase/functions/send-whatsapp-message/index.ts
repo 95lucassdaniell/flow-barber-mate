@@ -192,6 +192,10 @@ serve(async (req) => {
         .upsert({
           barbershop_id: targetBarbershopId,
           client_phone: formattedPhone,
+          client_name: formattedPhone, // Use phone as name initially
+          status: 'active',
+          ai_enabled: true,
+          human_takeover: false,
           last_message_at: new Date().toISOString()
         }, {
           onConflict: 'barbershop_id,client_phone'
@@ -217,7 +221,7 @@ serve(async (req) => {
         message_id: sendData.key?.id || sendData.value || null,
         phone_number: formattedPhone,
         message_type: messageType,
-        content: { conversation: message },
+        content: message,
         direction: 'outgoing',
         status: 'sent',
         ai_handled: !!aiHandled,

@@ -152,7 +152,7 @@ serve(async (req) => {
                   instance_id: whatsappInstance.id,
                   phone_number: phoneNumber,
                   contact_name: message.pushName || null,
-                  content: { conversation: messageContent },
+                  content: messageContent,
                   message_type: 'text',
                   direction: 'incoming',
                   status: 'received',

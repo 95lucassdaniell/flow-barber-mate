@@ -3950,6 +3950,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      create_conversations_for_existing_messages: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       create_monthly_partition: {
         Args: { table_name: string; start_date: string }
         Returns: undefined
