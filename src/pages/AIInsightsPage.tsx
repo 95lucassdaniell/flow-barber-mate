@@ -8,7 +8,8 @@ import { StatCard } from '@/components/ui/stat-card';
 import { useAIAnalytics } from '@/hooks/useAIAnalytics';
 import { useCRMMetrics } from '@/hooks/useCRMMetrics';
 import { supabase } from '@/integrations/supabase/client';
-import { Brain, TrendingUp, AlertTriangle, Clock, DollarSign, Users, Calendar, Target, Lightbulb, RefreshCw, UserPlus, Heart, Repeat, Star } from 'lucide-react';
+import { TrendingUp, AlertTriangle, Clock, DollarSign, Users, Calendar, Target, Lightbulb, RefreshCw, UserPlus, Heart, Repeat, Star } from 'lucide-react';
+import salaoAiIconInsights from '@/assets/salao-ai-icon-insights.png';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useState, useEffect } from 'react';
@@ -71,7 +72,7 @@ const AIInsightsPage: React.FC = () => {
     return <DashboardLayout activeTab="ai">
         <div className="space-y-6">
           <div className="flex items-center gap-2">
-            <Brain className="h-6 w-6 text-primary" />
+            <img src={salaoAiIconInsights} alt="Salão AI" className="h-6 w-6" />
             <h2 className="text-2xl font-bold">Insights de IA</h2>
             <RefreshCw className="h-4 w-4 animate-spin" />
           </div>
@@ -106,7 +107,7 @@ const AIInsightsPage: React.FC = () => {
   if (!insights) {
     return <DashboardLayout activeTab="ai">
         <Alert>
-          <Brain className="h-4 w-4" />
+          <img src={salaoAiIconInsights} alt="Salão AI" className="h-4 w-4" />
           <AlertDescription>
             Dados insuficientes para gerar insights de IA. Execute algumas vendas e agendamentos primeiro.
           </AlertDescription>
@@ -117,7 +118,7 @@ const AIInsightsPage: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Brain className="h-6 w-6 text-primary" />
+            <img src={salaoAiIconInsights} alt="Salão AI" className="h-6 w-6" />
             <h2 className="text-2xl font-bold">Salão AI</h2>
           </div>
           <Button variant="outline" size="sm" onClick={refreshInsights} disabled={loading}>
@@ -145,7 +146,7 @@ const AIInsightsPage: React.FC = () => {
         {/* Métricas IA */}
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <Brain className="h-5 w-5 text-primary" />
+            <img src={salaoAiIconInsights} alt="Salão AI" className="h-5 w-5" />
             <h3 className="text-lg font-semibold">Insights de IA</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
