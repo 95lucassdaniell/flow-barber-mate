@@ -23,6 +23,7 @@ import {
   ChevronDown,
   FolderOpen
 } from "lucide-react";
+import salaoAiIcon from "@/assets/salao-ai-icon.png";
 import { NavLink, useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -193,7 +194,7 @@ const AppSidebar = ({ barbershopData, profile, handleLogout, slug }: {
                   onClick={() => setAiMenuOpen(!aiMenuOpen)}
                   className={`cursor-pointer ${isAIActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/50"}`}
                 >
-                  <Brain className="w-5 h-5" />
+                  <img src={salaoAiIcon} alt="Salão AI" className="w-5 h-5" />
                   <span>Salão AI</span>
                   {aiMenuOpen ? (
                     <ChevronDown className="w-4 h-4 ml-auto" />
