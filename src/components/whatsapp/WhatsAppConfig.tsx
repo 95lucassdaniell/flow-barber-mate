@@ -8,6 +8,9 @@ import { toast } from "sonner";
 import { Loader2, CheckCircle, XCircle, QrCode, Smartphone, Wifi, WifiOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cacheManager } from "@/lib/globalState";
+import WhatsAppStatusChecker from "./WhatsAppStatusChecker";
+import WhatsAppConnectionWizard from "./WhatsAppConnectionWizard";
+import WhatsAppAutomationTester from "./WhatsAppAutomationTester";
 
 interface WhatsAppConfigProps {
   isConnected: boolean;
@@ -329,6 +332,15 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
 
   return (
     <div className="space-y-6">
+      {/* Status Checker */}
+      <WhatsAppStatusChecker />
+      
+      {/* Connection Wizard */}
+      <WhatsAppConnectionWizard />
+      
+      {/* Automation Tester */}
+      <WhatsAppAutomationTester />
+      
       {/* Configuration Status Alert */}
       <Card className="border-amber-200 bg-amber-50">
         <CardHeader>

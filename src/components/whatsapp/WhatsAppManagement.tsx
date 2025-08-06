@@ -47,10 +47,20 @@ const WhatsAppManagement = () => {
         </TabsContent>
 
         <TabsContent value="conversations" className="space-y-6">
-          <div className="p-4">
-            <p className="text-muted-foreground">
-              Conversas serão exibidas após a configuração das variáveis de ambiente e conexão do WhatsApp.
-            </p>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Conversas do WhatsApp</CardTitle>
+                <CardDescription>
+                  Gerencie conversas com seus clientes
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-center py-8">
+                  As conversas aparecerão aqui após conectar o WhatsApp e receber mensagens.
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
@@ -63,10 +73,20 @@ const WhatsAppManagement = () => {
         </TabsContent>
 
         <TabsContent value="ai" className="space-y-6">
-          <div className="p-4">
-            <p className="text-muted-foreground">
-              Dashboard de IA será disponibilizado após a configuração completa do WhatsApp.
-            </p>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Assistente IA WhatsApp</CardTitle>
+                <CardDescription>
+                  Configuração e monitoramento da IA para WhatsApp
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-center py-8">
+                  O assistente de IA será configurado automaticamente após conectar o WhatsApp.
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
