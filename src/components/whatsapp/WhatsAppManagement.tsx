@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Settings, Send, History, Plus, Bot } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import WhatsAppConfig from "./WhatsAppConfig";
 import MessageTemplates from "./MessageTemplates";
 import SendMessage from "./SendMessage";
@@ -13,6 +13,7 @@ import MessageHistory from "./MessageHistory";
 const WhatsAppManagement = () => {
   const [activeTab, setActiveTab] = useState("config");
   const [isConnected, setIsConnected] = useState(false);
+  const { slug } = useParams();
 
   return (
     <div className="space-y-6">
@@ -28,7 +29,7 @@ const WhatsAppManagement = () => {
               <Badge variant={isConnected ? "default" : "secondary"}>
                 {isConnected ? "Conectado" : "Desconectado"}
               </Badge>
-              <Link to="whatsapp-attendance">
+              <Link to={`/app/${slug}/whatsapp-attendance`}>
                 <Button variant="outline" size="sm">
                   <Bot className="h-4 w-4 mr-2" />
                   Atendimento IA
