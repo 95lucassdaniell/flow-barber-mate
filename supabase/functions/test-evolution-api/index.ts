@@ -42,6 +42,9 @@ serve(async (req) => {
     if (testType === 'all' || testType === 'api_connectivity') {
       try {
         console.log('Testing Evolution API connectivity...');
+        console.log(`Testing URL: ${evolutionApiUrl}/manager/fetchInstances`);
+        console.log(`Using API Key: ${evolutionApiKey.substring(0, 10)}...`);
+        
         const connectivityResponse = await fetch(`${evolutionApiUrl}/manager/fetchInstances`, {
           method: 'GET',
           headers: {
@@ -49,22 +52,58 @@ serve(async (req) => {
             'Content-Type': 'application/json'
           }
         });
-        
-        results.tests.api_connectivity = {
-          success: connectivityResponse.ok,
-          status: connectivityResponse.status,
-          message: connectivityResponse.ok ? 'Evolution API is accessible' : 'Evolution API is not accessible'
-        };
+
+        console.log(`Response status: ${connectivityResponse.status}`);
+        console.log(`Response headers:`, Object.fromEntries(connectivityResponse.headers.entries()));
+
+        const responseText = await connectivityResponse.text();
+        console.log(`Response body (first 500 chars): ${responseText.substring(0, 500)}`);
         
         if (connectivityResponse.ok) {
-          const instances = await connectivityResponse.json();
-          results.tests.api_connectivity.instanceCount = instances.length;
+          try {
+            const instances = JSON.parse(responseText);
+            results.tests.api_connectivity = {
+              success: true,
+              status: connectivityResponse.status,
+              message: 'Evolution API is accessible',
+              instanceCount: instances.length,
+              instances: instances,
+              api_url: evolutionApiUrl
+            };
+          } catch (parseError) {
+            results.tests.api_connectivity = {
+              success: false,
+              status: connectivityResponse.status,
+              message: 'Evolution API returned invalid JSON',
+              error: `Parse error: ${parseError.message}`,
+              response_preview: responseText.substring(0, 200),
+              api_url: evolutionApiUrl,
+              troubleshooting: 'The API returned HTML instead of JSON. Check if the URL is correct and the API is running.'
+            };
+          }
+        } else {
+          results.tests.api_connectivity = {
+            success: false,
+            status: connectivityResponse.status,
+            message: 'Evolution API is not accessible',
+            error: responseText,
+            api_url: evolutionApiUrl,
+            troubleshooting: connectivityResponse.status === 404 
+              ? 'API endpoint not found. Check if the URL path is correct.'
+              : connectivityResponse.status === 401 
+              ? 'Authentication failed. Check if the API key is correct.'
+              : 'Server error. Check if the Evolution API is running properly.'
+          };
         }
       } catch (error) {
         results.tests.api_connectivity = {
           success: false,
           error: error.message,
-          message: 'Failed to connect to Evolution API'
+          message: 'Failed to connect to Evolution API',
+          api_url: evolutionApiUrl,
+          troubleshooting: error.message.includes('fetch')
+            ? 'Network error. Check if the Evolution API URL is accessible and the server is running.'
+            : 'Unexpected error occurred during API call.'
         };
       }
     }

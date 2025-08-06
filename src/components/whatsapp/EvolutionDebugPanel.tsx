@@ -79,16 +79,79 @@ export const EvolutionDebugPanel = () => {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-2">{test.message}</p>
+
+          {/* Show troubleshooting info for errors */}
+          {!test.success && test.troubleshooting && (
+            <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded">
+              <div className="text-sm font-medium text-amber-800 mb-1">
+                💡 Solução Sugerida:
+              </div>
+              <div className="text-sm text-amber-700">
+                {test.troubleshooting}
+              </div>
+              {test.api_url && (
+                <div className="text-xs text-amber-600 mt-1">
+                  URL testada: {test.api_url}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Show configuration help */}
+          {test.configuration_help && (
+            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded">
+              <div className="text-sm font-medium text-blue-800 mb-1">
+                ⚙️ Configuração:
+              </div>
+              <div className="text-sm text-blue-700">
+                {test.configuration_help}
+              </div>
+            </div>
+          )}
           
           {test.error && (
-            <div className="bg-destructive/10 p-2 rounded text-sm text-destructive">
+            <div className="bg-destructive/10 p-2 rounded text-sm text-destructive mb-2">
               <strong>Erro:</strong> {test.error}
+            </div>
+          )}
+
+          {/* Show response preview for API errors */}
+          {test.response_preview && (
+            <div className="mb-2">
+              <div className="text-xs font-medium text-muted-foreground mb-1">
+                Resposta recebida (prévia):
+              </div>
+              <div className="text-xs font-mono bg-muted p-2 rounded border">
+                {test.response_preview}...
+              </div>
+            </div>
+          )}
+
+          {/* Show instances if found */}
+          {test.instances && test.instances.length > 0 && (
+            <div className="mb-3">
+              <div className="text-sm font-medium mb-2 text-green-700">
+                ✅ Instâncias encontradas ({test.instanceCount}):
+              </div>
+              <div className="space-y-1">
+                {test.instances.slice(0, 3).map((instance: any, idx: number) => (
+                  <div key={idx} className="bg-green-50 p-2 rounded text-sm">
+                    <div><strong>Nome:</strong> {instance.instanceName || 'N/A'}</div>
+                    <div><strong>Status:</strong> {instance.status || 'N/A'}</div>
+                  </div>
+                ))}
+                {test.instances.length > 3 && (
+                  <div className="text-xs text-muted-foreground">
+                    ... e mais {test.instances.length - 3} instâncias
+                  </div>
+                )}
+              </div>
             </div>
           )}
           
           {test.instance && (
             <details className="mt-2">
-              <summary className="text-sm font-medium cursor-pointer">Ver detalhes</summary>
+              <summary className="text-sm font-medium cursor-pointer">Ver detalhes da instância</summary>
               <pre className="mt-2 p-2 bg-muted rounded text-xs overflow-auto">
                 {JSON.stringify(test.instance, null, 2)}
               </pre>
@@ -98,14 +161,21 @@ export const EvolutionDebugPanel = () => {
           {test.recentMessages && (
             <div className="mt-2">
               <p className="text-sm font-medium">Mensagens recentes: {test.messageCount}</p>
-              {test.recentMessages.length > 0 && (
+              {test.recentMessages.length > 0 ? (
                 <ScrollArea className="h-20 mt-1">
                   {test.recentMessages.map((msg: any, idx: number) => (
                     <div key={idx} className="text-xs p-1 border-b">
-                      <strong>{msg.direction}:</strong> {msg.content.substring(0, 50)}...
+                      <strong>{msg.direction}:</strong> {msg.content?.substring(0, 50)}...
+                      <div className="text-muted-foreground">
+                        {new Date(msg.created_at).toLocaleString()}
+                      </div>
                     </div>
                   ))}
                 </ScrollArea>
+              ) : (
+                <div className="text-sm text-muted-foreground mt-1">
+                  Nenhuma mensagem encontrada
+                </div>
               )}
             </div>
           )}
