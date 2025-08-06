@@ -52,7 +52,11 @@ export const useWhatsAppConversations = () => {
   const barbershopId = profile?.barbershop_id;
 
   const fetchConversations = async () => {
+    console.log('🔍 fetchConversations iniciado', { barbershopId, user: user?.id, profile: profile?.id });
+    
     if (!barbershopId) {
+      console.warn('⚠️ Nenhum barbershop_id disponível para buscar conversas');
+      setError('ID da barbearia não encontrado. Verifique se você está autenticado.');
       setLoading(false);
       return;
     }
@@ -60,6 +64,7 @@ export const useWhatsAppConversations = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('📡 Buscando conversas para barbershop_id:', barbershopId);
 
       // Buscar conversas com informações das tags
       const { data: conversationsData, error: conversationsError } = await supabase
@@ -70,7 +75,32 @@ export const useWhatsAppConversations = () => {
         .eq('barbershop_id', barbershopId)
         .order('last_message_at', { ascending: false });
 
-      if (conversationsError) throw conversationsError;
+      if (conversationsError) {
+        console.error('❌ Erro na consulta de conversas:', conversationsError);
+        console.error('❌ Tipo de erro:', conversationsError.code);
+        console.error('❌ Mensagem:', conversationsError.message);
+        console.error('❌ Detalhes:', conversationsError.details);
+        
+        // Log adicional para debug de RLS
+        if (conversationsError.code === 'PGRST103' || conversationsError.message?.includes('policy')) {
+          console.log('🔍 Possível erro de RLS policy - Verificando contexto de autenticação:');
+          console.log('- User ID:', user?.id);
+          console.log('- Profile ID:', profile?.id);
+          console.log('- Barbershop ID:', barbershopId);
+          
+          // Tentar query simplificada para debug
+          try {
+            const { count } = await supabase
+              .from('whatsapp_conversations')
+              .select('*', { count: 'exact', head: true });
+            console.log('🔍 Total de conversas (sem filtro):', count);
+          } catch (debugError) {
+            console.log('🔍 Erro mesmo sem filtro:', debugError);
+          }
+        }
+        
+        throw conversationsError;
+      }
 
       // Buscar última mensagem e tags para cada conversa
       const conversationsWithMessages = await Promise.all(
@@ -121,10 +151,28 @@ export const useWhatsAppConversations = () => {
         })
       );
 
+      console.log('✅ Conversas carregadas com sucesso:', conversationsWithMessages.length);
       setConversations(conversationsWithMessages);
     } catch (err: any) {
-      console.error('Error fetching conversations:', err);
-      setError(err.message || 'Erro ao carregar conversas');
+      console.error('❌ Error fetching conversations:', err);
+      console.error('❌ Detalhes do erro:', {
+        message: err.message,
+        code: err.code,
+        details: err.details,
+        hint: err.hint
+      });
+      
+      // Mensagem de erro mais específica baseada no tipo de erro
+      let errorMessage = 'Erro ao carregar conversas';
+      if (err.code === 'PGRST103' || err.message?.includes('policy')) {
+        errorMessage = 'Erro de permissão - Verifique se você está autenticado corretamente';
+      } else if (err.message?.includes('rate limit')) {
+        errorMessage = 'Muitas tentativas - Aguarde um momento e tente novamente';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -327,8 +375,19 @@ export const useWhatsAppConversations = () => {
   }, [barbershopId]);
 
   useEffect(() => {
-    fetchConversations();
-    fetchTags();
+    console.log('📋 useWhatsAppConversations useEffect executado', { 
+      barbershopId,
+      userId: user?.id,
+      profileId: profile?.id,
+      isAuthenticated: !!user 
+    });
+    
+    if (barbershopId) {
+      fetchConversations();
+      fetchTags();
+    } else {
+      console.warn('⚠️ barbershopId não disponível, pulando fetch');
+    }
   }, [barbershopId]);
 
   return {

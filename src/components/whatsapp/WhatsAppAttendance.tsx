@@ -4,6 +4,7 @@ import { useWhatsAppConversations } from '@/hooks/useWhatsAppConversations';
 import ConversationsList from './ConversationsList';
 import ChatInterface from './ChatInterface';
 import AIStatusDashboard from './AIStatusDashboard';
+import AuthDebugPanel from './AuthDebugPanel';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Bot, User, MessageSquare, TrendingUp, AlertTriangle } from 'lucide-react';
@@ -35,13 +36,18 @@ const WhatsAppAttendance: React.FC = () => {
   if (error) {
     return (
       <DashboardLayout activeTab="whatsapp">
-        <Card className="p-6">
-          <div className="text-center text-red-600">
-            <MessageSquare className="h-12 w-12 mx-auto mb-3" />
-            <h3 className="text-lg font-semibold mb-2">Erro ao carregar conversas</h3>
-            <p>{error}</p>
-          </div>
-        </Card>
+        <div className="space-y-6">
+          <Card className="p-6">
+            <div className="text-center text-red-600">
+              <MessageSquare className="h-12 w-12 mx-auto mb-3" />
+              <h3 className="text-lg font-semibold mb-2">Erro ao carregar conversas</h3>
+              <p className="mb-4">{error}</p>
+            </div>
+          </Card>
+          
+          {/* Debug panel quando há erro */}
+          <AuthDebugPanel />
+        </div>
       </DashboardLayout>
     );
   }

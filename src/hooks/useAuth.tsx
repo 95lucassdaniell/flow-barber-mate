@@ -53,12 +53,13 @@ export const useAuth = () => {
   useEffect(() => {
     let mounted = true;
     let retryCount = 0;
-    const maxRetries = 3;
+    const maxRetries = 2; // Reduzido de 3 para 2
     const authKey = 'useAuth-init';
     
-    // Verificar rate limit para prevenir loops
-    if (!globalState.checkRateLimit(authKey, 3, 5000)) {
+    // Rate limit mais restritivo para prevenir loops
+    if (!globalState.checkRateLimit(authKey, 2, 10000)) { // Aumentado de 5s para 10s
       console.warn('🚨 Auth rate limit atingido, ignorando inicialização');
+      setLoading(false);
       return;
     }
     
@@ -77,9 +78,9 @@ export const useAuth = () => {
             setUser(session?.user ?? null);
             
             if (session?.user) {
-              // Fetch profile with rate limit
+              // Fetch profile with rate limit mais restritivo
               const profileKey = `profile-${session.user.id}`;
-              if (globalState.checkRateLimit(profileKey, 2, 3000)) {
+              if (globalState.checkRateLimit(profileKey, 1, 5000)) { // Apenas 1 chamada por 5s
                 setTimeout(async () => {
                   if (mounted) {
                     let profileData = await fetchProfile(session.user.id);
@@ -93,7 +94,9 @@ export const useAuth = () => {
                       setProfile(profileData as Profile);
                     }
                   }
-                }, 100);
+                }, 200); // Aumentado de 100ms para 200ms
+              } else {
+                console.warn('🚨 Profile fetch rate limit atingido');
               }
             } else {
               if (mounted) setProfile(null);
