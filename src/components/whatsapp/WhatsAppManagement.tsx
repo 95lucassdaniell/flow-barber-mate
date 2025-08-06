@@ -3,7 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Settings, Send, History, Plus } from "lucide-react";
+import { MessageSquare, Settings, Send, History, Plus, Bot } from "lucide-react";
+import { Link } from "react-router-dom";
 import WhatsAppConfig from "./WhatsAppConfig";
 import MessageTemplates from "./MessageTemplates";
 import SendMessage from "./SendMessage";
@@ -23,9 +24,17 @@ const WhatsAppManagement = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Badge variant={isConnected ? "default" : "secondary"}>
-            {isConnected ? "Conectado" : "Desconectado"}
-          </Badge>
+            <div className="flex items-center gap-3">
+              <Badge variant={isConnected ? "default" : "secondary"}>
+                {isConnected ? "Conectado" : "Desconectado"}
+              </Badge>
+              <Link to="/whatsapp-attendance">
+                <Button variant="outline" size="sm">
+                  <Bot className="h-4 w-4 mr-2" />
+                  Atendimento IA
+                </Button>
+              </Link>
+            </div>
         </div>
       </div>
 

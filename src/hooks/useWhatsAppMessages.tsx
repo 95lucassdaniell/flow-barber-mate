@@ -8,14 +8,17 @@ export interface WhatsAppMessage {
   contact_name?: string | null;
   content: any; // JSONB field
   message_type: string;
-  direction: string; // Will be cast to 'incoming' | 'outgoing'
-  status: string; // Will be cast to proper status type
+  direction: 'incoming' | 'outgoing';
+  status: string;
   message_id?: string | null;
   instance_id?: string | null;
   appointment_id?: string | null;
   client_id?: string | null;
   barbershop_id: string;
   created_at: string;
+  conversation_id?: string;
+  ai_handled?: boolean;
+  human_agent_id?: string;
 }
 
 export const useWhatsAppMessages = () => {
@@ -46,7 +49,10 @@ export const useWhatsAppMessages = () => {
         throw queryError;
       }
 
-      setMessages((data || []) as WhatsAppMessage[]);
+      setMessages((data || []).map(msg => ({
+        ...msg,
+        direction: msg.direction as 'incoming' | 'outgoing'
+      })));
     } catch (err: any) {
       console.error('Error fetching WhatsApp messages:', err);
       setError(err.message || 'Erro ao carregar mensagens');

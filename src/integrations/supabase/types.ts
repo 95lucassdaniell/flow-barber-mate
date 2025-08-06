@@ -3470,6 +3470,39 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_ai_context: {
+        Row: {
+          collected_data: Json
+          context_data: Json
+          conversation_id: string
+          created_at: string
+          id: string
+          intent: string | null
+          step: string | null
+          updated_at: string
+        }
+        Insert: {
+          collected_data?: Json
+          context_data?: Json
+          conversation_id: string
+          created_at?: string
+          id?: string
+          intent?: string | null
+          step?: string | null
+          updated_at?: string
+        }
+        Update: {
+          collected_data?: Json
+          context_data?: Json
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          intent?: string | null
+          step?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_automation_logs: {
         Row: {
           appointment_id: string | null
@@ -3548,6 +3581,72 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_conversation_tags: {
+        Row: {
+          applied_at: string
+          applied_by: string | null
+          conversation_id: string
+          id: string
+          tag_id: string
+        }
+        Insert: {
+          applied_at?: string
+          applied_by?: string | null
+          conversation_id: string
+          id?: string
+          tag_id: string
+        }
+        Update: {
+          applied_at?: string
+          applied_by?: string | null
+          conversation_id?: string
+          id?: string
+          tag_id?: string
+        }
+        Relationships: []
+      }
+      whatsapp_conversations: {
+        Row: {
+          ai_enabled: boolean
+          barbershop_id: string
+          client_name: string | null
+          client_phone: string
+          created_at: string
+          human_agent_id: string | null
+          human_takeover: boolean
+          id: string
+          last_message_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ai_enabled?: boolean
+          barbershop_id: string
+          client_name?: string | null
+          client_phone: string
+          created_at?: string
+          human_agent_id?: string | null
+          human_takeover?: boolean
+          id?: string
+          last_message_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_enabled?: boolean
+          barbershop_id?: string
+          client_name?: string | null
+          client_phone?: string
+          created_at?: string
+          human_agent_id?: string | null
+          human_takeover?: boolean
+          id?: string
+          last_message_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_instances: {
         Row: {
           api_type: string | null
@@ -3621,13 +3720,16 @@ export type Database = {
       }
       whatsapp_messages: {
         Row: {
+          ai_handled: boolean | null
           appointment_id: string | null
           barbershop_id: string
           client_id: string | null
           contact_name: string | null
           content: Json
+          conversation_id: string | null
           created_at: string
           direction: string
+          human_agent_id: string | null
           id: string
           instance_id: string
           message_id: string | null
@@ -3636,13 +3738,16 @@ export type Database = {
           status: string
         }
         Insert: {
+          ai_handled?: boolean | null
           appointment_id?: string | null
           barbershop_id: string
           client_id?: string | null
           contact_name?: string | null
           content: Json
+          conversation_id?: string | null
           created_at?: string
           direction: string
+          human_agent_id?: string | null
           id?: string
           instance_id: string
           message_id?: string | null
@@ -3651,13 +3756,16 @@ export type Database = {
           status?: string
         }
         Update: {
+          ai_handled?: boolean | null
           appointment_id?: string | null
           barbershop_id?: string
           client_id?: string | null
           contact_name?: string | null
           content?: Json
+          conversation_id?: string | null
           created_at?: string
           direction?: string
+          human_agent_id?: string | null
           id?: string
           instance_id?: string
           message_id?: string | null
@@ -3739,6 +3847,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      whatsapp_tags: {
+        Row: {
+          barbershop_id: string
+          color: string
+          created_at: string
+          description: string | null
+          id: string
+          is_system: boolean
+          name: string
+        }
+        Insert: {
+          barbershop_id: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+        }
+        Update: {
+          barbershop_id?: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+        }
+        Relationships: []
       }
       whatsapp_templates: {
         Row: {
