@@ -42,16 +42,61 @@ serve(async (req) => {
     if (testType === 'all' || testType === 'api_connectivity') {
       try {
         console.log('Testing Evolution API connectivity...');
-        console.log(`Testing URL: ${evolutionApiUrl}/manager/fetchInstances`);
+        console.log(`Base URL: ${evolutionApiUrl}`);
         console.log(`Using API Key: ${evolutionApiKey.substring(0, 10)}...`);
         
-        const connectivityResponse = await fetch(`${evolutionApiUrl}/manager/fetchInstances`, {
-          method: 'GET',
-          headers: {
-            'apikey': evolutionApiKey,
-            'Content-Type': 'application/json'
+        // Test different possible endpoints
+        const endpoints = [
+          '/instance/fetchInstances',
+          '/instances',
+          '/manager/fetchInstances',
+          '/api/instance/fetchInstances',
+          '/v1/instance/fetchInstances'
+        ];
+        
+        let connectivityResponse: Response | null = null;
+        let workingEndpoint = '';
+        
+        for (const endpoint of endpoints) {
+          const testUrl = `${evolutionApiUrl}${endpoint}`;
+          console.log(`Testing endpoint: ${testUrl}`);
+          
+          try {
+            const response = await fetch(testUrl, {
+              method: 'GET',
+              headers: {
+                'apikey': evolutionApiKey,
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            console.log(`${endpoint} - Status: ${response.status}`);
+            
+            // If we get a successful response or 401 (which means endpoint exists but auth might be wrong)
+            if (response.ok || response.status === 401) {
+              connectivityResponse = response;
+              workingEndpoint = endpoint;
+              console.log(`Found working endpoint: ${endpoint}`);
+              break;
+            }
+          } catch (error) {
+            console.log(`${endpoint} - Error: ${error.message}`);
+            continue;
           }
-        });
+        }
+        
+        if (!connectivityResponse) {
+          // If no endpoint worked, try the base URL to see what we get
+          console.log('Testing base URL without endpoint...');
+          connectivityResponse = await fetch(evolutionApiUrl, {
+            method: 'GET',
+            headers: {
+              'apikey': evolutionApiKey,
+              'Content-Type': 'application/json'
+            }
+          });
+          workingEndpoint = 'base';
+        }
 
         console.log(`Response status: ${connectivityResponse.status}`);
         console.log(`Response headers:`, Object.fromEntries(connectivityResponse.headers.entries()));
@@ -68,7 +113,9 @@ serve(async (req) => {
               message: 'Evolution API is accessible',
               instanceCount: instances.length,
               instances: instances,
-              api_url: evolutionApiUrl
+              api_url: evolutionApiUrl,
+              working_endpoint: workingEndpoint,
+              tested_endpoints: endpoints
             };
           } catch (parseError) {
             results.tests.api_connectivity = {
