@@ -329,6 +329,38 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
 
   return (
     <div className="space-y-6">
+      {/* Configuration Status Alert */}
+      <Card className="border-amber-200 bg-amber-50">
+        <CardHeader>
+          <CardTitle className="text-amber-800">⚙️ Configuração Necessária</CardTitle>
+          <CardDescription className="text-amber-700">
+            Para completar a integração, configure as variáveis de ambiente no Supabase Dashboard:
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="bg-white p-3 rounded border">
+            <p className="font-mono text-sm text-gray-800">
+              <strong>EVOLUTION_API_URL:</strong><br/>
+              https://atendimento-evolution-api.qna796.easypanel.host
+            </p>
+          </div>
+          <div className="bg-white p-3 rounded border">
+            <p className="font-mono text-sm text-gray-800">
+              <strong>EVOLUTION_GLOBAL_API_KEY:</strong><br/>
+              shHxOuaaWufn4uirAI95CfGbgIqLFivUCehX22Fmv7gI2kTLKZ52QfKkR0jDFNrlv7DLXUL0kBFRJBn9cgi4UlzDYIWDzERRG9oEmDBCXxRiqye31VGNJsY1Ue0eziEQ
+            </p>
+          </div>
+          <div className="text-sm text-amber-700 bg-amber-100 p-3 rounded">
+            <p><strong>Passos:</strong></p>
+            <ol className="list-decimal list-inside space-y-1 mt-2">
+              <li>Acesse o <strong>Supabase Dashboard</strong></li>
+              <li>Vá em <strong>Settings → Edge Functions</strong></li>
+              <li>Adicione as duas variáveis acima</li>
+              <li>Salve e volte aqui para continuar</li>
+            </ol>
+          </div>
+        </CardContent>
+      </Card>
       
       <Card>
         <CardHeader>

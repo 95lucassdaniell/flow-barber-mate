@@ -49,7 +49,7 @@ const WhatsAppManagement = () => {
         <TabsContent value="conversations" className="space-y-6">
           <div className="p-4">
             <p className="text-muted-foreground">
-              Use a aba Debug para diagnosticar problemas com as conversas do WhatsApp.
+              Conversas serão exibidas após a configuração das variáveis de ambiente e conexão do WhatsApp.
             </p>
           </div>
         </TabsContent>
@@ -65,7 +65,7 @@ const WhatsAppManagement = () => {
         <TabsContent value="ai" className="space-y-6">
           <div className="p-4">
             <p className="text-muted-foreground">
-              Dashboard de IA será implementado após a resolução dos problemas de conectividade.
+              Dashboard de IA será disponibilizado após a configuração completa do WhatsApp.
             </p>
           </div>
         </TabsContent>
