@@ -13,9 +13,12 @@ serve(async (req) => {
 
   try {
     console.log('=== EVOLUTION WEBHOOK RECEIVED ===');
+    console.log('Timestamp:', new Date().toISOString());
     console.log('Request method:', req.method);
     console.log('Request URL:', req.url);
     console.log('Request headers:', Object.fromEntries(req.headers.entries()));
+    console.log('User-Agent:', req.headers.get('user-agent'));
+    console.log('Content-Type:', req.headers.get('content-type'));
     
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -25,6 +28,7 @@ serve(async (req) => {
     const webhookData = await req.json();
     console.log('=== WEBHOOK DATA RECEIVED ===');
     console.log('Full webhook data:', JSON.stringify(webhookData, null, 2));
+    console.log('Data size:', JSON.stringify(webhookData).length, 'bytes');
 
     const { instance, event, data } = webhookData;
 
