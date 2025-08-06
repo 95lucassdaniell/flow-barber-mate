@@ -4,9 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import WhatsAppConfig from "./WhatsAppConfig";
 import ConversationsList from "./ConversationsList";
+import ConversationTestPanel from "./ConversationTestPanel";
 import MessageTemplates from "./MessageTemplates";
 import SendMessage from "./SendMessage";
 import AIStatusDashboard from "./AIStatusDashboard";
+import WhatsAppAttendance from "./WhatsAppAttendance";
 import EvolutionApiTester from "./EvolutionApiTester";
 import EvolutionApiConfig from "./EvolutionApiConfig";
 import { EvolutionDebugPanel } from "./EvolutionDebugPanel";
@@ -48,19 +50,8 @@ const WhatsAppManagement = () => {
 
         <TabsContent value="conversations" className="space-y-6">
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Conversas do WhatsApp</CardTitle>
-                <CardDescription>
-                  Gerencie conversas com seus clientes
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground text-center py-8">
-                  As conversas aparecerão aqui após conectar o WhatsApp e receber mensagens.
-                </p>
-              </CardContent>
-            </Card>
+            <ConversationTestPanel />
+            <WhatsAppAttendance />
           </div>
         </TabsContent>
 
