@@ -2,10 +2,9 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import BarberFinancialDashboard from "@/components/financial/BarberFinancialDashboard";
-import AdminFinancialDashboard from "@/components/financial/AdminFinancialDashboard";
+import AdminSubscriptionPlansPage from "@/components/admin/AdminSubscriptionPlansPage";
 
-export default function FinancialPage() {
+export default function FinancialSubscriptionsPage() {
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -15,6 +14,12 @@ export default function FinancialPage() {
     }
   }, [user, loading, navigate]);
 
+  useEffect(() => {
+    if (!loading && profile && profile.role !== 'admin') {
+      navigate('/login');
+    }
+  }, [profile, loading, navigate]);
+
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -23,30 +28,21 @@ export default function FinancialPage() {
     );
   }
 
-  if (!user || !profile) {
+  if (!user || !profile || profile.role !== 'admin') {
     return null;
   }
 
-  const isAdmin = profile.role === 'admin';
-
   return (
-    <DashboardLayout activeTab="financial">
+    <DashboardLayout activeTab="financial-subscriptions">
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Financeiro</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Assinaturas</h1>
           <p className="text-muted-foreground">
-            {isAdmin 
-              ? "Gerencie as finanças da barbearia e acompanhe a performance da equipe"
-              : "Acompanhe suas comissões e performance"
-            }
+            Gerencie os planos de assinatura e controle de clientes
           </p>
         </div>
 
-        {isAdmin ? (
-          <AdminFinancialDashboard />
-        ) : (
-          <BarberFinancialDashboard />
-        )}
+        <AdminSubscriptionPlansPage />
       </div>
     </DashboardLayout>
   );

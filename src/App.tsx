@@ -28,7 +28,10 @@ import SuperAdminAuditPage from "./pages/SuperAdminAuditPage";
 import SuperAdminMonitoringPage from "./pages/SuperAdminMonitoringPage";
 import SuperAdminSettingsPage from "./pages/SuperAdminSettingsPage";
 import SuperAdminHistoricalDataPage from "./pages/SuperAdminHistoricalDataPage";
-import FinancialPage from "./pages/FinancialPage";
+import FinancialDashboardPage from "./pages/FinancialDashboardPage";
+import FinancialSubscriptionsPage from "./pages/FinancialSubscriptionsPage";
+import FinancialCommissionsPage from "./pages/FinancialCommissionsPage";
+import FinancialProvidersPage from "./pages/FinancialProvidersPage";
 import AIPage from "./pages/AIPage";
 import GoalsPage from "./pages/GoalsPage";
 import ProviderLoginPage from "./components/providers/ProviderLoginPage";
@@ -170,7 +173,35 @@ function App() {
             <Route path="/app/:slug/financial" element={
               <SessionGuard>
                 <ProtectedRoute requiresRole="admin">
-                  <FinancialPage />
+                  <Navigate to="./dashboard" relative="path" replace />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/financial/dashboard" element={
+              <SessionGuard>
+                <ProtectedRoute requiresRole="admin">
+                  <FinancialDashboardPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/financial/assinaturas" element={
+              <SessionGuard>
+                <ProtectedRoute requiresRole="admin">
+                  <FinancialSubscriptionsPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/financial/comissoes" element={
+              <SessionGuard>
+                <ProtectedRoute>
+                  <FinancialCommissionsPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/financial/prestadores" element={
+              <SessionGuard>
+                <ProtectedRoute requiresRole="admin">
+                  <FinancialProvidersPage />
                 </ProtectedRoute>
               </SessionGuard>
             } />

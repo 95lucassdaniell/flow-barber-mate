@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   Calendar, 
@@ -8,7 +7,6 @@ import {
   MessageCircle, 
   DollarSign, 
   Settings, 
-  Menu,
   Bell,
   LogOut,
   BarChart3,
@@ -17,35 +15,46 @@ import {
   Package,
   Receipt,
   Brain,
-  Target
+  Target,
+  CreditCard,
+  HandCoins,
+  UsersIcon
 } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { NavLink, useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useBarbershopBySlug } from "@/hooks/useBarbershopBySlug";
-import logo from "@/assets/barberflow-logo.png";
 import usePageTitle from "@/hooks/usePageTitle";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
   activeTab?: string;
 }
 
-const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutProps) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { slug } = useParams();
-  const { profile, signOut } = useAuth();
-  
-  // Use slug-based fallback for immediate barbershop data
-  const { barbershop: barbershopBySlug, loading: slugLoading } = useBarbershopBySlug(slug || '');
-  
-  const [barbershopData, setBarbershopData] = useState<{
-    name: string;
-    logo_url: string;
-  }>({
-    name: "Barbearia",
-    logo_url: ""
-  });
+const AppSidebar = ({ barbershopData, profile, handleLogout, slug }: {
+  barbershopData: { name: string; logo_url: string };
+  profile: any;
+  handleLogout: () => void;
+  slug: string | undefined;
+}) => {
+  const location = useLocation();
+  const currentPath = location.pathname;
 
   const navigation = [
     { id: "dashboard", name: "Dashboard", icon: BarChart3, href: `/app/${slug}` },
@@ -60,9 +69,120 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
     { id: "comandas", name: "Comandas", icon: Receipt, href: `/app/${slug}/comandas` },
     { id: "caixa", name: "Caixa", icon: DollarSign, href: `/app/${slug}/caixa` },
     { id: "whatsapp", name: "WhatsApp", icon: MessageCircle, href: `/app/${slug}/whatsapp` },
-    { id: "financial", name: "Financeiro", icon: DollarSign, href: `/app/${slug}/financial` },
     { id: "settings", name: "Configurações", icon: Settings, href: `/app/${slug}/settings` },
   ];
+
+  const financialSubItems = [
+    { id: "financial-dashboard", name: "Dashboard Geral", icon: BarChart3, href: `/app/${slug}/financial/dashboard` },
+    { id: "financial-subscriptions", name: "Assinaturas", icon: CreditCard, href: `/app/${slug}/financial/assinaturas` },
+    { id: "financial-commissions", name: "Comissões", icon: HandCoins, href: `/app/${slug}/financial/comissoes` },
+    { id: "financial-providers", name: "Prestadores", icon: UsersIcon, href: `/app/${slug}/financial/prestadores` },
+  ];
+
+  const isFinancialActive = currentPath.includes('/financial');
+  const getNavCls = (href: string) => 
+    currentPath === href ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/50";
+
+  return (
+    <Sidebar>
+      <SidebarContent>
+        {/* Header with logo and barbershop info */}
+        <div className="p-4 border-b border-sidebar-border">
+          <div className="flex flex-col items-center space-y-2">
+            <Avatar className="w-24 h-24">
+              <AvatarImage src={barbershopData.logo_url} alt="Logo da barbearia" />
+              <AvatarFallback className="text-xl">
+                {barbershopData.name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="text-center">
+              <h2 className="font-semibold text-lg text-sidebar-foreground">{barbershopData.name}</h2>
+              <p className="text-sm text-sidebar-foreground/70">
+                {profile?.role === 'admin' ? 'Administrador' : 
+                 profile?.role === 'receptionist' ? 'Recepcionista' : 'Barbeiro'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navigation.map((item) => {
+                const Icon = item.icon;
+                
+                return (
+                  <SidebarMenuItem key={item.id}>
+                    <SidebarMenuButton asChild>
+                      <NavLink to={item.href} className={getNavCls(item.href)}>
+                        <Icon className="w-5 h-5" />
+                        <span>{item.name}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+              
+              {/* Financial submenu */}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg cursor-pointer ${isFinancialActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/50"}`}>
+                    <DollarSign className="w-5 h-5" />
+                    <span>Financeiro</span>
+                  </div>
+                </SidebarMenuButton>
+                <SidebarMenuSub>
+                  {financialSubItems.map((subItem) => {
+                    const SubIcon = subItem.icon;
+                    
+                    return (
+                      <SidebarMenuSubItem key={subItem.id}>
+                        <SidebarMenuSubButton asChild>
+                          <NavLink to={subItem.href} className={getNavCls(subItem.href)}>
+                            <SubIcon className="w-4 h-4" />
+                            <span>{subItem.name}</span>
+                          </NavLink>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    );
+                  })}
+                </SidebarMenuSub>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Logout button */}
+        <div className="mt-auto p-4">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start h-10" 
+            size="sm"
+            onClick={handleLogout}
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            <span>Sair</span>
+          </Button>
+        </div>
+      </SidebarContent>
+    </Sidebar>
+  );
+};
+
+const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutProps) => {
+  const { slug } = useParams();
+  const { profile, signOut } = useAuth();
+  
+  // Use slug-based fallback for immediate barbershop data
+  const { barbershop: barbershopBySlug, loading: slugLoading } = useBarbershopBySlug(slug || '');
+  
+  const [barbershopData, setBarbershopData] = useState<{
+    name: string;
+    logo_url: string;
+  }>({
+    name: "Barbearia",
+    logo_url: ""
+  });
 
   // Debug logs for troubleshooting
   useEffect(() => {
@@ -151,6 +271,10 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
       caixa: "Caixa",
       whatsapp: "WhatsApp",
       financial: "Financeiro",
+      "financial-dashboard": "Dashboard Geral",
+      "financial-subscriptions": "Assinaturas", 
+      "financial-commissions": "Comissões",
+      "financial-providers": "Prestadores",
       settings: "Configurações"
     };
     return tabNames[tabId] || "Dashboard";
@@ -163,107 +287,48 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
   });
 
   return (
-    <div className="min-h-screen bg-secondary/20 flex">
-      {/* Sidebar */}
-      <aside className={`bg-card border-r border-border transition-all duration-300 ${
-        sidebarOpen ? "w-64" : "w-16 md:w-64"
-      }`}>
-        <div className="p-4 border-b border-border">
-          <div className="flex flex-col items-center space-y-2">
-            <Avatar className="w-36 h-36">
-              <AvatarImage src={barbershopData.logo_url} alt="Logo da barbearia" />
-              <AvatarFallback className="text-2xl">
-                {barbershopData.name.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div className={`text-center ${sidebarOpen ? "block" : "hidden md:block"}`}>
-              <h2 className="font-semibold text-lg">{barbershopData.name}</h2>
-              <p className="text-sm text-muted-foreground">
-                {profile?.role === 'admin' ? 'Administrador' : 
-                 profile?.role === 'receptionist' ? 'Recepcionista' : 'Barbeiro'}
-              </p>
+    <SidebarProvider>
+      <div className="min-h-screen bg-secondary/20 flex w-full">
+        <AppSidebar 
+          barbershopData={barbershopData}
+          profile={profile}
+          handleLogout={handleLogout}
+          slug={slug}
+        />
+        
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col">
+          {/* Top Bar */}
+          <header className="bg-card border-b border-border p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <SidebarTrigger />
+                <h1 className="text-2xl font-semibold">
+                  {getTabTitle(activeTab)}
+                </h1>
+              </div>
+
+              <div className="flex items-center space-x-4">
+                <Button variant="ghost" size="sm">
+                  <Bell className="w-5 h-5" />
+                </Button>
+                <Avatar className="w-8 h-8">
+                  <AvatarImage src="" />
+                  <AvatarFallback>
+                    {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
             </div>
-          </div>
+          </header>
+
+          {/* Page Content */}
+          <main className="flex-1 p-6">
+            {children}
+          </main>
         </div>
-
-        <nav className="p-4 space-y-2">
-          {navigation.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            
-            return (
-              <Link
-                key={item.id}
-                to={item.href}
-                className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
-                  isActive 
-                    ? "bg-accent text-accent-foreground" 
-                    : "hover:bg-accent/50"
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className={`${sidebarOpen ? "block" : "hidden md:block"}`}>
-                  {item.name}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="absolute bottom-4 left-4 right-4">
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start h-10" 
-            size="sm"
-            onClick={handleLogout}
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            <span className={`${sidebarOpen ? "block" : "hidden md:block"}`}>
-              Sair
-            </span>
-          </Button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        {/* Top Bar */}
-        <header className="bg-card border-b border-border p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="md:hidden"
-              >
-                <Menu className="w-5 h-5" />
-              </Button>
-              <h1 className="text-2xl font-semibold">
-                {navigation.find(item => item.id === activeTab)?.name || "Dashboard"}
-              </h1>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm">
-                <Bell className="w-5 h-5" />
-              </Button>
-              <Avatar className="w-8 h-8">
-                <AvatarImage src="" />
-                <AvatarFallback>
-                  {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'U'}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-          </div>
-        </header>
-
-        {/* Page Content */}
-        <main className="flex-1 p-6">
-          {children}
-        </main>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 
