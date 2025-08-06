@@ -16,10 +16,12 @@ import {
   Minus,
   Search,
   Trash2,
-  ExternalLink,
+  Copy,
   RefreshCw,
   Users
 } from 'lucide-react';
+import { useBarbershopSlug } from '@/hooks/useBarbershopSlug';
+import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -36,6 +38,7 @@ import {
 
 const ReviewsManagement: React.FC = () => {
   const { reviews, metrics, providers, loading, deleteReview, refetch } = useClientReviews();
+  const { slug, loading: slugLoading } = useBarbershopSlug();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProvider, setSelectedProvider] = useState<string>('all');
 
@@ -71,6 +74,33 @@ const ReviewsManagement: React.FC = () => {
         ))}
       </div>
     );
+  };
+
+  const handleCopyReviewLink = async () => {
+    if (!slug) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível gerar o link de avaliação",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reviewLink = `${window.location.origin}/review/${slug}`;
+    
+    try {
+      await navigator.clipboard.writeText(reviewLink);
+      toast({
+        title: "Link copiado!",
+        description: "O link de avaliação foi copiado para a área de transferência",
+      });
+    } catch (err) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível copiar o link",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -181,9 +211,13 @@ const ReviewsManagement: React.FC = () => {
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Atualizar
           </Button>
-          <Button variant="outline">
-            <ExternalLink className="w-4 h-4 mr-2" />
-            Link de Avaliação
+          <Button 
+            variant="outline"
+            onClick={handleCopyReviewLink}
+            disabled={slugLoading || !slug}
+          >
+            <Copy className="w-4 h-4 mr-2" />
+            Copiar Link
           </Button>
         </div>
       </div>
