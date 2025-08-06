@@ -208,10 +208,6 @@ const AIInsightsPage: React.FC = () => {
 
         {/* Métricas IA */}
         <div>
-          <div className="flex items-center gap-2 mb-4">
-            <Brain className="h-5 w-5 text-primary" />
-            <h3 className="text-lg font-semibold">Insights de IA</h3>
-          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
