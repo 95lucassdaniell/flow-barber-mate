@@ -7,7 +7,7 @@ import AdminSubscriptionPlansPage from "@/components/admin/AdminSubscriptionPlan
 import SubscriptionFinancialStats from "@/components/financial/SubscriptionFinancialStats";
 import SubscriptionBillingList from "@/components/financial/SubscriptionBillingList";
 import FinancialFilters from "@/components/financial/FinancialFilters";
-import { useSubscriptionFinancialData } from "@/hooks/useSubscriptionFinancialData";
+import { useIntelligentSubscriptionData } from "@/hooks/useIntelligentSubscriptionData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, Settings, DollarSign } from "lucide-react";
@@ -28,11 +28,10 @@ export default function FinancialSubscriptionsPage() {
 
   const {
     stats: subscriptionStats,
-    loading: subscriptionLoading
-  } = useSubscriptionFinancialData(
-    financialParams.startDate,
-    financialParams.endDate
-  );
+    billings,
+    loading: subscriptionLoading,
+    fromCache
+  } = useIntelligentSubscriptionData(financialParams);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -88,7 +87,8 @@ export default function FinancialSubscriptionsPage() {
           <CardContent>
             <SubscriptionFinancialStats 
               stats={subscriptionStats} 
-              loading={subscriptionLoading} 
+              loading={subscriptionLoading}
+              fromCache={fromCache}
             />
           </CardContent>
         </Card>
@@ -107,7 +107,11 @@ export default function FinancialSubscriptionsPage() {
           </TabsList>
 
           <TabsContent value="billing" className="space-y-4">
-            <SubscriptionBillingList />
+            <SubscriptionBillingList 
+              billings={billings}
+              loading={subscriptionLoading}
+              fromCache={fromCache}
+            />
           </TabsContent>
 
           <TabsContent value="plans" className="space-y-4">

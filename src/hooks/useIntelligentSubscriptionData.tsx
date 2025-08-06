@@ -12,11 +12,12 @@ interface SubscriptionStats {
   average_ticket: number;
 }
 
-interface SubscriptionBilling {
+export interface SubscriptionBilling {
   id: string;
   subscription_id: string;
   client_name: string;
   provider_name: string;
+  provider_id: string;
   plan_name: string;
   amount: number;
   commission_amount: number;
@@ -214,6 +215,7 @@ export const useIntelligentSubscriptionData = (
         subscription_id: record.subscription_id,
         client_name: client?.name || 'Cliente não encontrado',
         provider_name: provider?.full_name || 'Provider não encontrado',
+        provider_id: subscription?.provider_id || '',
         plan_name: plan?.name || 'Plano não encontrado',
         amount: record.amount,
         commission_amount: record.commission_amount,

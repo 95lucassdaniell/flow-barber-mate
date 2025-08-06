@@ -13,9 +13,10 @@ interface SubscriptionStats {
 interface SubscriptionFinancialStatsProps {
   stats: SubscriptionStats | null;
   loading?: boolean;
+  fromCache?: boolean;
 }
 
-export default function SubscriptionFinancialStats({ stats, loading }: SubscriptionFinancialStatsProps) {
+export default function SubscriptionFinancialStats({ stats, loading, fromCache }: SubscriptionFinancialStatsProps) {
   if (loading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -88,7 +89,13 @@ export default function SubscriptionFinancialStats({ stats, loading }: Subscript
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="space-y-4">
+      {fromCache && (
+        <div className="p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+          ⚡ Dados do cache inteligente - Performance otimizada
+        </div>
+      )}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Assinaturas Ativas</CardTitle>
@@ -140,6 +147,7 @@ export default function SubscriptionFinancialStats({ stats, loading }: Subscript
           </p>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

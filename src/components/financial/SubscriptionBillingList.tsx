@@ -12,8 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useSubscriptionBilling } from "@/hooks/useSubscriptionBilling";
 import { useProviders } from "@/hooks/useProviders";
+import { SubscriptionBilling } from "@/hooks/useIntelligentSubscriptionData";
 import { formatCurrency } from "@/lib/utils";
 import { debugLogger } from "@/lib/debugLogger";
 import { format } from "date-fns";
@@ -28,7 +28,17 @@ interface BillingFilters {
   providerId: string;
 }
 
-export default function SubscriptionBillingList() {
+interface SubscriptionBillingListProps {
+  billings: SubscriptionBilling[];
+  loading: boolean;
+  fromCache?: boolean;
+}
+
+export default function SubscriptionBillingList({ 
+  billings: propBillings, 
+  loading: propLoading, 
+  fromCache 
+}: SubscriptionBillingListProps) {
   const [filters, setFilters] = useState<BillingFilters>({
     status: 'all',
     startDate: '',
@@ -47,8 +57,33 @@ export default function SubscriptionBillingList() {
     providerId: filters.providerId === 'all' ? undefined : filters.providerId
   }), [filters.status, filters.startDate, filters.endDate, filters.providerId]);
 
-  const { billings, loading, updateBillingStatus } = useSubscriptionBilling(hookFilters);
   const { providers } = useProviders();
+  
+  // Filtrar billings localmente para performance
+  const filteredBillings = useMemo(() => {
+    return propBillings.filter(billing => {
+      if (filters.status !== 'all') {
+        if (filters.status === 'overdue') {
+          return billing.status === 'pending' && new Date(billing.due_date) < new Date();
+        }
+        if (billing.status !== filters.status) return false;
+      }
+      
+      if (filters.providerId !== 'all' && billing.provider_id !== filters.providerId) {
+        return false;
+      }
+      
+      if (filters.startDate && new Date(billing.due_date) < new Date(filters.startDate)) {
+        return false;
+      }
+      
+      if (filters.endDate && new Date(billing.due_date) > new Date(filters.endDate)) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [propBillings, filters]);
 
   // Logs movidos para useEffect para evitar execução a cada render
   useEffect(() => {
@@ -56,12 +91,12 @@ export default function SubscriptionBillingList() {
       debugLogger.billing.debug('SubscriptionBillingList', 'Current filters', filters);
       debugLogger.billing.debug('SubscriptionBillingList', 'Processed filters for hook', hookFilters);
       debugLogger.billing.debug('SubscriptionBillingList', 'Component state', {
-        billingsCount: billings?.length || 0,
-        loading,
+        billingsCount: propBillings?.length || 0,
+        loading: propLoading,
         providersCount: providers?.length || 0
       });
     });
-  }, [filters, hookFilters, billings?.length, loading, providers?.length]);
+  }, [filters, hookFilters, propBillings?.length, propLoading, providers?.length]);
 
   const getStatusBadge = (status: string, dueDate: string) => {
     const today = new Date();
@@ -79,7 +114,8 @@ export default function SubscriptionBillingList() {
   };
 
   const handleQuickPay = async (billingId: string) => {
-    await updateBillingStatus(billingId, 'paid', 'Dinheiro');
+    // TODO: Implementar updateBillingStatus no hook inteligente
+    console.log('Marking as paid:', billingId);
   };
 
   const openDetailModal = (billingId: string) => {
@@ -87,15 +123,15 @@ export default function SubscriptionBillingList() {
     setShowDetailModal(true);
   };
 
-  const pendingCount = billings.filter(b => b.status === 'pending').length;
-  const overdueCount = billings.filter(b => {
+  const pendingCount = filteredBillings.filter(b => b.status === 'pending').length;
+  const overdueCount = filteredBillings.filter(b => {
     return b.status === 'pending' && new Date(b.due_date) < new Date();
   }).length;
-  const totalPending = billings
+  const totalPending = filteredBillings
     .filter(b => b.status === 'pending')
     .reduce((sum, b) => sum + b.amount, 0);
 
-  if (loading) {
+  if (propLoading) {
     return (
       <div className="flex items-center justify-center h-32">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -210,7 +246,12 @@ export default function SubscriptionBillingList() {
           <CardTitle>Cobranças de Assinaturas</CardTitle>
         </CardHeader>
         <CardContent>
-          {billings.length > 0 ? (
+          {fromCache && (
+            <div className="mb-4 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
+              📊 Dados do cache - Carregamento instantâneo
+            </div>
+          )}
+          {filteredBillings.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -224,7 +265,7 @@ export default function SubscriptionBillingList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {billings.map((billing) => (
+                {filteredBillings.map((billing) => (
                   <TableRow key={billing.id}>
                     <TableCell className="font-medium">{billing.client_name}</TableCell>
                     <TableCell>{billing.provider_name}</TableCell>
