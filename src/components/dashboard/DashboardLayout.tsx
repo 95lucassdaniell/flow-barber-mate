@@ -55,6 +55,7 @@ const AppSidebar = ({ barbershopData, profile, handleLogout, slug }: {
 }) => {
   const location = useLocation();
   const currentPath = location.pathname;
+  const [financialMenuOpen, setFinancialMenuOpen] = useState(false);
 
   const navigation = [
     { id: "dashboard", name: "Dashboard", icon: BarChart3, href: `/app/${slug}` },
@@ -66,8 +67,6 @@ const AppSidebar = ({ barbershopData, profile, handleLogout, slug }: {
     { id: "metas", name: "Metas", icon: Target, href: `/app/${slug}/metas` },
     { id: "services", name: "Serviços", icon: Scissors, href: `/app/${slug}/services` },
     { id: "produtos", name: "Produtos", icon: Package, href: `/app/${slug}/produtos` },
-    { id: "comandas", name: "Comandas", icon: Receipt, href: `/app/${slug}/comandas` },
-    { id: "caixa", name: "Caixa", icon: DollarSign, href: `/app/${slug}/caixa` },
     { id: "whatsapp", name: "WhatsApp", icon: MessageCircle, href: `/app/${slug}/whatsapp` },
     { id: "settings", name: "Configurações", icon: Settings, href: `/app/${slug}/settings` },
   ];
@@ -77,11 +76,20 @@ const AppSidebar = ({ barbershopData, profile, handleLogout, slug }: {
     { id: "financial-subscriptions", name: "Assinaturas", icon: CreditCard, href: `/app/${slug}/financial/assinaturas` },
     { id: "financial-commissions", name: "Comissões", icon: HandCoins, href: `/app/${slug}/financial/comissoes` },
     { id: "financial-providers", name: "Prestadores", icon: UsersIcon, href: `/app/${slug}/financial/prestadores` },
+    { id: "comandas", name: "Comandas", icon: Receipt, href: `/app/${slug}/comandas` },
+    { id: "caixa", name: "Caixa", icon: DollarSign, href: `/app/${slug}/caixa` },
   ];
 
-  const isFinancialActive = currentPath.includes('/financial');
+  const isFinancialActive = currentPath.includes('/financial') || currentPath.includes('/comandas') || currentPath.includes('/caixa');
   const getNavCls = (href: string) => 
     currentPath === href ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/50";
+
+  // Auto-expand financial menu if user is on a financial page
+  useEffect(() => {
+    if (isFinancialActive) {
+      setFinancialMenuOpen(true);
+    }
+  }, [isFinancialActive]);
 
   return (
     <Sidebar>
@@ -125,28 +133,31 @@ const AppSidebar = ({ barbershopData, profile, handleLogout, slug }: {
               
               {/* Financial submenu */}
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg cursor-pointer ${isFinancialActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/50"}`}>
-                    <DollarSign className="w-5 h-5" />
-                    <span>Financeiro</span>
-                  </div>
+                <SidebarMenuButton 
+                  onClick={() => setFinancialMenuOpen(!financialMenuOpen)}
+                  className={`cursor-pointer ${isFinancialActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/50"}`}
+                >
+                  <DollarSign className="w-5 h-5" />
+                  <span>Financeiro</span>
                 </SidebarMenuButton>
-                <SidebarMenuSub>
-                  {financialSubItems.map((subItem) => {
-                    const SubIcon = subItem.icon;
-                    
-                    return (
-                      <SidebarMenuSubItem key={subItem.id}>
-                        <SidebarMenuSubButton asChild>
-                          <NavLink to={subItem.href} className={getNavCls(subItem.href)}>
-                            <SubIcon className="w-4 h-4" />
-                            <span>{subItem.name}</span>
-                          </NavLink>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    );
-                  })}
-                </SidebarMenuSub>
+                {financialMenuOpen && (
+                  <SidebarMenuSub>
+                    {financialSubItems.map((subItem) => {
+                      const SubIcon = subItem.icon;
+                      
+                      return (
+                        <SidebarMenuSubItem key={subItem.id}>
+                          <SidebarMenuSubButton asChild>
+                            <NavLink to={subItem.href} className={getNavCls(subItem.href)}>
+                              <SubIcon className="w-4 h-4" />
+                              <span>{subItem.name}</span>
+                            </NavLink>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      );
+                    })}
+                  </SidebarMenuSub>
+                )}
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
@@ -255,7 +266,6 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
     await signOut();
   };
 
-  // Tab name mapping for better titles
   const getTabTitle = (tabId: string) => {
     const tabNames: Record<string, string> = {
       dashboard: "Dashboard",
