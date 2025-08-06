@@ -68,44 +68,56 @@ export const useAuth = () => {
         // Verificação síncrona imediata do localStorage
         const storedSession = localStorage.getItem('sb-yzqwmxffjufefocgkevz-auth-token');
 
-        // Set up auth state listener FIRST
+        // Set up auth state listener with debouncing
+        let authChangeTimeout: NodeJS.Timeout;
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           (event, session) => {
             if (!mounted) return;
             
-            setAuthError(null);
-            setSession(session);
-            setUser(session?.user ?? null);
+            // Clear previous timeout to debounce rapid auth changes
+            if (authChangeTimeout) {
+              clearTimeout(authChangeTimeout);
+            }
             
-            if (session?.user) {
-              // Fetch profile with rate limit mais restritivo
-              const profileKey = `profile-${session.user.id}`;
-              if (globalState.checkRateLimit(profileKey, 1, 5000)) { // Apenas 1 chamada por 5s
-                setTimeout(async () => {
-                  if (mounted) {
-                    let profileData = await fetchProfile(session.user.id);
-                    
-                    // If no profile exists, create one
-                    if (!profileData) {
-                      profileData = await ensureUserProfile(session.user.id);
-                    }
-                    
+            authChangeTimeout = setTimeout(() => {
+              if (!mounted) return;
+              
+              console.log('🔐 Auth state changed:', event, session ? 'authenticated' : 'no session');
+              
+              setAuthError(null);
+              setSession(session);
+              setUser(session?.user ?? null);
+              
+              if (session?.user) {
+                // Fetch profile with more aggressive rate limiting
+                const profileKey = `profile-${session.user.id}`;
+                if (globalState.checkRateLimit(profileKey, 1, 10000)) { // 1 chamada por 10s
+                  setTimeout(async () => {
                     if (mounted) {
-                      setProfile(profileData as Profile);
+                      let profileData = await fetchProfile(session.user.id);
+                      
+                      // If no profile exists, create one
+                      if (!profileData) {
+                        profileData = await ensureUserProfile(session.user.id);
+                      }
+                      
+                      if (mounted) {
+                        setProfile(profileData as Profile);
+                      }
                     }
-                  }
-                }, 200); // Aumentado de 100ms para 200ms
+                  }, 300); // Increased delay
+                } else {
+                  console.warn('🚨 Profile fetch rate limit atingido');
+                }
               } else {
-                console.warn('🚨 Profile fetch rate limit atingido');
+                if (mounted) setProfile(null);
               }
-            } else {
-              if (mounted) setProfile(null);
-            }
-            
-            if (mounted) {
-              setLoading(false);
-              globalState.clearOperationTimeout('auth-loading');
-            }
+              
+              if (mounted) {
+                setLoading(false);
+                globalState.clearOperationTimeout('auth-loading');
+              }
+            }, 150); // Debounce auth changes
           }
         );
 

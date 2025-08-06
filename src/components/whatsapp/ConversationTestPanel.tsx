@@ -7,7 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { MessageSquare, Plus, Send, Phone } from 'lucide-react';
+import { useBarbershopBySlug } from '@/hooks/useBarbershopBySlug';
+import { MessageSquare, Plus, Send, Phone, AlertCircle } from 'lucide-react';
+import { useParams } from 'react-router-dom';
 
 const ConversationTestPanel = () => {
   const [testPhone, setTestPhone] = useState('');
@@ -16,9 +18,14 @@ const ConversationTestPanel = () => {
   const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
   const { profile } = useAuth();
+  const { slug } = useParams<{ slug: string }>();
+  const { barbershop } = useBarbershopBySlug(slug || '');
+  
+  // Use barbershop_id from profile or fallback to barbershop from slug
+  const barbershopId = profile?.barbershop_id || barbershop?.id;
 
   const createTestConversation = async () => {
-    if (!testPhone.trim() || !profile?.barbershop_id) return;
+    if (!testPhone.trim() || !barbershopId) return;
 
     setIsCreating(true);
     try {
@@ -27,7 +34,7 @@ const ConversationTestPanel = () => {
       const { data, error } = await supabase
         .from('whatsapp_conversations')
         .upsert({
-          barbershop_id: profile.barbershop_id,
+          barbershop_id: barbershopId,
           client_phone: formattedPhone,
           client_name: `Cliente Teste ${formattedPhone.slice(-4)}`,
           last_message_at: new Date().toISOString(),
@@ -60,7 +67,7 @@ const ConversationTestPanel = () => {
   };
 
   const sendTestMessage = async () => {
-    if (!testPhone.trim() || !testMessage.trim() || !profile?.barbershop_id) return;
+    if (!testPhone.trim() || !testMessage.trim() || !barbershopId) return;
 
     setIsSending(true);
     try {
@@ -70,7 +77,7 @@ const ConversationTestPanel = () => {
         body: {
           phone: formattedPhone,
           message: testMessage,
-          barbershop_id: profile.barbershop_id
+          barbershop_id: barbershopId
         }
       });
 
@@ -103,6 +110,17 @@ const ConversationTestPanel = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {!barbershopId && (
+          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-center gap-2 text-yellow-800">
+              <AlertCircle className="h-4 w-4" />
+              <span className="font-medium">Aguardando autenticação...</span>
+            </div>
+            <p className="text-sm text-yellow-700 mt-1">
+              O sistema está carregando as informações da barbearia. Aguarde um momento.
+            </p>
+          </div>
+        )}
         <div className="p-4 bg-muted/50 rounded-lg">
           <h4 className="font-medium mb-2">Criar Conversa de Teste</h4>
           <p className="text-sm text-muted-foreground mb-3">
@@ -117,7 +135,7 @@ const ConversationTestPanel = () => {
             />
             <Button
               onClick={createTestConversation}
-              disabled={!testPhone.trim() || isCreating}
+              disabled={!testPhone.trim() || isCreating || !barbershopId}
               className="whitespace-nowrap"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -145,7 +163,7 @@ const ConversationTestPanel = () => {
             />
             <Button
               onClick={sendTestMessage}
-              disabled={!testPhone.trim() || !testMessage.trim() || isSending}
+              disabled={!testPhone.trim() || !testMessage.trim() || isSending || !barbershopId}
               className="w-full"
             >
               <Send className="h-4 w-4 mr-2" />

@@ -81,46 +81,38 @@ export const useWhatsAppConversations = () => {
         console.error('❌ Mensagem:', conversationsError.message);
         console.error('❌ Detalhes:', conversationsError.details);
         
-        // Log adicional para debug de RLS
-        if (conversationsError.code === 'PGRST103' || conversationsError.message?.includes('policy')) {
-          console.log('🔍 Possível erro de RLS policy - Verificando contexto de autenticação:');
-          console.log('- User ID:', user?.id);
-          console.log('- Profile ID:', profile?.id);
-          console.log('- Barbershop ID:', barbershopId);
+        // Sempre tentar fallback em caso de erro
+        try {
+          console.log('🔄 Tentando fallback com função RPC...');
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .rpc('get_whatsapp_conversations_debug', { p_barbershop_id: barbershopId });
           
-          // Tentar fallback com função RPC
-          try {
-            console.log('🔄 Tentando fallback com função RPC...');
-            const { data: fallbackData, error: fallbackError } = await supabase
-              .rpc('get_whatsapp_conversations_debug', { p_barbershop_id: barbershopId });
-            
-            if (fallbackError) {
-              console.error('❌ Fallback RPC também falhou:', fallbackError);
-            } else {
-              console.log('✅ Fallback RPC funcionou! Encontradas', fallbackData?.length || 0, 'conversas');
-              
-              // Usar dados do fallback se disponível
-              if (fallbackData && Array.isArray(fallbackData)) {
-                const conversationsWithDefaults = fallbackData.map(conv => ({
-                  ...conv,
-                  status: conv.status as 'active' | 'archived' | 'blocked',
-                  tags: [],
-                  lastMessage: undefined,
-                  unread_count: 0
-                }));
-                
-                console.log('✅ Usando dados do fallback RPC');
-                setConversations(conversationsWithDefaults);
-                setLoading(false);
-                return;
-              }
-            }
-          } catch (fallbackError) {
-            console.error('❌ Erro no fallback RPC:', fallbackError);
+          if (fallbackError) {
+            console.error('❌ Fallback RPC também falhou:', fallbackError);
+            throw new Error(`Erro RLS: ${conversationsError.message}. Fallback falhou: ${fallbackError.message}`);
           }
+          
+          console.log('✅ Fallback RPC funcionou! Encontradas', fallbackData?.length || 0, 'conversas');
+          
+          // Usar dados do fallback se disponível
+          if (fallbackData && Array.isArray(fallbackData)) {
+            const conversationsWithDefaults = fallbackData.map(conv => ({
+              ...conv,
+              status: conv.status as 'active' | 'archived' | 'blocked',
+              tags: [],
+              lastMessage: undefined,
+              unread_count: 0
+            }));
+            
+            console.log('✅ Usando dados do fallback RPC');
+            setConversations(conversationsWithDefaults);
+            setLoading(false);
+            return;
+          }
+        } catch (fallbackError) {
+          console.error('❌ Erro no fallback RPC:', fallbackError);
+          throw conversationsError;
         }
-        
-        throw conversationsError;
       }
 
       // Buscar última mensagem e tags para cada conversa
@@ -359,9 +351,18 @@ export const useWhatsAppConversations = () => {
     }
   };
 
-  // Real-time subscription
+  // Real-time subscription with debouncing
   useEffect(() => {
     if (!barbershopId) return;
+
+    let fetchTimeout: NodeJS.Timeout;
+    
+    const debouncedFetch = () => {
+      if (fetchTimeout) clearTimeout(fetchTimeout);
+      fetchTimeout = setTimeout(() => {
+        fetchConversations();
+      }, 1000); // Debounce real-time updates
+    };
 
     const channel = supabase
       .channel('whatsapp-conversations-changes')
@@ -373,8 +374,9 @@ export const useWhatsAppConversations = () => {
           table: 'whatsapp_conversations',
           filter: `barbershop_id=eq.${barbershopId}`,
         },
-        () => {
-          fetchConversations();
+        (payload) => {
+          console.log('🔄 Conversa atualizada:', payload);
+          debouncedFetch();
         }
       )
       .on(
@@ -384,13 +386,15 @@ export const useWhatsAppConversations = () => {
           schema: 'public',
           table: 'whatsapp_messages',
         },
-        () => {
-          fetchConversations();
+        (payload) => {
+          console.log('🔄 Mensagem atualizada:', payload);
+          debouncedFetch();
         }
       )
       .subscribe();
 
     return () => {
+      if (fetchTimeout) clearTimeout(fetchTimeout);
       supabase.removeChannel(channel);
     };
   }, [barbershopId]);
