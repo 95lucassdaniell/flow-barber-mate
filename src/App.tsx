@@ -45,6 +45,7 @@ import ProviderClientsPage from "./components/providers/clients/ProviderClientsP
 import ProviderSubscriptionsPage from "./pages/ProviderSubscriptionsPage";
 import { PublicBookingPage } from "./pages/PublicBookingPage";
 import PublicReviewPage from "./pages/PublicReviewPage";
+import FinancialRedirect from "./components/financial/FinancialRedirect";
 
 function App() {
   return (
@@ -173,7 +174,7 @@ function App() {
             <Route path="/app/:slug/financial" element={
               <SessionGuard>
                 <ProtectedRoute requiresRole="admin">
-                  <Navigate to="./dashboard" relative="path" replace />
+                  <FinancialRedirect />
                 </ProtectedRoute>
               </SessionGuard>
             } />
