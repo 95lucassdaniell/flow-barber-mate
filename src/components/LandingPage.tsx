@@ -235,7 +235,7 @@ const LandingPage = () => {
           </div>
 
           <Tabs defaultValue="predictive" className="max-w-6xl mx-auto">
-            <TabsList className="grid w-full grid-cols-3 mb-12 h-20">
+            <TabsList className="grid w-full grid-cols-3 mb-12 h-28">
               <TabsTrigger value="predictive" className="text-center p-4">
                 <div>
                   <Brain className="w-6 h-6 mx-auto mb-2" />
