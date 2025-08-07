@@ -11,6 +11,7 @@ import SendMessage from "./SendMessage";
 import AIStatusDashboard from "./AIStatusDashboard";
 import WhatsAppAttendance from "./WhatsAppAttendance";
 import WhatsAppConnectionWizard from "./WhatsAppConnectionWizard";
+import WhatsAppDiagnostics from "./WhatsAppDiagnostics";
 import EvolutionApiTester from "./EvolutionApiTester";
 import EvolutionApiConfig from "./EvolutionApiConfig";
 import { EvolutionDebugPanel } from "./EvolutionDebugPanel";
@@ -58,7 +59,10 @@ const WhatsAppManagement = () => {
         </TabsList>
 
         <TabsContent value="connection" className="space-y-4">
-          <WhatsAppConnectionWizard />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <WhatsAppConnectionWizard />
+            <WhatsAppDiagnostics />
+          </div>
         </TabsContent>
 
         <TabsContent value="config" className="space-y-6">
