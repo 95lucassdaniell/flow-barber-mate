@@ -98,12 +98,10 @@ export const useWhatsAppConversations = () => {
       setIsRetrying(isRetryAttempt);
       console.log(`📡 Buscando conversas para barbershop_id: ${barbershopId} (tentativa ${attemptNumber + 1})`);
 
-      // Buscar conversas com informações das tags
+      // Buscar conversas básicas primeiro
       const { data: conversationsData, error: conversationsError } = await supabase
         .from('whatsapp_conversations')
-        .select(`
-          *
-        `)
+        .select('*')
         .eq('barbershop_id', barbershopId)
         .order('last_message_at', { ascending: false });
 
@@ -147,9 +145,32 @@ export const useWhatsAppConversations = () => {
         }
       }
 
-      // Buscar última mensagem e tags para cada conversa
+      if (!conversationsData || conversationsData.length === 0) {
+        console.log('ℹ️ Nenhuma conversa encontrada');
+        setConversations([]);
+        return;
+      }
+
+      // Buscar todas as tags das conversas em uma única query
+      const conversationIds = conversationsData.map(conv => conv.id);
+      const { data: allConversationTags } = await supabase
+        .from('whatsapp_conversation_tags')
+        .select('conversation_id, tag_id')
+        .in('conversation_id', conversationIds);
+
+      // Buscar todas as tags referenciadas
+      const tagIds = [...new Set(allConversationTags?.map(ct => ct.tag_id) || [])];
+      const { data: allTags } = await supabase
+        .from('whatsapp_tags')
+        .select('*')
+        .in('id', tagIds);
+
+      // Criar um mapa de tags por ID para lookup eficiente
+      const tagMap = new Map(allTags?.map(tag => [tag.id, tag]) || []);
+
+      // Buscar última mensagem e montar resultado final
       const conversationsWithMessages = await Promise.all(
-        (conversationsData || []).map(async (conv) => {
+        conversationsData.map(async (conv) => {
           const { data: lastMsg } = await supabase
             .from('whatsapp_messages')
             .select('*')
@@ -157,21 +178,6 @@ export const useWhatsAppConversations = () => {
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
-
-          // Buscar tags da conversa
-          const { data: conversationTags } = await supabase
-            .from('whatsapp_conversation_tags')
-            .select(`
-              tag_id,
-              whatsapp_tags!left (
-                id,
-                name,
-                color,
-                description,
-                is_system
-              )
-            `)
-            .eq('conversation_id', conv.id);
 
           // Contar mensagens não lidas (incoming e não vistas por humano)
           const { count: unreadCount } = await supabase
@@ -181,10 +187,19 @@ export const useWhatsAppConversations = () => {
             .eq('direction', 'incoming')
             .is('human_agent_id', null);
 
+          // Buscar tags da conversa usando os dados já carregados
+          const conversationTagIds = allConversationTags
+            ?.filter(ct => ct.conversation_id === conv.id)
+            ?.map(ct => ct.tag_id) || [];
+          
+          const conversationTags = conversationTagIds
+            .map(tagId => tagMap.get(tagId))
+            .filter(Boolean);
+
           return {
             ...conv,
             status: conv.status as 'active' | 'archived' | 'blocked',
-            tags: conversationTags?.map((ct: any) => ct.whatsapp_tags).filter(Boolean) || [],
+            tags: conversationTags || [],
             lastMessage: lastMsg ? {
               ...lastMsg,
               direction: lastMsg.direction as 'incoming' | 'outgoing',
