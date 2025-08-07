@@ -12,6 +12,9 @@ import AIStatusDashboard from "./AIStatusDashboard";
 import WhatsAppAttendance from "./WhatsAppAttendance";
 import WhatsAppConnectionWizard from "./WhatsAppConnectionWizard";
 import WhatsAppDiagnostics from "./WhatsAppDiagnostics";
+import WhatsAppAdvancedDiagnostics from "./WhatsAppAdvancedDiagnostics";
+import WhatsAppCompleteReset from "./WhatsAppCompleteReset";
+import WhatsAppMessageTester from "./WhatsAppMessageTester";
 import EvolutionApiTester from "./EvolutionApiTester";
 import EvolutionApiConfig from "./EvolutionApiConfig";
 import { EvolutionDebugPanel } from "./EvolutionDebugPanel";
@@ -36,15 +39,17 @@ const WhatsAppManagement = () => {
       </div>
 
       <Tabs defaultValue="connection" className="w-full">
-        <TabsList className="grid w-full grid-cols-10">
+        <TabsList className="grid w-full grid-cols-12">
           <TabsTrigger value="connection" className="flex items-center gap-2">
             <Wifi className="h-4 w-4" />
             Conexão
           </TabsTrigger>
-          <TabsTrigger value="config">Configuração</TabsTrigger>
+          <TabsTrigger value="diagnostics">Diagnóstico</TabsTrigger>
+          <TabsTrigger value="config">Config</TabsTrigger>
           <TabsTrigger value="conversations">Conversas</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
           <TabsTrigger value="send">Enviar</TabsTrigger>
+          <TabsTrigger value="test">Teste</TabsTrigger>
           <TabsTrigger value="ai" className="flex items-center gap-2">
             <Brain className="h-4 w-4" />
             IA
@@ -61,7 +66,14 @@ const WhatsAppManagement = () => {
         <TabsContent value="connection" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <WhatsAppConnectionWizard />
+            <WhatsAppCompleteReset />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="diagnostics" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <WhatsAppDiagnostics />
+            <WhatsAppAdvancedDiagnostics />
           </div>
         </TabsContent>
 
@@ -85,6 +97,10 @@ const WhatsAppManagement = () => {
 
         <TabsContent value="send" className="space-y-6">
           <SendMessage isConnected={isConnected} />
+        </TabsContent>
+
+        <TabsContent value="test" className="space-y-6">
+          <WhatsAppMessageTester />
         </TabsContent>
 
         <TabsContent value="ai" className="space-y-6">
