@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,161 +20,168 @@ serve(async (req) => {
     console.log('Starting WhatsApp health monitoring...');
 
     // Get all active WhatsApp instances
-    const { data: instances, error: instancesError } = await supabase
+    const { data: instances, error: fetchError } = await supabase
       .from('whatsapp_instances')
-      .select(`
-        id,
-        barbershop_id,
-        evolution_instance_name,
-        status,
-        last_connected_at,
-        api_type,
-        barbershops!inner(name, slug)
-      `)
-      .eq('api_type', 'evolution')
-      .neq('status', 'pending_configuration');
+      .select('*')
+      .eq('api_type', 'evolution');
 
-    if (instancesError) {
-      throw new Error(`Failed to get instances: ${instancesError.message}`);
+    if (fetchError) {
+      throw new Error(`Failed to fetch instances: ${fetchError.message}`);
     }
 
-    const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
-    const evolutionApiKey = Deno.env.get('EVOLUTION_GLOBAL_API_KEY');
+    const healthResults = [];
+    const evolutionUrl = Deno.env.get('EVOLUTION_API_URL');
+    const globalApiKey = Deno.env.get('EVOLUTION_GLOBAL_API_KEY');
 
-    if (!evolutionApiUrl || !evolutionApiKey) {
-      return new Response(JSON.stringify({ error: 'Evolution API not configured' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    for (const instance of instances) {
+      console.log(`Checking health for instance: ${instance.evolution_instance_name}`);
+      
+      const healthCheck = {
+        barbershop_id: instance.barbershop_id,
+        instance_name: instance.evolution_instance_name,
+        db_status: instance.status,
+        api_status: 'unknown',
+        last_message_received: null,
+        needs_reconnection: false,
+        issues: []
+      };
 
-    const results = [];
-
-    for (const instance of instances || []) {
       try {
-        console.log(`Checking health for instance: ${instance.evolution_instance_name}`);
-
-        // Check if instance hasn't received messages in the last hour
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-        
-        const { data: recentMessages } = await supabase
+        // Check recent inbound messages
+        const { data: recentMessages, error: msgError } = await supabase
           .from('whatsapp_messages')
-          .select('id')
+          .select('created_at')
           .eq('barbershop_id', instance.barbershop_id)
           .eq('direction', 'inbound')
-          .gte('created_at', oneHourAgo)
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+          .order('created_at', { ascending: false })
           .limit(1);
 
-        // Check actual status from Evolution API
-        const statusResponse = await fetch(`${evolutionApiUrl}/instance/connectionState/${instance.evolution_instance_name}`, {
-          method: 'GET',
-          headers: {
-            'apikey': evolutionApiKey
-          }
-        });
-
-        let needsReconnection = false;
-        let actualStatus = 'unknown';
-        let phoneNumber = null;
-
-        if (statusResponse.ok) {
-          const statusData = await statusResponse.json();
-          actualStatus = statusData.instance?.state || 'unknown';
-          phoneNumber = statusData.instance?.user?.id?.split('@')[0] || null;
-
-          // Check if status is inconsistent
-          if (actualStatus !== 'open' && instance.status === 'connected') {
-            needsReconnection = true;
-            console.log(`Instance ${instance.evolution_instance_name} shows as connected but API says ${actualStatus}`);
-          }
-
-          // Check if no messages received in last hour and was previously working
-          if (actualStatus === 'open' && instance.status === 'connected' && (!recentMessages || recentMessages.length === 0)) {
-            // Check if this instance ever received messages
-            const { data: hasMessages } = await supabase
-              .from('whatsapp_messages')
-              .select('id')
-              .eq('barbershop_id', instance.barbershop_id)
-              .eq('direction', 'inbound')
-              .limit(1);
-
-            if (hasMessages && hasMessages.length > 0) {
-              console.log(`Instance ${instance.evolution_instance_name} hasn't received messages in the last hour`);
-              needsReconnection = true;
-            }
-          }
+        if (!msgError && recentMessages.length > 0) {
+          healthCheck.last_message_received = recentMessages[0].created_at;
         } else {
-          console.log(`Failed to check status for ${instance.evolution_instance_name}: ${statusResponse.status}`);
-          if (instance.status === 'connected') {
-            needsReconnection = true;
+          healthCheck.issues.push('No inbound messages in last 24 hours');
+        }
+
+        // Check Evolution API connection state
+        if (instance.evolution_instance_name) {
+          const apiResponse = await fetch(
+            `${evolutionUrl}/instance/connectionState/${instance.evolution_instance_name}`,
+            {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': globalApiKey,
+              },
+            }
+          );
+
+          if (apiResponse.ok) {
+            const apiData = await apiResponse.json();
+            healthCheck.api_status = apiData.instance?.state || 'unknown';
+            
+            // Update database with real status and phone number
+            const updateData: any = {
+              last_seen: new Date().toISOString()
+            };
+
+            if (apiData.instance?.state) {
+              if (apiData.instance.state === 'open') {
+                updateData.status = 'connected';
+              } else if (apiData.instance.state === 'close') {
+                updateData.status = 'disconnected';
+                healthCheck.needs_reconnection = true;
+                healthCheck.issues.push('Instance disconnected in Evolution API');
+              }
+            }
+
+            if (apiData.instance?.phone) {
+              updateData.phone_number = apiData.instance.phone;
+            }
+
+            await supabase
+              .from('whatsapp_instances')
+              .update(updateData)
+              .eq('id', instance.id);
+
+            console.log(`Evolution API response:`, JSON.stringify(apiData));
+          } else {
+            healthCheck.api_status = 'error';
+            healthCheck.issues.push('Failed to connect to Evolution API');
           }
         }
 
-        // Update database status
-        await supabase
-          .from('whatsapp_instances')
-          .update({
-            status: actualStatus === 'open' ? 'connected' : actualStatus === 'close' ? 'disconnected' : actualStatus,
-            phone_number: phoneNumber,
-            last_connected_at: actualStatus === 'open' ? new Date().toISOString() : instance.last_connected_at
-          })
-          .eq('id', instance.id);
+        // Determine if reconnection is needed
+        if (instance.status === 'connected' && healthCheck.api_status !== 'open') {
+          healthCheck.needs_reconnection = true;
+          healthCheck.issues.push('Database shows connected but API shows different state');
+        }
 
-        // Attempt auto-reconnection if needed
-        if (needsReconnection) {
+        if (!instance.phone_number && instance.status === 'connected') {
+          healthCheck.needs_reconnection = true;
+          healthCheck.issues.push('No phone number but marked as connected');
+        }
+
+        // Auto-reconnect if needed
+        if (healthCheck.needs_reconnection) {
           console.log(`Attempting auto-reconnection for ${instance.evolution_instance_name}`);
           
           try {
-            // Call the reconnect function
-            const reconnectResponse = await supabase.functions.invoke('whatsapp-reconnect', {
-              headers: {
-                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+            const { error: reconnectError } = await supabase.functions.invoke(
+              'whatsapp-reconnect',
+              {
+                body: { barbershopId: instance.barbershop_id }
               }
-            });
+            );
 
-            if (reconnectResponse.error) {
-              console.error(`Auto-reconnection failed for ${instance.evolution_instance_name}:`, reconnectResponse.error);
+            if (reconnectError) {
+              healthCheck.issues.push(`Auto-reconnection failed: ${reconnectError.message}`);
             } else {
-              console.log(`Auto-reconnection initiated for ${instance.evolution_instance_name}`);
+              healthCheck.issues.push('Auto-reconnection attempted');
             }
           } catch (reconnectError) {
-            console.error(`Auto-reconnection error for ${instance.evolution_instance_name}:`, reconnectError);
+            healthCheck.issues.push(`Auto-reconnection error: ${reconnectError.message}`);
           }
         }
 
-        results.push({
-          instance_name: instance.evolution_instance_name,
-          barbershop: instance.barbershops?.name,
-          previous_status: instance.status,
-          actual_status: actualStatus,
-          needs_reconnection: needsReconnection,
-          recent_messages: recentMessages?.length || 0
-        });
-
       } catch (error) {
-        console.error(`Error checking instance ${instance.evolution_instance_name}:`, error);
-        results.push({
-          instance_name: instance.evolution_instance_name,
-          barbershop: instance.barbershops?.name,
-          error: error.message
-        });
+        console.error(`Health check error for ${instance.evolution_instance_name}:`, error);
+        healthCheck.issues.push(`Health check error: ${error.message}`);
       }
+
+      healthResults.push(healthCheck);
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      timestamp: new Date().toISOString(),
-      checked_instances: results.length,
-      results
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.log('Health monitoring completed');
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        timestamp: new Date().toISOString(),
+        results: healthResults,
+        summary: {
+          total_instances: instances.length,
+          healthy_instances: healthResults.filter(r => r.issues.length === 0).length,
+          instances_needing_attention: healthResults.filter(r => r.issues.length > 0).length
+        }
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    );
 
   } catch (error) {
     console.error('Error in whatsapp-health-monitor:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error.message
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      }
+    );
   }
 });

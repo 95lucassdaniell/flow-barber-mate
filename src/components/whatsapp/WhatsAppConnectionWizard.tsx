@@ -1,51 +1,55 @@
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-import { CheckCircle, Circle, Loader2, QrCode, Smartphone, MessageSquare, Settings } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { QrCode, Wifi, MessageCircle, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface WizardStep {
   id: string;
   title: string;
   description: string;
-  status: 'pending' | 'loading' | 'completed' | 'error';
-  icon: React.ReactNode;
+  status: 'pending' | 'active' | 'completed' | 'failed';
+  icon: React.ComponentType<any>;
 }
 
 const WhatsAppConnectionWizard = () => {
+  const { profile } = useAuth();
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
   const [qrCode, setQrCode] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionTimeout, setConnectionTimeout] = useState<NodeJS.Timeout | null>(null);
+
   const [steps, setSteps] = useState<WizardStep[]>([
     {
-      id: 'instance',
-      title: 'Verificar Instância',
-      description: 'Validar configuração da instância WhatsApp',
+      id: 'init',
+      title: 'Inicializar Conexão',
+      description: 'Preparando instância WhatsApp',
       status: 'pending',
-      icon: <Settings className="h-5 w-5" />
+      icon: Wifi
     },
     {
-      id: 'qr_code',
+      id: 'qr',
       title: 'Gerar QR Code',
-      description: 'Criar código QR para conexão',
+      description: 'Código QR para conectar WhatsApp',
       status: 'pending',
-      icon: <QrCode className="h-5 w-5" />
+      icon: QrCode
     },
     {
-      id: 'connection',
+      id: 'connect',
       title: 'Conectar WhatsApp',
-      description: 'Escaneie o QR Code com seu celular',
+      description: 'Escaneie o QR code no seu telefone',
       status: 'pending',
-      icon: <Smartphone className="h-5 w-5" />
+      icon: MessageCircle
     },
     {
       id: 'test',
-      title: 'Testar Mensagem',
-      description: 'Enviar mensagem de teste',
+      title: 'Testar Conexão',
+      description: 'Enviando mensagem de teste',
       status: 'pending',
-      icon: <MessageSquare className="h-5 w-5" />
+      icon: CheckCircle
     }
   ]);
 
@@ -55,228 +59,281 @@ const WhatsAppConnectionWizard = () => {
     ));
   };
 
-  const nextStep = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(prev => prev + 1);
-    }
-  };
-
   const startWizard = async () => {
-    // Step 1: Verificar instância
+    if (!profile?.barbershop_id) {
+      toast({
+        title: "Erro",
+        description: "Barbearia não encontrada",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsConnecting(true);
     setCurrentStep(0);
-    updateStepStatus('instance', 'loading');
     
+    // Reset all steps
+    setSteps(prev => prev.map(step => ({ ...step, status: 'pending' })));
+
     try {
-      const { data: statusData, error } = await supabase.functions.invoke('whatsapp-status');
+      // Step 1: Initialize connection
+      updateStepStatus('init', 'active');
       
-      if (error) {
-        updateStepStatus('instance', 'error');
-        toast.error("Erro ao verificar instância");
-        return;
+      // First, reset the instance completely
+      console.log('Resetting WhatsApp instance...');
+      const { data: resetData, error: resetError } = await supabase.functions.invoke('whatsapp-reset-instance', {
+        body: { barbershopId: profile.barbershop_id }
+      });
+
+      if (resetError) {
+        throw new Error(`Reset failed: ${resetError.message}`);
       }
 
-      updateStepStatus('instance', 'completed');
-      
-      // Step 2: Gerar QR Code
-      setTimeout(() => {
-        setCurrentStep(1);
-        updateStepStatus('qr_code', 'loading');
-        generateQRCode();
-      }, 1000);
-      
+      updateStepStatus('init', 'completed');
+      setCurrentStep(1);
+
+      // Step 2: Generate QR Code
+      updateStepStatus('qr', 'active');
+      await generateQRCode();
+
+      updateStepStatus('qr', 'completed');
+      setCurrentStep(2);
+
+      // Step 3: Monitor connection
+      updateStepStatus('connect', 'active');
+      startConnectionMonitoring();
+
     } catch (error) {
-      updateStepStatus('instance', 'error');
-      toast.error("Erro na verificação da instância");
+      console.error('Erro no wizard:', error);
+      updateStepStatus('init', 'failed');
+      toast({
+        title: "Erro na inicialização",
+        description: error.message,
+        variant: "destructive",
+      });
+      setIsConnecting(false);
     }
   };
 
   const generateQRCode = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('whatsapp-connect');
-      
-      if (error) {
-        updateStepStatus('qr_code', 'error');
-        toast.error("Erro ao gerar QR Code");
-        return;
-      }
+    if (!profile?.barbershop_id) return;
 
-      setQrCode(data.qr_code);
-      updateStepStatus('qr_code', 'completed');
-      
-      // Step 3: Aguardar conexão
-      setTimeout(() => {
-        setCurrentStep(2);
-        updateStepStatus('connection', 'loading');
-        startConnectionMonitoring();
-      }, 1000);
-      
+    try {
+      const { data, error } = await supabase.functions.invoke('whatsapp-connect', {
+        body: { barbershopId: profile.barbershop_id }
+      });
+
+      if (error) throw error;
+
+      if (data.qr_code) {
+        setQrCode(data.qr_code);
+        console.log('QR Code gerado com sucesso');
+      } else if (data.status === 'connected') {
+        // Already connected
+        updateStepStatus('connect', 'completed');
+        setCurrentStep(3);
+        await sendTestMessage();
+      }
     } catch (error) {
-      updateStepStatus('qr_code', 'error');
-      toast.error("Erro ao gerar QR Code");
+      console.error('Erro ao gerar QR code:', error);
+      updateStepStatus('qr', 'failed');
+      throw error;
     }
   };
 
   const startConnectionMonitoring = () => {
+    // Clear any existing timeout
+    if (connectionTimeout) {
+      clearTimeout(connectionTimeout);
+    }
+
     const checkConnection = async () => {
+      if (!profile?.barbershop_id) return;
+
       try {
-        const { data } = await supabase.functions.invoke('whatsapp-status');
-        
-        if (data?.connected) {
-          updateStepStatus('connection', 'completed');
+        const { data, error } = await supabase.functions.invoke('whatsapp-status', {
+          body: { barbershopId: profile.barbershop_id }
+        });
+
+        if (error) throw error;
+
+        if (data.connected && data.phone_number) {
+          // Connection successful!
+          updateStepStatus('connect', 'completed');
+          setCurrentStep(3);
           setQrCode(null);
           
-          // Step 4: Teste de mensagem
-          setTimeout(() => {
-            setCurrentStep(3);
-            updateStepStatus('test', 'loading');
-            sendTestMessage();
-          }, 1000);
+          // Clear timeout and proceed to test
+          if (connectionTimeout) {
+            clearTimeout(connectionTimeout);
+            setConnectionTimeout(null);
+          }
           
-          return true;
+          await sendTestMessage();
+        } else {
+          // Still connecting, check again in 3 seconds
+          const timeout = setTimeout(checkConnection, 3000);
+          setConnectionTimeout(timeout);
         }
-        return false;
       } catch (error) {
-        return false;
+        console.error('Erro ao verificar conexão:', error);
+        // Continue checking
+        const timeout = setTimeout(checkConnection, 5000);
+        setConnectionTimeout(timeout);
       }
     };
 
-    const interval = setInterval(async () => {
-      const connected = await checkConnection();
-      if (connected) {
-        clearInterval(interval);
-      }
-    }, 3000);
+    // Start checking after 2 seconds
+    const timeout = setTimeout(checkConnection, 2000);
+    setConnectionTimeout(timeout);
 
-    // Timeout após 5 minutos
+    // Set overall timeout of 2 minutes
     setTimeout(() => {
-      clearInterval(interval);
-      if (steps[2].status === 'loading') {
-        updateStepStatus('connection', 'error');
-        toast.error("Timeout: QR Code expirou");
+      if (steps.find(s => s.id === 'connect')?.status === 'active') {
+        updateStepStatus('connect', 'failed');
+        setIsConnecting(false);
+        toast({
+          title: "Timeout",
+          description: "Timeout na conexão. Tente novamente.",
+          variant: "destructive",
+        });
       }
-    }, 300000);
+    }, 120000);
   };
 
   const sendTestMessage = async () => {
-    try {
-      // Obter número conectado
-      const { data: statusData } = await supabase.functions.invoke('whatsapp-status');
-      
-      if (!statusData?.phone_number) {
-        updateStepStatus('test', 'error');
-        toast.error("Número do WhatsApp não encontrado");
-        return;
-      }
+    if (!profile?.barbershop_id) return;
 
-      const testPhone = statusData.phone_number.replace(/[@\w.]+$/, '');
-      
+    updateStepStatus('test', 'active');
+
+    try {
       const { data, error } = await supabase.functions.invoke('send-whatsapp-message', {
         body: {
-          phone: testPhone,
-          message: "🎉 Parabéns! Seu WhatsApp Business foi conectado com sucesso!\n\nO sistema está pronto para enviar notificações de agendamentos."
+          barbershopId: profile.barbershop_id,
+          phone: "test",
+          message: "🎉 WhatsApp conectado com sucesso! Sistema funcionando perfeitamente.",
+          messageType: "text"
         }
       });
 
-      if (error) {
-        updateStepStatus('test', 'error');
-        toast.error("Erro ao enviar mensagem de teste");
-        return;
-      }
+      if (error) throw error;
 
       updateStepStatus('test', 'completed');
-      toast.success("🎉 WhatsApp configurado com sucesso!");
+      setCurrentStep(4);
+      setIsConnecting(false);
+      
+      toast({
+        title: "Sucesso!",
+        description: "WhatsApp conectado e testado com sucesso!",
+      });
       
     } catch (error) {
-      updateStepStatus('test', 'error');
-      toast.error("Erro no teste de mensagem");
+      console.error('Erro no teste:', error);
+      updateStepStatus('test', 'failed');
+      toast({
+        title: "Aviso",
+        description: "Conexão estabelecida, mas falha no teste de envio",
+        variant: "destructive",
+      });
+      setIsConnecting(false);
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (connectionTimeout) {
+        clearTimeout(connectionTimeout);
+      }
+    };
+  }, [connectionTimeout]);
+
   const getStepIcon = (step: WizardStep) => {
+    const Icon = step.icon;
+    
     switch (step.status) {
       case 'completed':
         return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'loading':
-        return <Loader2 className="h-5 w-5 animate-spin text-blue-500" />;
-      case 'error':
-        return <Circle className="h-5 w-5 text-red-500" />;
+      case 'failed':
+        return <AlertCircle className="h-5 w-5 text-red-500" />;
+      case 'active':
+        return <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />;
       default:
-        return <Circle className="h-5 w-5 text-gray-300" />;
+        return <Icon className="h-5 w-5 text-gray-400" />;
     }
   };
-
-  const completedSteps = steps.filter(step => step.status === 'completed').length;
-  const progress = (completedSteps / steps.length) * 100;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Assistente de Configuração WhatsApp</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <MessageCircle className="h-5 w-5" />
+          Assistente de Conexão WhatsApp
+        </CardTitle>
         <CardDescription>
-          Configure seu WhatsApp Business em 4 passos simples
+          Configure sua conexão WhatsApp passo a passo
         </CardDescription>
-        <Progress value={progress} className="w-full" />
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Progress Steps */}
         <div className="space-y-4">
           {steps.map((step, index) => (
-            <div 
-              key={step.id}
-              className={`flex items-center space-x-3 p-3 rounded-lg border ${
-                index === currentStep ? 'border-blue-200 bg-blue-50' : 'border-gray-200'
-              }`}
-            >
+            <div key={step.id} className="flex items-center gap-3">
               {getStepIcon(step)}
               <div className="flex-1">
-                <h4 className="font-medium">{step.title}</h4>
-                <p className="text-sm text-muted-foreground">{step.description}</p>
+                <div className="font-medium">{step.title}</div>
+                <div className="text-sm text-muted-foreground">{step.description}</div>
               </div>
-              {step.status === 'completed' && (
-                <Badge variant="outline" className="text-green-600 border-green-300">
-                  Concluído
-                </Badge>
-              )}
-              {step.status === 'loading' && (
-                <Badge variant="outline" className="text-blue-600 border-blue-300">
-                  Em andamento...
-                </Badge>
-              )}
-              {step.status === 'error' && (
-                <Badge variant="destructive">
-                  Erro
-                </Badge>
+              {index === currentStep && step.status === 'active' && (
+                <div className="text-sm text-blue-600 font-medium">Em andamento...</div>
               )}
             </div>
           ))}
         </div>
 
-        {qrCode && currentStep === 2 && (
-          <div className="text-center space-y-4 p-4 bg-gray-50 rounded-lg">
-            <div className="bg-white p-4 rounded-lg border inline-block">
-              <img 
-                src={qrCode.startsWith('data:') ? qrCode : `data:image/png;base64,${qrCode}`} 
-                alt="QR Code WhatsApp" 
-                className="w-48 h-48"
-              />
+        {/* QR Code Display */}
+        {qrCode && (
+          <Card className="p-4">
+            <div className="text-center space-y-4">
+              <h3 className="font-medium">Escaneie o QR Code no WhatsApp</h3>
+              <div className="flex justify-center">
+                <img 
+                  src={qrCode} 
+                  alt="WhatsApp QR Code" 
+                  className="max-w-[300px] max-h-[300px] border rounded"
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                1. Abra o WhatsApp no seu telefone<br/>
+                2. Toque em Mais opções → Dispositivos conectados<br/>
+                3. Toque em Conectar dispositivo<br/>
+                4. Aponte seu telefone para esta tela
+              </p>
             </div>
-            <div className="text-sm text-muted-foreground space-y-1">
-              <p><strong>📱 Abra o WhatsApp no seu celular</strong></p>
-              <p>⚙️ Vá em Configurações → Aparelhos conectados</p>
-              <p>📷 Toque em "Conectar um aparelho" e escaneie o código</p>
-            </div>
-          </div>
+          </Card>
         )}
 
-        <div className="flex justify-center">
-          {completedSteps === 0 && (
-            <Button onClick={startWizard} size="lg">
-              <Settings className="h-4 w-4 mr-2" />
-              Iniciar Configuração
-            </Button>
-          )}
-          {completedSteps === steps.length && (
-            <Button onClick={startWizard} variant="outline" size="lg">
-              <CheckCircle className="h-4 w-4 mr-2" />
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          <Button 
+            onClick={startWizard} 
+            disabled={isConnecting}
+            className="flex-1"
+          >
+            {isConnecting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Conectando...
+              </>
+            ) : (
+              'Iniciar Conexão'
+            )}
+          </Button>
+          
+          {currentStep >= 2 && !isConnecting && (
+            <Button 
+              onClick={() => window.location.reload()} 
+              variant="outline"
+            >
               Reconfigurar
             </Button>
           )}

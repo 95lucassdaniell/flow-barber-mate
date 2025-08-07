@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { MessageCircle, Users, Send, Brain, Activity, Settings, Bug, Wifi } from "lucide-react";
 import WhatsAppConfig from "./WhatsAppConfig";
 import ConversationsList from "./ConversationsList";
 import ConversationTestPanel from "./ConversationTestPanel";
@@ -9,6 +10,7 @@ import MessageTemplates from "./MessageTemplates";
 import SendMessage from "./SendMessage";
 import AIStatusDashboard from "./AIStatusDashboard";
 import WhatsAppAttendance from "./WhatsAppAttendance";
+import WhatsAppConnectionWizard from "./WhatsAppConnectionWizard";
 import EvolutionApiTester from "./EvolutionApiTester";
 import EvolutionApiConfig from "./EvolutionApiConfig";
 import { EvolutionDebugPanel } from "./EvolutionDebugPanel";
@@ -32,18 +34,32 @@ const WhatsAppManagement = () => {
         </Badge>
       </div>
 
-      <Tabs defaultValue="config" className="w-full">
-        <TabsList className="grid w-full grid-cols-9">
+      <Tabs defaultValue="connection" className="w-full">
+        <TabsList className="grid w-full grid-cols-10">
+          <TabsTrigger value="connection" className="flex items-center gap-2">
+            <Wifi className="h-4 w-4" />
+            Conexão
+          </TabsTrigger>
           <TabsTrigger value="config">Configuração</TabsTrigger>
           <TabsTrigger value="conversations">Conversas</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
           <TabsTrigger value="send">Enviar</TabsTrigger>
-          <TabsTrigger value="ai">IA</TabsTrigger>
-          <TabsTrigger value="monitor">Monitor</TabsTrigger>
+          <TabsTrigger value="ai" className="flex items-center gap-2">
+            <Brain className="h-4 w-4" />
+            IA
+          </TabsTrigger>
+          <TabsTrigger value="monitor" className="flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Monitor
+          </TabsTrigger>
           <TabsTrigger value="recovery">Recovery</TabsTrigger>
           <TabsTrigger value="api">API</TabsTrigger>
           <TabsTrigger value="debug">Debug</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="connection" className="space-y-4">
+          <WhatsAppConnectionWizard />
+        </TabsContent>
 
         <TabsContent value="config" className="space-y-6">
           <WhatsAppConfig 

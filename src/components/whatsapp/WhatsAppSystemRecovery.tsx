@@ -145,6 +145,43 @@ const WhatsAppSystemRecovery = () => {
     }
   }
 
+  const resetInstance = async () => {
+    if (!barbershopId) return
+
+    setIsLoading(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('whatsapp-reset-instance', {
+        body: { barbershopId }
+      })
+
+      if (error) throw error
+
+      if (data.success) {
+        toast({
+          title: "Reset concluído",
+          description: "Instância resetada com sucesso! Execute o diagnóstico novamente.",
+        })
+        setDiagnosis(null)
+        setRecoverySteps([])
+      } else {
+        toast({
+          title: "Erro no reset",
+          description: data.error,
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Erro no reset da instância:', error)
+      toast({
+        title: "Erro no reset",
+        description: "Falha ao resetar instância",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const testWebhook = async () => {
     if (!barbershopId) return
 
@@ -247,6 +284,15 @@ const WhatsAppSystemRecovery = () => {
             >
               <Zap className="h-4 w-4 mr-2" />
               {isRecovering ? 'Recuperando...' : 'Executar Recovery'}
+            </Button>
+
+            <Button 
+              onClick={resetInstance} 
+              disabled={isLoading || isRecovering}
+              variant="destructive"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Reset Completo
             </Button>
 
             <Button 

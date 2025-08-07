@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,118 +12,95 @@ serve(async (req) => {
   }
 
   try {
-    console.log('=== WHATSAPP RESET INSTANCE STARTED ===');
-    
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     const { barbershopId } = await req.json();
-    console.log('Resetting WhatsApp instance for barbershop:', barbershopId);
 
-    // Get current instance data
-    const { data: currentInstance } = await supabase
+    if (!barbershopId) {
+      throw new Error('barbershopId is required');
+    }
+
+    console.log(`Starting WhatsApp instance reset for barbershop: ${barbershopId}`);
+
+    // 1. Get current instance data
+    const { data: currentInstance, error: fetchError } = await supabase
       .from('whatsapp_instances')
       .select('*')
       .eq('barbershop_id', barbershopId)
       .single();
 
-    if (!currentInstance) {
-      return new Response(JSON.stringify({ error: 'WhatsApp instance not found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      throw new Error(`Failed to fetch current instance: ${fetchError.message}`);
     }
 
-    console.log('Current instance found:', currentInstance);
+    // 2. Delete from Evolution API if exists
+    if (currentInstance?.evolution_instance_name) {
+      try {
+        const evolutionUrl = Deno.env.get('EVOLUTION_API_URL');
+        const globalApiKey = Deno.env.get('EVOLUTION_GLOBAL_API_KEY');
 
-    // Step 1: Delete existing instance from Evolution API if it exists
-    if (currentInstance.evolution_instance_name) {
-      console.log('Deleting existing Evolution API instance...');
-      
-      const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
-      const evolutionApiKey = Deno.env.get('EVOLUTION_GLOBAL_API_KEY');
+        console.log(`Deleting instance from Evolution API: ${currentInstance.evolution_instance_name}`);
 
-      if (evolutionApiUrl && evolutionApiKey) {
-        try {
-          const deleteResponse = await fetch(`${evolutionApiUrl}/instance/delete/${currentInstance.evolution_instance_name}`, {
+        const deleteResponse = await fetch(
+          `${evolutionUrl}/instance/delete/${currentInstance.evolution_instance_name}`,
+          {
             method: 'DELETE',
             headers: {
-              'apikey': evolutionApiKey,
+              'Content-Type': 'application/json',
+              'apikey': globalApiKey,
             },
-          });
-          
-          console.log('Delete response status:', deleteResponse.status);
-          if (deleteResponse.ok) {
-            console.log('Existing instance deleted successfully');
-          } else {
-            console.log('Failed to delete existing instance, continuing anyway...');
           }
-        } catch (error) {
-          console.error('Error deleting existing instance:', error);
-          console.log('Continuing with reset anyway...');
+        );
+
+        if (!deleteResponse.ok) {
+          console.log(`Failed to delete from Evolution API: ${deleteResponse.status}`);
+        } else {
+          console.log('Successfully deleted instance from Evolution API');
         }
+      } catch (error) {
+        console.log(`Error deleting from Evolution API: ${error.message}`);
       }
     }
 
-    // Step 2: Reset database instance data
-    console.log('Resetting database instance data...');
-    const resetData = {
-      status: 'disconnected',
-      phone_number: null,
-      qr_code: null,
-      last_connected_at: null,
-      instance_id: null,
-      instance_token: null,
-      evolution_instance_name: null,
-      updated_at: new Date().toISOString()
-    };
-
+    // 3. Reset database record
     const { error: resetError } = await supabase
       .from('whatsapp_instances')
-      .update(resetData)
+      .update({
+        status: 'disconnected',
+        qr_code: null,
+        phone_number: null,
+        instance_id: null,
+        instance_token: null,
+        evolution_instance_name: null,
+        webhook_url: null,
+        last_seen: null,
+        updated_at: new Date().toISOString()
+      })
       .eq('barbershop_id', barbershopId);
 
     if (resetError) {
-      console.error('Error resetting database:', resetError);
-      return new Response(JSON.stringify({ 
-        error: 'Failed to reset database instance',
-        details: resetError 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      throw new Error(`Failed to reset instance: ${resetError.message}`);
     }
 
-    console.log('Database instance reset successfully');
-
-    // Step 3: Create new instance using the evolution-instance-manager
-    console.log('Creating new Evolution API instance...');
-    
-    const { data: createResult, error: createError } = await supabase.functions.invoke('evolution-instance-manager', {
-      body: {
-        action: 'create',
-        barbershopId: barbershopId
+    // 4. Create new instance via evolution-instance-manager
+    const { data: newInstanceData, error: createError } = await supabase.functions.invoke(
+      'evolution-instance-manager',
+      {
+        body: { 
+          barbershopId,
+          action: 'create_instance'
+        }
       }
-    });
+    );
 
     if (createError) {
-      console.error('Error creating new instance:', createError);
-      return new Response(JSON.stringify({ 
-        error: 'Failed to create new instance',
-        details: createError 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      throw new Error(`Failed to create new instance: ${createError.message}`);
     }
 
-    console.log('New instance created successfully:', createResult);
-
-    // Step 4: Clear any existing conversations and messages for a fresh start (optional)
-    console.log('Clearing existing conversations and messages...');
-    
+    // 5. Clean up old messages and conversations
     await supabase
       .from('whatsapp_messages')
       .delete()
@@ -134,25 +111,31 @@ serve(async (req) => {
       .delete()
       .eq('barbershop_id', barbershopId);
 
-    console.log('WhatsApp reset completed successfully');
+    console.log('WhatsApp instance reset completed successfully');
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'WhatsApp instance reset successfully',
-      instanceCreated: createResult?.success || false,
-      nextStep: 'Please reconnect via QR Code'
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: 'WhatsApp instance reset successfully',
+        newInstanceData
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    );
 
   } catch (error) {
     console.error('Error in whatsapp-reset-instance:', error);
-    return new Response(JSON.stringify({ 
-      error: 'Internal server error',
-      details: error.message 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error.message
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      }
+    );
   }
 });
