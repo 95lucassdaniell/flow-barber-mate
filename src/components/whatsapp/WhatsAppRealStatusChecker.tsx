@@ -17,6 +17,7 @@ interface StatusCheckResult {
   statusMismatch: boolean;
   phoneMismatch: boolean;
   needsConnection: boolean;
+  isGhostConnection: boolean;
   qrCode: string | null;
   recommendations: string[];
 }

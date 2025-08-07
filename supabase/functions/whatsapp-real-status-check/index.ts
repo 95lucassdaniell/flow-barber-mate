@@ -137,15 +137,21 @@ serve(async (req) => {
       console.error(`Evolution API retornou ${statusResponse.status}: ${statusResponse.statusText}`);
     }
 
-    // Update database with real status
+    // Determine REAL connection status based on phone_number
+    const actualStatus = realPhoneNumber ? 'connected' : (realStatus === 'close' ? 'disconnected' : 'awaiting_qr_scan');
+    const isGhostConnection = instance.status === 'connected' && !realPhoneNumber;
+    
+    // Update database with REAL status
     const updateData: any = {
-      status: realStatus === 'open' ? 'connected' : 'disconnected',
+      status: actualStatus,
       updated_at: new Date().toISOString()
     };
 
     if (realPhoneNumber) {
       updateData.phone_number = realPhoneNumber;
       updateData.last_connected_at = new Date().toISOString();
+    } else {
+      updateData.phone_number = null;
     }
 
     if (qrCode) {
@@ -160,31 +166,33 @@ serve(async (req) => {
     const result = {
       instanceName: instance.evolution_instance_name,
       databaseStatus: instance.status,
-      realStatus: realStatus,
+      realStatus: actualStatus,
       databasePhone: instance.phone_number,
       realPhone: realPhoneNumber,
-      statusMismatch: instance.status !== (realStatus === 'open' ? 'connected' : 'disconnected'),
+      statusMismatch: instance.status !== actualStatus,
       phoneMismatch: instance.phone_number !== realPhoneNumber,
-      needsConnection: needsConnection || realStatus !== 'open',
+      needsConnection: !realPhoneNumber,
+      isGhostConnection: isGhostConnection,
       qrCode: qrCode,
       recommendations: []
     };
 
     // Add recommendations
+    if (isGhostConnection) {
+      result.recommendations.push('⚠️ Conexão fantasma detectada - instância existe mas sem dispositivo real');
+      result.recommendations.push('📱 Escaneie o QR Code com seu WhatsApp para conectar um dispositivo real');
+    } else if (result.needsConnection) {
+      result.recommendations.push('📱 Escaneie o QR Code com seu WhatsApp para conectar');
+    } else {
+      result.recommendations.push('✅ WhatsApp conectado e funcionando corretamente');
+    }
+    
     if (result.statusMismatch) {
-      result.recommendations.push('Status no banco difere do status real');
+      result.recommendations.push('Status no banco foi corrigido para refletir o status real');
     }
     
     if (result.phoneMismatch) {
-      result.recommendations.push('Número de telefone no banco difere do real');
-    }
-    
-    if (result.needsConnection) {
-      result.recommendations.push('Instância precisa ser conectada a um dispositivo WhatsApp real');
-    }
-    
-    if (!realPhoneNumber && realStatus === 'open') {
-      result.recommendations.push('Instância conectada mas sem número de telefone - reconexão necessária');
+      result.recommendations.push('Número de telefone no banco foi atualizado');
     }
 
     return new Response(JSON.stringify({

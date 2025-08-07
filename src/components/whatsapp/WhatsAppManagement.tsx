@@ -72,11 +72,9 @@ const WhatsAppManagement = () => {
         </TabsContent>
 
         <TabsContent value="diagnostics" className="space-y-4">
+          <WhatsAppDiagnostics />
           <WhatsAppRealStatusChecker />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <WhatsAppDiagnostics />
-            <WhatsAppAdvancedDiagnostics />
-          </div>
+          <WhatsAppAdvancedDiagnostics />
         </TabsContent>
 
         <TabsContent value="config" className="space-y-6">

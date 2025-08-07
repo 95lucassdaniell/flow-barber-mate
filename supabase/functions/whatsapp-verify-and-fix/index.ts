@@ -1,12 +1,13 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+}
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -14,19 +15,17 @@ serve(async (req) => {
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    );
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    // Get the Authorization header
+    const authHeader = req.headers.get('Authorization');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader?.replace('Bearer ', '') ?? '');
+    
+    if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
@@ -38,13 +37,13 @@ serve(async (req) => {
       .single();
 
     if (!profile?.barbershop_id) {
-      return new Response(JSON.stringify({ error: 'Barbershop not found' }), {
+      return new Response(JSON.stringify({ error: 'Barbearia não encontrada' }), {
         status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Get instance
+    // Get WhatsApp instance
     const { data: instance } = await supabase
       .from('whatsapp_instances')
       .select('*')
@@ -52,229 +51,215 @@ serve(async (req) => {
       .single();
 
     if (!instance) {
-      return new Response(JSON.stringify({ 
-        error: 'WhatsApp instance not found',
-        action_needed: 'create_instance'
-      }), {
+      return new Response(JSON.stringify({ error: 'Instância WhatsApp não encontrada' }), {
         status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
     const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
     const evolutionApiKey = Deno.env.get('EVOLUTION_GLOBAL_API_KEY');
 
-    if (!evolutionApiUrl || !evolutionApiKey || !instance.evolution_instance_name) {
-      return new Response(JSON.stringify({ 
-        error: 'Evolution API configuration missing',
-        action_needed: 'configure_api'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    if (!evolutionApiUrl || !evolutionApiKey) {
+      return new Response(JSON.stringify({ error: 'Configuração da Evolution API não encontrada' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    console.log(`Verifying WhatsApp instance: ${instance.evolution_instance_name}`);
+    console.log(`Verificando e corrigindo instância: ${instance.evolution_instance_name}`);
 
-    // Step 1: Check real status from Evolution API
-    let realStatus = null;
+    let appliedFixes = [];
+    let realStatus = 'disconnected';
     let phoneNumber = null;
-    let needsQrCode = false;
-    let isReallyConnected = false;
+    let qrCode = null;
 
+    // 1. Check real status from Evolution API
     try {
       const statusResponse = await fetch(`${evolutionApiUrl}/instance/connectionState/${instance.evolution_instance_name}`, {
-        method: 'GET',
-        headers: { 'apikey': evolutionApiKey }
+        headers: {
+          'Authorization': `Bearer ${evolutionApiKey}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (statusResponse.ok) {
         const statusData = await statusResponse.json();
-        console.log('Evolution API real status:', JSON.stringify(statusData, null, 2));
+        realStatus = statusData.instance?.state || 'close';
         
-        realStatus = statusData.instance?.state || 'disconnected';
-        phoneNumber = statusData.instance?.user?.id?.split('@')[0] || null;
-        isReallyConnected = realStatus === 'open' && phoneNumber !== null;
-        needsQrCode = realStatus === 'close' || realStatus === 'connecting' || !phoneNumber;
+        // Get phone number if connected
+        if (realStatus === 'open') {
+          const infoResponse = await fetch(`${evolutionApiUrl}/instance/fetchInstances?instanceName=${instance.evolution_instance_name}`, {
+            headers: {
+              'Authorization': `Bearer ${evolutionApiKey}`,
+              'Content-Type': 'application/json'
+            }
+          });
 
-        console.log(`Real status: ${realStatus}, Phone: ${phoneNumber}, Connected: ${isReallyConnected}`);
-      } else {
-        console.log('Instance not found in Evolution API, needs creation');
-        needsQrCode = true;
+          if (infoResponse.ok) {
+            const infoData = await infoResponse.json();
+            if (infoData.length > 0) {
+              phoneNumber = infoData[0].instance?.wuid || null;
+            }
+          }
+        }
       }
     } catch (error) {
-      console.error('Error checking Evolution API status:', error);
-      needsQrCode = true;
+      console.error('Erro ao verificar status:', error);
     }
 
-    // Step 2: Verify webhook configuration
+    // 2. Check webhook configuration
     let webhookConfigured = false;
     try {
       const webhookResponse = await fetch(`${evolutionApiUrl}/webhook/find/${instance.evolution_instance_name}`, {
-        method: 'GET',
-        headers: { 'apikey': evolutionApiKey }
+        headers: {
+          'Authorization': `Bearer ${evolutionApiKey}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (webhookResponse.ok) {
         const webhookData = await webhookResponse.json();
-        console.log('Webhook status:', JSON.stringify(webhookData, null, 2));
-        
-        const expectedWebhookUrl = 'https://yzqwmxffjufefocgkevz.supabase.co/functions/v1/evolution-webhook';
-        webhookConfigured = webhookData.webhook?.url === expectedWebhookUrl;
+        webhookConfigured = webhookData.webhook?.url === instance.webhook_url;
       }
     } catch (error) {
-      console.error('Error checking webhook:', error);
+      console.error('Erro ao verificar webhook:', error);
     }
 
-    // Step 3: Apply fixes based on analysis
-    const fixes = [];
-    let finalStatus = instance.status;
-    let newQrCode = null;
-
+    // 3. Apply fixes
+    
     // Fix 1: Update database status to match reality
-    if (realStatus && (instance.status !== realStatus || instance.phone_number !== phoneNumber)) {
-      await supabase
+    const actualStatus = phoneNumber ? 'connected' : (realStatus === 'close' ? 'disconnected' : 'awaiting_qr_scan');
+    const isGhostConnection = instance.status === 'connected' && !phoneNumber;
+    
+    if (instance.status !== actualStatus || instance.phone_number !== phoneNumber) {
+      const { error: updateError } = await supabase
         .from('whatsapp_instances')
         .update({
-          status: isReallyConnected ? 'connected' : 'disconnected',
+          status: actualStatus,
           phone_number: phoneNumber,
-          last_connected_at: isReallyConnected ? new Date().toISOString() : instance.last_connected_at
+          last_connected_at: phoneNumber ? new Date().toISOString() : null
         })
         .eq('id', instance.id);
-      
-      finalStatus = isReallyConnected ? 'connected' : 'disconnected';
-      fixes.push(`Updated database status from ${instance.status} to ${finalStatus}`);
-    }
 
-    // Fix 2: Configure webhook if missing
-    if (!webhookConfigured) {
-      try {
-        const webhookUrl = 'https://yzqwmxffjufefocgkevz.supabase.co/functions/v1/evolution-webhook';
-        const webhookConfig = await fetch(`${evolutionApiUrl}/webhook/set/${instance.evolution_instance_name}`, {
-          method: 'POST',
-          headers: {
-            'apikey': evolutionApiKey,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            url: webhookUrl,
-            events: [
-              'MESSAGES_UPSERT',
-              'CONNECTION_UPDATE',
-              'QRCODE_UPDATED'
-            ]
-          })
-        });
-
-        if (webhookConfig.ok) {
-          fixes.push('Configured webhook successfully');
-          
-          await supabase
-            .from('whatsapp_instances')
-            .update({ webhook_url: webhookUrl })
-            .eq('id', instance.id);
-        } else {
-          fixes.push('Failed to configure webhook');
+      if (!updateError) {
+        appliedFixes.push(`Status atualizado: ${instance.status} → ${actualStatus}`);
+        if (phoneNumber !== instance.phone_number) {
+          appliedFixes.push(`Telefone atualizado: ${instance.phone_number || 'null'} → ${phoneNumber || 'null'}`);
         }
-      } catch (error) {
-        console.error('Error configuring webhook:', error);
-        fixes.push('Error configuring webhook');
+        if (isGhostConnection) {
+          appliedFixes.push('Conexão fantasma corrigida');
+        }
       }
     }
 
-    // Fix 3: Generate new QR code if needed
-    if (needsQrCode && !isReallyConnected) {
+    // Fix 2: Configure webhook if not configured
+    if (!webhookConfigured) {
       try {
-        console.log('Generating new QR code for connection');
-        
-        // First try to restart the instance
-        try {
-          const restartResponse = await fetch(`${evolutionApiUrl}/instance/restart/${instance.evolution_instance_name}`, {
-            method: 'PUT',
-            headers: { 'apikey': evolutionApiKey }
-          });
-          
-          if (restartResponse.ok) {
-            fixes.push('Restarted instance successfully');
-          }
-        } catch (restartError) {
-          console.log('Restart failed, will try to get QR code directly');
-        }
+        const webhookConfig = {
+          url: instance.webhook_url,
+          events: [
+            'QRCODE_UPDATED',
+            'CONNECTION_UPDATE', 
+            'MESSAGES_UPSERT',
+            'SEND_MESSAGE'
+          ],
+          webhook_by_events: false
+        };
 
-        // Get QR code
+        const webhookSetResponse = await fetch(`${evolutionApiUrl}/webhook/set/${instance.evolution_instance_name}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${evolutionApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(webhookConfig)
+        });
+
+        if (webhookSetResponse.ok) {
+          appliedFixes.push('Webhook configurado corretamente');
+        }
+      } catch (error) {
+        console.error('Erro ao configurar webhook:', error);
+      }
+    }
+
+    // Fix 3: Generate new QR Code if disconnected or no phone
+    if (!phoneNumber) {
+      try {
         const qrResponse = await fetch(`${evolutionApiUrl}/instance/connect/${instance.evolution_instance_name}`, {
           method: 'GET',
-          headers: { 'apikey': evolutionApiKey }
+          headers: {
+            'Authorization': `Bearer ${evolutionApiKey}`,
+            'Content-Type': 'application/json'
+          }
         });
 
         if (qrResponse.ok) {
           const qrData = await qrResponse.json();
-          if (qrData.base64) {
-            newQrCode = qrData.base64;
-            
-            await supabase
+          qrCode = qrData.base64 || qrData.qrcode?.base64;
+          
+          if (qrCode) {
+            const { error: updateQrError } = await supabase
               .from('whatsapp_instances')
               .update({
-                qr_code: newQrCode,
+                qr_code: qrCode,
                 status: 'awaiting_qr_scan'
               })
               .eq('id', instance.id);
-            
-            fixes.push('Generated new QR code for connection');
-            finalStatus = 'awaiting_qr_scan';
+
+            if (!updateQrError) {
+              appliedFixes.push('Novo QR Code gerado');
+            }
           }
         }
       } catch (error) {
-        console.error('Error generating QR code:', error);
-        fixes.push('Failed to generate QR code');
+        console.error('Erro ao gerar QR Code:', error);
       }
     }
 
-    const result = {
+    // 4. Final status and recommendations
+    let recommendations = [];
+    
+    if (isGhostConnection) {
+      recommendations.push('⚠️ Conexão fantasma corrigida - status do banco atualizado');
+    }
+    
+    if (!phoneNumber && qrCode) {
+      recommendations.push('📱 Escaneie o novo QR Code com seu WhatsApp para conectar um dispositivo real');
+      recommendations.push('🔄 Após escanear, mensagens serão recebidas automaticamente');
+    } else if (phoneNumber) {
+      recommendations.push('✅ WhatsApp conectado e funcionando - mensagens podem ser recebidas');
+    } else {
+      recommendations.push('🔄 Tente forçar uma nova conexão se problemas persistirem');
+    }
+
+    return new Response(JSON.stringify({
       success: true,
       analysis: {
         database_status: instance.status,
-        real_status: realStatus,
-        phone_number: phoneNumber,
-        is_really_connected: isReallyConnected,
+        real_status: actualStatus,
+        phone_connected: !!phoneNumber,
         webhook_configured: webhookConfigured,
-        needs_qr_code: needsQrCode
+        ghost_connection_detected: isGhostConnection
       },
-      fixes_applied: fixes,
-      final_status: finalStatus,
-      qr_code: newQrCode,
-      recommendations: []
-    };
-
-    // Add recommendations
-    if (!isReallyConnected && !needsQrCode) {
-      result.recommendations.push('Instance shows as connected but no phone number. May need manual reconnection.');
-    }
-    
-    if (isReallyConnected && webhookConfigured) {
-      result.recommendations.push('Everything looks good! Instance is connected and webhook is configured.');
-    }
-    
-    if (!isReallyConnected && newQrCode) {
-      result.recommendations.push('Scan the QR code with WhatsApp to complete the connection.');
-    }
-
-    console.log('Verification complete:', JSON.stringify(result, null, 2));
-
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      applied_fixes: appliedFixes,
+      final_status: actualStatus,
+      qr_code: qrCode ? `data:image/png;base64,${qrCode}` : null,
+      recommendations
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('Error in whatsapp-verify-and-fix:', error);
+    console.error('Verify and fix error:', error);
     return new Response(JSON.stringify({ 
-      success: false,
       error: error.message,
-      fixes_applied: [],
-      recommendations: ['Check logs for detailed error information']
+      success: false
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 });
