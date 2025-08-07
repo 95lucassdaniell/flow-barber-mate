@@ -13,6 +13,7 @@ import EvolutionApiTester from "./EvolutionApiTester";
 import EvolutionApiConfig from "./EvolutionApiConfig";
 import { EvolutionDebugPanel } from "./EvolutionDebugPanel";
 import WhatsAppHealthMonitor from "./WhatsAppHealthMonitor";
+import WhatsAppSystemRecovery from "./WhatsAppSystemRecovery";
 
 const WhatsAppManagement = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -32,13 +33,14 @@ const WhatsAppManagement = () => {
       </div>
 
       <Tabs defaultValue="config" className="w-full">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-9">
           <TabsTrigger value="config">Configuração</TabsTrigger>
           <TabsTrigger value="conversations">Conversas</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
           <TabsTrigger value="send">Enviar</TabsTrigger>
           <TabsTrigger value="ai">IA</TabsTrigger>
           <TabsTrigger value="monitor">Monitor</TabsTrigger>
+          <TabsTrigger value="recovery">Recovery</TabsTrigger>
           <TabsTrigger value="api">API</TabsTrigger>
           <TabsTrigger value="debug">Debug</TabsTrigger>
         </TabsList>
@@ -85,6 +87,10 @@ const WhatsAppManagement = () => {
 
         <TabsContent value="monitor" className="space-y-6">
           <WhatsAppHealthMonitor />
+        </TabsContent>
+
+        <TabsContent value="recovery" className="space-y-6">
+          <WhatsAppSystemRecovery />
         </TabsContent>
 
         <TabsContent value="api" className="space-y-6">
