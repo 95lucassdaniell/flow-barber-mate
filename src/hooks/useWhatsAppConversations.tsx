@@ -461,29 +461,23 @@ export const useWhatsAppConversations = () => {
       authLoading
     });
     
-    // Timeout de segurança para evitar loading infinito
-    const timeoutId = setTimeout(() => {
-      if (loading && !conversations.length && !error) {
-        console.warn('⏰ Timeout de segurança - forçando retry ou erro');
-        if (retryCount < 3) {
-          fetchConversations(retryCount);
-        } else {
-          setError('Timeout ao carregar conversas. Tente recarregar a página.');
-          setLoading(false);
-        }
-      }
-    }, 15000); // 15 segundos timeout
-    
-    if (barbershopId || (!authLoading && user)) {
+    // Só executar se não estiver carregando auth e tiver barbershop_id
+    if (!authLoading && barbershopId) {
+      console.log('✅ Condições atendidas, iniciando fetch de conversas');
       fetchConversations();
       fetchTags();
+    } else if (!authLoading && user && !barbershopId) {
+      console.warn('⚠️ Usuário autenticado mas sem barbershop_id');
+      setError('Perfil incompleto. Faça logout e login novamente.');
+      setLoading(false);
     } else if (!authLoading && !user) {
+      console.warn('⚠️ Usuário não autenticado');
       setError('Usuário não autenticado');
       setLoading(false);
+    } else {
+      console.log('⏳ Aguardando autenticação completar...');
     }
-    
-    return () => clearTimeout(timeoutId);
-  }, [barbershopId, authLoading]);
+  }, [barbershopId, authLoading, user]);
 
   const manualRetry = () => {
     setRetryCount(0);

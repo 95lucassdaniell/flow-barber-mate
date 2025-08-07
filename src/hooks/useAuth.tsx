@@ -24,7 +24,7 @@ export const useAuth = () => {
     const circuitKey = `fetchProfile-${userId}`;
     
     if (globalState.isEmergencyStopActive()) return null;
-    if (!globalState.checkCircuitBreaker(circuitKey, 5, 2000)) return null;
+    if (!globalState.checkCircuitBreaker(circuitKey, 10, 5000)) return null; // Menos restritivo
 
     const cacheKey = `profile-${userId}`;
     
@@ -33,19 +33,24 @@ export const useAuth = () => {
     if (cached) return cached;
 
     try {
+      console.log('🔍 Buscando profile para userId:', userId);
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao buscar profile:', error);
+        throw error;
+      }
       
       const profile = profileData as Profile;
-      cacheManager.set(cacheKey, profile, 300000); // 5 min cache
+      cacheManager.set(cacheKey, profile, 60000); // 1 min cache
+      console.log('✅ Profile encontrado:', profile.id);
       return profile;
     } catch (error) {
-      console.error('Profile fetch error:', error);
+      console.error('❌ Profile fetch error:', error);
       return null;
     }
   }, []);
@@ -53,15 +58,9 @@ export const useAuth = () => {
   useEffect(() => {
     let mounted = true;
     let retryCount = 0;
-    const maxRetries = 2; // Reduzido de 3 para 2
-    const authKey = 'useAuth-init';
+    const maxRetries = 2;
     
-    // Rate limit mais restritivo para prevenir loops
-    if (!globalState.checkRateLimit(authKey, 2, 10000)) { // Aumentado de 5s para 10s
-      console.warn('🚨 Auth rate limit atingido, ignorando inicialização');
-      setLoading(false);
-      return;
-    }
+    console.log('🔐 Iniciando useAuth...');
     
     const initializeAuth = async () => {
       try {
@@ -89,26 +88,21 @@ export const useAuth = () => {
               setUser(session?.user ?? null);
               
               if (session?.user) {
-                // Fetch profile with more aggressive rate limiting
-                const profileKey = `profile-${session.user.id}`;
-                if (globalState.checkRateLimit(profileKey, 1, 10000)) { // 1 chamada por 10s
-                  setTimeout(async () => {
-                    if (mounted) {
-                      let profileData = await fetchProfile(session.user.id);
-                      
-                      // If no profile exists, create one
-                      if (!profileData) {
-                        profileData = await ensureUserProfile(session.user.id);
-                      }
-                      
-                      if (mounted) {
-                        setProfile(profileData as Profile);
-                      }
+                // Fetch profile sem rate limiting
+                setTimeout(async () => {
+                  if (mounted) {
+                    let profileData = await fetchProfile(session.user.id);
+                    
+                    // If no profile exists, create one
+                    if (!profileData) {
+                      profileData = await ensureUserProfile(session.user.id);
                     }
-                  }, 300); // Increased delay
-                } else {
-                  console.warn('🚨 Profile fetch rate limit atingido');
-                }
+                    
+                    if (mounted) {
+                      setProfile(profileData as Profile);
+                    }
+                  }
+                }, 100);
               } else {
                 if (mounted) setProfile(null);
               }
@@ -172,13 +166,13 @@ export const useAuth = () => {
           }
         };
 
-        // Timeout de segurança mais longo
+        // Timeout de segurança mais curto
         globalState.setOperationTimeout('auth-loading', () => {
           if (mounted) {
             console.warn('⏰ Auth timeout - forçando loading=false');
             setLoading(false);
           }
-        }, 12000);
+        }, 8000); // Reduzido para 8 segundos
 
         // Start session check
         await checkSession();
