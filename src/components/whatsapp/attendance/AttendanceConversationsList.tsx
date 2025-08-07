@@ -28,20 +28,20 @@ export const AttendanceConversationsList = ({
   retryCount = 0
 }: AttendanceConversationsListProps) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("");
-  const [filterTag, setFilterTag] = useState<string>("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterTag, setFilterTag] = useState<string>("all");
 
   const filteredConversations = conversations.filter(conversation => {
     const matchesSearch = !searchTerm || 
       conversation.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       conversation.client_phone.includes(searchTerm);
     
-    const matchesStatus = !filterStatus || 
+    const matchesStatus = filterStatus === "all" || 
       (filterStatus === "ai" && conversation.ai_enabled && !conversation.human_takeover) ||
       (filterStatus === "human" && conversation.human_takeover) ||
       (filterStatus === "active" && conversation.status === "active");
     
-    const matchesTag = !filterTag || 
+    const matchesTag = filterTag === "all" || 
       conversation.tags?.some(tag => tag.id === filterTag);
     
     return matchesSearch && matchesStatus && matchesTag;
@@ -125,7 +125,7 @@ export const AttendanceConversationsList = ({
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="ai">IA</SelectItem>
               <SelectItem value="human">Humano</SelectItem>
               <SelectItem value="active">Ativo</SelectItem>
@@ -137,7 +137,7 @@ export const AttendanceConversationsList = ({
               <SelectValue placeholder="Tag" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas</SelectItem>
+              <SelectItem value="all">Todas</SelectItem>
               {tags.map((tag) => (
                 <SelectItem key={tag.id} value={tag.id}>
                   {tag.name}

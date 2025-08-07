@@ -162,7 +162,8 @@ export const useWhatsAppConversations = () => {
           const { data: conversationTags } = await supabase
             .from('whatsapp_conversation_tags')
             .select(`
-              whatsapp_tags (
+              tag_id,
+              whatsapp_tags!inner (
                 id,
                 name,
                 color,
