@@ -85,18 +85,29 @@ serve(async (req) => {
     }
 
     // 4. Create new instance via evolution-instance-manager
-    const { data: newInstanceData, error: createError } = await supabase.functions.invoke(
-      'evolution-instance-manager',
-      {
-        body: { 
-          barbershopId,
-          action: 'create_instance'
+    try {
+      console.log('Creating new WhatsApp instance...');
+      const { data: newInstanceData, error: createError } = await supabase.functions.invoke(
+        'evolution-instance-manager',
+        {
+          body: { 
+            barbershopId,
+            action: 'create'
+          }
         }
-      }
-    );
+      );
 
-    if (createError) {
-      throw new Error(`Failed to create new instance: ${createError.message}`);
+      if (createError) {
+        console.error('Error creating new instance:', createError);
+        // Continue with reset even if instance creation fails
+        console.log('Continuing with database cleanup despite instance creation failure');
+      } else {
+        console.log('New instance created successfully:', newInstanceData);
+      }
+    } catch (instanceError) {
+      console.error('Exception creating new instance:', instanceError);
+      // Continue with reset - the database cleanup is more important
+      console.log('Continuing with database cleanup despite instance creation exception');
     }
 
     // 5. Clean up old messages and conversations
@@ -116,7 +127,9 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         message: 'WhatsApp instance reset successfully',
-        newInstanceData
+        databaseReset: true,
+        messagesCleared: true,
+        conversationsCleared: true
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

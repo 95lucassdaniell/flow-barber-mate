@@ -22,24 +22,19 @@ serve(async (req) => {
     
     // Test environment variables first
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
     const evolutionApiKey = Deno.env.get('EVOLUTION_GLOBAL_API_KEY');
     
     console.log('Environment variables check:');
     console.log('- SUPABASE_URL:', supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'NOT SET');
-    console.log('- SUPABASE_ANON_KEY:', supabaseAnonKey ? 'SET' : 'NOT SET');
+    console.log('- SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? 'SET' : 'NOT SET');
     console.log('- EVOLUTION_API_URL:', evolutionApiUrl ? `${evolutionApiUrl.substring(0, 30)}...` : 'NOT SET');
     console.log('- EVOLUTION_GLOBAL_API_KEY:', evolutionApiKey ? 'SET' : 'NOT SET');
     
     const supabase = createClient(
       supabaseUrl ?? '',
-      supabaseAnonKey ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
+      supabaseServiceKey ?? ''
     );
 
     let requestBody;
