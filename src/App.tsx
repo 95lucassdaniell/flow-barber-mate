@@ -17,6 +17,7 @@ import ServicesPage from "./pages/ServicesPage";
 import SettingsPage from "./pages/SettingsPage";
 import WhatsAppPage from "./pages/WhatsAppPage";
 import WhatsAppAttendancePage from "./pages/WhatsAppAttendancePage";
+import WhatsAppAttendanceDedicatedPage from "./pages/WhatsAppAttendanceDedicatedPage";
 import CRMPage from "./pages/CRMPage";
 import ProductsPage from "./pages/ProductsPage";
 import CommandsPage from "./pages/CommandsPage";
@@ -166,6 +167,13 @@ function App() {
               <SessionGuard>
                 <ProtectedRoute>
                   <WhatsAppAttendancePage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/atendimento" element={
+              <SessionGuard>
+                <ProtectedRoute>
+                  <WhatsAppAttendanceDedicatedPage />
                 </ProtectedRoute>
               </SessionGuard>
             } />
