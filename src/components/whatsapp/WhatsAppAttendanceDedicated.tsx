@@ -3,6 +3,7 @@ import { AttendanceLayout } from "./attendance/AttendanceLayout";
 import { AttendanceConversationsList } from "./attendance/AttendanceConversationsList";
 import { AttendanceChatInterface } from "./attendance/AttendanceChatInterface";
 import { AttendanceHeader } from "./attendance/AttendanceHeader";
+import WhatsAppConnectionStatus from "./WhatsAppConnectionStatus";
 import { useWhatsAppConversations } from "@/hooks/useWhatsAppConversations";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -17,12 +18,14 @@ const WhatsAppAttendanceDedicated = () => {
     error,
     retryCount,
     isRetrying,
+    connectionStatus,
     manualRetry,
     takeoverConversation,
     releaseConversation,
     applyTag,
     removeTag,
-    sendMessage
+    sendMessage,
+    reconnectWhatsApp
   } = useWhatsAppConversations();
 
   const selectedConversationData = conversations.find(c => c.id === selectedConversation);
@@ -64,6 +67,17 @@ const WhatsAppAttendanceDedicated = () => {
     <AttendanceLayout>
       <div className="flex flex-col h-full">
         <AttendanceHeader stats={stats} />
+        
+        {/* Status da conexão WhatsApp */}
+        {connectionStatus !== 'connected' && (
+          <div className="p-4 border-b border-border">
+            <WhatsAppConnectionStatus 
+              connectionStatus={connectionStatus}
+              onReconnect={reconnectWhatsApp}
+              loading={loading}
+            />
+          </div>
+        )}
         
         <div className="flex flex-1 overflow-hidden">
           <div className="w-80 border-r border-border flex-shrink-0">

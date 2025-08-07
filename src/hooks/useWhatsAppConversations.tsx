@@ -49,9 +49,41 @@ export const useWhatsAppConversations = () => {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
-  const { user, profile, loading: authLoading } = useAuth();
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected' | 'error'>('checking');
+  const { user, profile, loading: authLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const barbershopId = profile?.barbershop_id;
+
+  // Função para verificar status da conexão WhatsApp
+  const checkWhatsAppConnection = async () => {
+    if (!barbershopId) return;
+    
+    try {
+      console.log('📡 Verificando status da conexão WhatsApp...');
+      const { data: instanceData, error: instanceError } = await supabase
+        .from('whatsapp_instances')
+        .select('status, phone_number')
+        .eq('barbershop_id', barbershopId)
+        .single();
+
+      if (instanceError) {
+        console.warn('⚠️ Instância WhatsApp não encontrada:', instanceError);
+        setConnectionStatus('disconnected');
+        return;
+      }
+
+      if (instanceData?.status === 'connected' && instanceData?.phone_number) {
+        setConnectionStatus('connected');
+        console.log('✅ WhatsApp conectado:', instanceData.phone_number);
+      } else {
+        setConnectionStatus('disconnected');
+        console.log('❌ WhatsApp desconectado, status:', instanceData?.status);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao verificar conexão WhatsApp:', error);
+      setConnectionStatus('error');
+    }
+  };
 
   const fetchConversations = async (attemptNumber = 0) => {
     const maxRetries = 3;
@@ -62,8 +94,17 @@ export const useWhatsAppConversations = () => {
       user: user?.id, 
       profile: profile?.id, 
       attempt: attemptNumber + 1,
-      authLoading 
+      authLoading,
+      isAuthenticated
     });
+    
+    // Verificar autenticação primeiro
+    if (!isAuthenticated) {
+      console.log('❌ Usuário não autenticado');
+      setError('Você precisa estar logado para acessar as conversas');
+      setLoading(false);
+      return;
+    }
     
     // Se ainda estiver carregando auth e for primeira tentativa, aguardar
     if (authLoading && attemptNumber === 0) {
@@ -468,20 +509,63 @@ export const useWhatsAppConversations = () => {
     };
   }, [barbershopId]);
 
+  // Função para tentar reconectar WhatsApp
+  const reconnectWhatsApp = async () => {
+    if (!barbershopId) return;
+    
+    try {
+      setConnectionStatus('checking');
+      console.log('🔄 Tentando reconectar WhatsApp...');
+      
+      const { error } = await supabase.functions.invoke('whatsapp-reconnect', {
+        body: { barbershopId }
+      });
+
+      if (error) {
+        console.error('❌ Erro na reconexão:', error);
+        setConnectionStatus('error');
+        toast({
+          title: "Erro na reconexão",
+          description: "Não foi possível reconectar o WhatsApp",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Reconexão iniciada",
+        description: "Processo de reconexão do WhatsApp iniciado",
+      });
+      
+      // Verificar status após alguns segundos
+      setTimeout(() => {
+        checkWhatsAppConnection();
+      }, 3000);
+    } catch (error) {
+      console.error('❌ Erro na reconexão:', error);
+      setConnectionStatus('error');
+    }
+  };
+
   useEffect(() => {
     console.log('📋 useWhatsAppConversations useEffect executado', { 
       barbershopId,
       userId: user?.id,
       profileId: profile?.id,
-      isAuthenticated: !!user,
+      isAuthenticated,
       authLoading
     });
     
     // Aguardar tanto o fim do carregamento quanto o profile estar disponível
-    if (!authLoading && user && profile && barbershopId) {
+    if (!authLoading && isAuthenticated && user && profile && barbershopId) {
       console.log('✅ Condições atendidas, iniciando fetch de conversas');
       fetchConversations();
       fetchTags();
+      checkWhatsAppConnection();
+    } else if (!authLoading && !isAuthenticated) {
+      console.log('❌ Usuário não autenticado');
+      setError('Você precisa estar logado para acessar as conversas');
+      setLoading(false);
     } else if (!authLoading && user && !profile) {
       // Dar tempo adicional para o profile carregar após a autenticação
       console.log('⏳ Usuário autenticado, aguardando profile carregar...');
@@ -528,12 +612,15 @@ export const useWhatsAppConversations = () => {
     error,
     retryCount,
     isRetrying,
+    connectionStatus,
     refetch: fetchConversations,
     manualRetry,
     takeoverConversation,
     releaseConversation,
     applyTag,
     removeTag,
-    sendMessage
+    sendMessage,
+    reconnectWhatsApp,
+    checkWhatsAppConnection
   };
 };
