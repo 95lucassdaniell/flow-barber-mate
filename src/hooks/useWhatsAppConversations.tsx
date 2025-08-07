@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useToast } from "@/components/ui/use-toast";
@@ -49,41 +49,11 @@ export const useWhatsAppConversations = () => {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected' | 'error'>('checking');
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected' | 'connecting' | 'error'>('checking');
   const { user, profile, loading: authLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const barbershopId = profile?.barbershop_id;
 
-  // Função para verificar status da conexão WhatsApp
-  const checkWhatsAppConnection = async () => {
-    if (!barbershopId) return;
-    
-    try {
-      console.log('📡 Verificando status da conexão WhatsApp...');
-      const { data: instanceData, error: instanceError } = await supabase
-        .from('whatsapp_instances')
-        .select('status, phone_number')
-        .eq('barbershop_id', barbershopId)
-        .single();
-
-      if (instanceError) {
-        console.warn('⚠️ Instância WhatsApp não encontrada:', instanceError);
-        setConnectionStatus('disconnected');
-        return;
-      }
-
-      if (instanceData?.status === 'connected' && instanceData?.phone_number) {
-        setConnectionStatus('connected');
-        console.log('✅ WhatsApp conectado:', instanceData.phone_number);
-      } else {
-        setConnectionStatus('disconnected');
-        console.log('❌ WhatsApp desconectado, status:', instanceData?.status);
-      }
-    } catch (error) {
-      console.error('❌ Erro ao verificar conexão WhatsApp:', error);
-      setConnectionStatus('error');
-    }
-  };
 
   const fetchConversations = async (attemptNumber = 0) => {
     const maxRetries = 3;
@@ -509,43 +479,83 @@ export const useWhatsAppConversations = () => {
     };
   }, [barbershopId]);
 
-  // Função para tentar reconectar WhatsApp
-  const reconnectWhatsApp = async () => {
+  // Função para verificar status WhatsApp
+  const checkWhatsAppConnection = useCallback(async () => {
     if (!barbershopId) return;
     
     try {
       setConnectionStatus('checking');
-      console.log('🔄 Tentando reconectar WhatsApp...');
       
-      const { error } = await supabase.functions.invoke('whatsapp-reconnect', {
-        body: { barbershopId }
+      const { data, error } = await supabase.functions.invoke('whatsapp-status', {
+        headers: {
+          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
       });
 
-      if (error) {
-        console.error('❌ Erro na reconexão:', error);
-        setConnectionStatus('error');
-        toast({
-          title: "Erro na reconexão",
-          description: "Não foi possível reconectar o WhatsApp",
-          variant: "destructive",
-        });
-        return;
+      if (error) throw error;
+
+      // Sync with database - update local status
+      if (data.status) {
+        await supabase
+          .from('whatsapp_instances')
+          .update({ 
+            status: data.status,
+            phone_number: data.phone_number || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('barbershop_id', barbershopId);
       }
 
-      toast({
-        title: "Reconexão iniciada",
-        description: "Processo de reconexão do WhatsApp iniciado",
-      });
+      setConnectionStatus(data.connected ? 'connected' : 'disconnected');
+    } catch (error) {
+      console.error('❌ Erro ao verificar status WhatsApp:', error);
+      setConnectionStatus('error');
+    }
+  }, [barbershopId]);
+
+  // Função para tentar reconectar WhatsApp
+  const reconnectWhatsApp = useCallback(async () => {
+    try {
+      setIsRetrying(true);
+      setConnectionStatus('checking');
+      console.log('🔄 Iniciando reconexão WhatsApp...');
       
-      // Verificar status após alguns segundos
-      setTimeout(() => {
-        checkWhatsAppConnection();
-      }, 3000);
+      const { data, error } = await supabase.functions.invoke('whatsapp-reconnect', {
+        headers: {
+          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+
+      console.log('✅ Reconexão bem-sucedida:', data);
+      
+      // Update connection status
+      if (data.status) {
+        setConnectionStatus(data.status === 'connected' ? 'connected' : (data.status as 'connecting' | 'disconnected' | 'error'));
+        
+        // Check connection again after a delay if connecting
+        if (data.status === 'connecting') {
+          setTimeout(() => {
+            checkWhatsAppConnection();
+          }, 3000);
+        }
+      }
+      
+      // Refresh conversations after reconnection
+      await fetchConversations();
+      
     } catch (error) {
       console.error('❌ Erro na reconexão:', error);
       setConnectionStatus('error');
+      
+      // More specific error handling
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      setError(`Falha na reconexão WhatsApp: ${errorMessage}`);
+    } finally {
+      setIsRetrying(false);
     }
-  };
+  }, [fetchConversations, checkWhatsAppConnection]);
 
   useEffect(() => {
     console.log('📋 useWhatsAppConversations useEffect executado', { 

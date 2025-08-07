@@ -5,7 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Wifi, WifiOff, RefreshCw, Loader2, AlertTriangle } from "lucide-react";
 
 interface WhatsAppConnectionStatusProps {
-  connectionStatus: 'checking' | 'connected' | 'disconnected' | 'error';
+  connectionStatus: 'checking' | 'connected' | 'disconnected' | 'connecting' | 'error';
   onReconnect: () => void;
   loading?: boolean;
 }
@@ -50,6 +50,17 @@ export const WhatsAppConnectionStatus = ({
           title: "Erro na Conexão",
           description: "Tente reconectar ou verifique as configurações"
         };
+      case 'connecting':
+        return {
+          icon: <Loader2 className="h-4 w-4 animate-spin" />,
+          badge: "connecting",
+          variant: "outline" as const,
+          color: "text-orange-600",
+          bgColor: "bg-orange-50",
+          borderColor: "border-orange-200",
+          title: "Conectando WhatsApp",
+          description: "Estabelecendo conexão com o WhatsApp"
+        };
       case 'checking':
       default:
         return {
@@ -90,7 +101,7 @@ export const WhatsAppConnectionStatus = ({
           </AlertDescription>
         </Alert>
 
-        {(connectionStatus === 'disconnected' || connectionStatus === 'error') && (
+        {(connectionStatus === 'disconnected' || connectionStatus === 'error' || connectionStatus === 'connecting') && (
           <div className="mt-4 space-y-2">
             <Button 
               onClick={onReconnect} 

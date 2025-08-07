@@ -153,57 +153,126 @@ serve(async (req) => {
       console.log(`Delete failed: ${deleteError.message}`);
     }
 
-    // Create new instance
-    const createResponse = await fetch(
-      `${evolutionUrl}/instance/create`,
+    // First check if instance already exists
+    const checkResponse = await fetch(
+      `${evolutionUrl}/instance/fetchInstances`,
       {
-        method: 'POST',
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'apikey': globalApiKey,
         },
-        body: JSON.stringify({
-          instanceName: instance.evolution_instance_name,
-          webhook: instance.webhook_url,
-          events: ['messages.upsert', 'connection.update', 'qrcode.updated'],
-          qrcode: true,
-        }),
       }
     );
 
-    if (!createResponse.ok) {
-      throw new Error(`Failed to create instance: ${createResponse.status}`);
+    let instanceExists = false;
+    if (checkResponse.ok) {
+      const existingInstances = await checkResponse.json();
+      instanceExists = existingInstances.some((inst: any) => 
+        inst.instance?.instanceName === instance.evolution_instance_name
+      );
     }
 
-    const createData = await createResponse.json();
-    console.log('Instance created:', createData);
+    // Only create if it doesn't exist
+    if (!instanceExists) {
+      console.log(`Creating new instance: ${instance.evolution_instance_name}`);
+      
+      const createResponse = await fetch(
+        `${evolutionUrl}/instance/create`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': globalApiKey,
+          },
+          body: JSON.stringify({
+            instanceName: instance.evolution_instance_name,
+            webhook: instance.webhook_url,
+            events: ['messages.upsert', 'connection.update', 'qrcode.updated'],
+            qrcode: true,
+          }),
+        }
+      );
 
-    // Update database
-    const updateData: any = {
-      status: 'connecting',
-      instance_id: createData.instance?.instanceId || null,
-      instance_token: createData.hash || null,
-      qr_code: createData.qrcode || null,
-      updated_at: new Date().toISOString()
-    };
-
-    await supabase
-      .from('whatsapp_instances')
-      .update(updateData)
-      .eq('id', instance.id);
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        status: createData.qrcode ? 'connecting' : 'connected',
-        qr_code: createData.qrcode || null,
-        message: 'Instance recreated successfully'
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
+      if (!createResponse.ok) {
+        const errorText = await createResponse.text();
+        console.error(`Create failed with status ${createResponse.status}:`, errorText);
+        throw new Error(`Failed to create instance: ${createResponse.status} - ${errorText}`);
       }
-    );
+
+      const createData = await createResponse.json();
+      console.log('Instance created:', createData);
+
+      // Update database
+      const updateData: any = {
+        status: 'connecting',
+        instance_id: createData.instance?.instanceId || null,
+        instance_token: createData.hash || null,
+        qr_code: createData.qrcode || null,
+        updated_at: new Date().toISOString()
+      };
+
+      await supabase
+        .from('whatsapp_instances')
+        .update(updateData)
+        .eq('id', instance.id);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          status: createData.qrcode ? 'connecting' : 'connected',
+          qr_code: createData.qrcode || null,
+          message: 'Instance recreated successfully'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    } else {
+      console.log('Instance already exists, checking state');
+      
+      // Instance exists, just check its state
+      const stateResponse = await fetch(
+        `${evolutionUrl}/instance/connectionState/${instance.evolution_instance_name}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': globalApiKey,
+          },
+        }
+      );
+
+      if (stateResponse.ok) {
+        const stateData = await stateResponse.json();
+        const status = stateData.instance?.state === 'open' ? 'connected' : 'connecting';
+        
+        await supabase
+          .from('whatsapp_instances')
+          .update({
+            status,
+            phone_number: stateData.instance?.phone || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', instance.id);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            status,
+            message: 'Instance state checked successfully'
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+          }
+        );
+      } else {
+        throw new Error(`Failed to check instance state: ${stateResponse.status}`);
+      }
+    }
+
 
   } catch (error) {
     console.error('Error in whatsapp-reconnect:', error);
