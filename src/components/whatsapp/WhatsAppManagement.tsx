@@ -13,6 +13,7 @@ import WhatsAppAttendance from "./WhatsAppAttendance";
 import WhatsAppConnectionWizard from "./WhatsAppConnectionWizard";
 import WhatsAppDiagnostics from "./WhatsAppDiagnostics";
 import WhatsAppAdvancedDiagnostics from "./WhatsAppAdvancedDiagnostics";
+import WhatsAppRealStatusChecker from "./WhatsAppRealStatusChecker";
 import WhatsAppCompleteReset from "./WhatsAppCompleteReset";
 import WhatsAppMessageTester from "./WhatsAppMessageTester";
 import EvolutionApiTester from "./EvolutionApiTester";
@@ -71,6 +72,7 @@ const WhatsAppManagement = () => {
         </TabsContent>
 
         <TabsContent value="diagnostics" className="space-y-4">
+          <WhatsAppRealStatusChecker />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <WhatsAppDiagnostics />
             <WhatsAppAdvancedDiagnostics />
