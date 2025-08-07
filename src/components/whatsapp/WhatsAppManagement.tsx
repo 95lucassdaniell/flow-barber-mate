@@ -14,7 +14,7 @@ import WhatsAppConnectionWizard from "./WhatsAppConnectionWizard";
 import EvolutionApiTester from "./EvolutionApiTester";
 import EvolutionApiConfig from "./EvolutionApiConfig";
 import { EvolutionDebugPanel } from "./EvolutionDebugPanel";
-import WhatsAppHealthMonitor from "./WhatsAppHealthMonitor";
+import { WhatsAppHealthMonitor } from "./WhatsAppHealthMonitor";
 import WhatsAppSystemRecovery from "./WhatsAppSystemRecovery";
 
 const WhatsAppManagement = () => {
