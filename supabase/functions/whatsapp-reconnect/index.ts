@@ -229,7 +229,7 @@ serve(async (req) => {
         body: JSON.stringify({
           instanceName: instance.evolution_instance_name,
           webhook: instance.webhook_url,
-          events: ['messages.upsert', 'connection.update', 'qrcode.updated'],
+          events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE', 'QRCODE_UPDATED'],
           qrcode: true,
         }),
       }

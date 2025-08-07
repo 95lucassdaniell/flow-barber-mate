@@ -49,15 +49,19 @@ serve(async (req) => {
       return new Response('OK', { status: 200 });
     }
 
-    // Handle different webhook events
+    // Handle different webhook events - using correct Evolution API event names
     switch (event) {
+      case 'QRCODE_UPDATED':
       case 'qrcode.updated':
+        console.log('=== QR CODE UPDATE EVENT ===');
+        console.log('QR Code data:', JSON.stringify(data, null, 2));
+        
         if (data?.qrcode) {
           await supabase
             .from('whatsapp_instances')
             .update({
               qr_code: data.qrcode,
-              status: 'connecting'
+              status: 'awaiting_qr_scan'
             })
             .eq('id', whatsappInstance.id);
           
@@ -65,6 +69,7 @@ serve(async (req) => {
         }
         break;
 
+      case 'CONNECTION_UPDATE':
       case 'connection.update':
         console.log('=== CONNECTION UPDATE EVENT ===');
         console.log('Connection data:', JSON.stringify(data, null, 2));
@@ -101,6 +106,7 @@ serve(async (req) => {
         }
         break;
 
+      case 'MESSAGES_UPSERT':
       case 'messages.upsert':
         console.log('=== MESSAGES UPSERT EVENT ===');
         console.log('Messages data:', JSON.stringify(data, null, 2));
@@ -207,7 +213,11 @@ serve(async (req) => {
         }
         break;
 
+      case 'SEND_MESSAGE':
       case 'send.message':
+        console.log('=== SEND MESSAGE EVENT ===');
+        console.log('Send message data:', JSON.stringify(data, null, 2));
+        
         // Handle message sending status updates
         if (data?.key?.id) {
           await supabase

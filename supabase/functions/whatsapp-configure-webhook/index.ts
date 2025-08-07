@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,49 +41,43 @@ serve(async (req) => {
       throw new Error('User barbershop not found');
     }
 
-    const barbershopId = profile.barbershop_id;
-
-    console.log(`Configuring webhook for barbershop: ${barbershopId}`);
-
-    // Get current instance
-    const { data: instance, error: fetchError } = await supabase
+    // Get WhatsApp instance
+    const { data: instance } = await supabase
       .from('whatsapp_instances')
       .select('*')
-      .eq('barbershop_id', barbershopId)
+      .eq('barbershop_id', profile.barbershop_id)
       .single();
 
-    if (fetchError) {
-      throw new Error(`Failed to fetch instance: ${fetchError.message}`);
+    if (!instance) {
+      throw new Error('WhatsApp instance not found');
     }
 
     const evolutionUrl = Deno.env.get('EVOLUTION_API_URL');
     const globalApiKey = Deno.env.get('EVOLUTION_GLOBAL_API_KEY');
 
-    if (!instance.evolution_instance_name) {
-      throw new Error('No Evolution instance name found');
+    if (!evolutionUrl || !globalApiKey) {
+      throw new Error('Evolution API credentials not configured');
     }
 
-    const webhookUrl = 'https://yzqwmxffjufefocgkevz.supabase.co/functions/v1/evolution-webhook';
-    
-    console.log(`Configuring webhook: ${webhookUrl} for instance: ${instance.evolution_instance_name}`);
+    console.log(`Configuring webhook for instance: ${instance.evolution_instance_name}`);
 
-    // Configure webhook in Evolution API
+    // Configure webhook with correct events
     const webhookResponse = await fetch(
       `${evolutionUrl}/webhook/set/${instance.evolution_instance_name}`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': globalApiKey,
+          'Authorization': `Bearer ${globalApiKey}`,
         },
         body: JSON.stringify({
-          url: webhookUrl,
-          webhook_by_events: false,
-          webhook_base64: false,
+          url: instance.webhook_url,
+          enabled: true,
           events: [
-            'messages.upsert',
-            'connection.update',
-            'qrcode.updated'
+            'MESSAGES_UPSERT',
+            'CONNECTION_UPDATE', 
+            'QRCODE_UPDATED',
+            'SEND_MESSAGE'
           ]
         }),
       }
@@ -91,18 +85,17 @@ serve(async (req) => {
 
     if (!webhookResponse.ok) {
       const errorText = await webhookResponse.text();
-      console.error('Webhook configuration failed:', errorText);
-      throw new Error(`Failed to configure webhook: ${webhookResponse.status} - ${errorText}`);
+      console.error(`Webhook configuration failed: ${webhookResponse.status} - ${errorText}`);
+      throw new Error(`Failed to configure webhook: ${errorText}`);
     }
 
     const webhookData = await webhookResponse.json();
     console.log('Webhook configured successfully:', webhookData);
 
-    // Update instance with webhook URL
+    // Update instance with webhook configuration timestamp
     await supabase
       .from('whatsapp_instances')
       .update({
-        webhook_url: webhookUrl,
         updated_at: new Date().toISOString()
       })
       .eq('id', instance.id);
@@ -111,8 +104,8 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         message: 'Webhook configured successfully',
-        webhook_url: webhookUrl,
-        instance_name: instance.evolution_instance_name
+        webhook_url: instance.webhook_url,
+        events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE', 'QRCODE_UPDATED', 'SEND_MESSAGE']
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -121,7 +114,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in whatsapp-configure-webhook:', error);
+    console.error('Error configuring webhook:', error);
     return new Response(
       JSON.stringify({
         success: false,
