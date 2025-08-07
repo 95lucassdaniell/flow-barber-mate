@@ -14,6 +14,8 @@ interface AttendanceConversationsListProps {
   selectedConversation: string | null;
   onSelectConversation: (conversationId: string) => void;
   loading: boolean;
+  isRetrying?: boolean;
+  retryCount?: number;
 }
 
 export const AttendanceConversationsList = ({
@@ -21,7 +23,9 @@ export const AttendanceConversationsList = ({
   tags,
   selectedConversation,
   onSelectConversation,
-  loading
+  loading,
+  isRetrying = false,
+  retryCount = 0
 }: AttendanceConversationsListProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("");
@@ -98,6 +102,11 @@ export const AttendanceConversationsList = ({
           <MessageCircle className="w-5 h-5 text-primary" />
           <h2 className="font-semibold">Conversas</h2>
           <Badge variant="secondary">{filteredConversations.length}</Badge>
+          {isRetrying && (
+            <Badge variant="outline" className="text-xs">
+              Retry {retryCount}/3
+            </Badge>
+          )}
         </div>
         
         <div className="relative mb-3">

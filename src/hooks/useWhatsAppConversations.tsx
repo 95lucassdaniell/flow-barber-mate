@@ -47,24 +47,56 @@ export const useWhatsAppConversations = () => {
   const [tags, setTags] = useState<WhatsAppTag[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user, profile } = useAuth();
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const { user, profile, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const barbershopId = profile?.barbershop_id;
 
-  const fetchConversations = async () => {
-    console.log('🔍 fetchConversations iniciado', { barbershopId, user: user?.id, profile: profile?.id });
+  const fetchConversations = async (attemptNumber = 0) => {
+    const maxRetries = 3;
+    const isRetryAttempt = attemptNumber > 0;
+    
+    console.log('🔍 fetchConversations iniciado', { 
+      barbershopId, 
+      user: user?.id, 
+      profile: profile?.id, 
+      attempt: attemptNumber + 1,
+      authLoading 
+    });
+    
+    // Se ainda estiver carregando auth e for primeira tentativa, aguardar
+    if (authLoading && attemptNumber === 0) {
+      console.log('⏳ Aguardando autenticação completar...');
+      setTimeout(() => fetchConversations(0), 1000);
+      return;
+    }
     
     if (!barbershopId) {
-      console.warn('⚠️ Nenhum barbershop_id disponível para buscar conversas');
-      setError('ID da barbearia não encontrado. Verifique se você está autenticado.');
+      if (attemptNumber < maxRetries) {
+        console.warn(`⚠️ Tentativa ${attemptNumber + 1}: barbershop_id não disponível, tentando novamente em 2s...`);
+        setIsRetrying(true);
+        setTimeout(() => {
+          setRetryCount(attemptNumber + 1);
+          fetchConversations(attemptNumber + 1);
+        }, 2000);
+        return;
+      }
+      
+      console.error('❌ Falha final: ID da barbearia não encontrado após tentativas');
+      setError('ID da barbearia não encontrado. Faça logout e login novamente.');
       setLoading(false);
+      setIsRetrying(false);
       return;
     }
 
     try {
-      setLoading(true);
+      if (!isRetryAttempt) {
+        setLoading(true);
+      }
       setError(null);
-      console.log('📡 Buscando conversas para barbershop_id:', barbershopId);
+      setIsRetrying(isRetryAttempt);
+      console.log(`📡 Buscando conversas para barbershop_id: ${barbershopId} (tentativa ${attemptNumber + 1})`);
 
       // Buscar conversas com informações das tags
       const { data: conversationsData, error: conversationsError } = await supabase
@@ -166,6 +198,8 @@ export const useWhatsAppConversations = () => {
 
       console.log('✅ Conversas carregadas com sucesso:', conversationsWithMessages.length);
       setConversations(conversationsWithMessages);
+      setRetryCount(0);
+      setIsRetrying(false);
     } catch (err: any) {
       console.error('❌ Error fetching conversations:', err);
       console.error('❌ Detalhes do erro:', {
@@ -185,9 +219,28 @@ export const useWhatsAppConversations = () => {
         errorMessage = err.message;
       }
       
+      // Retry logic para erros críticos
+      if (attemptNumber < maxRetries && (
+        err.code === 'PGRST103' || 
+        err.message?.includes('policy') ||
+        err.message?.includes('permission')
+      )) {
+        const retryDelay = Math.min(2000 * Math.pow(2, attemptNumber), 8000);
+        console.log(`🔄 Retry automático em ${retryDelay}ms (tentativa ${attemptNumber + 1}/${maxRetries})`);
+        setIsRetrying(true);
+        setTimeout(() => {
+          setRetryCount(attemptNumber + 1);
+          fetchConversations(attemptNumber + 1);
+        }, retryDelay);
+        return;
+      }
+      
       setError(errorMessage);
+      setIsRetrying(false);
     } finally {
-      setLoading(false);
+      if (!isRetryAttempt || attemptNumber >= maxRetries) {
+        setLoading(false);
+      }
     }
   };
 
@@ -404,23 +457,51 @@ export const useWhatsAppConversations = () => {
       barbershopId,
       userId: user?.id,
       profileId: profile?.id,
-      isAuthenticated: !!user 
+      isAuthenticated: !!user,
+      authLoading
     });
     
-    if (barbershopId) {
+    // Timeout de segurança para evitar loading infinito
+    const timeoutId = setTimeout(() => {
+      if (loading && !conversations.length && !error) {
+        console.warn('⏰ Timeout de segurança - forçando retry ou erro');
+        if (retryCount < 3) {
+          fetchConversations(retryCount);
+        } else {
+          setError('Timeout ao carregar conversas. Tente recarregar a página.');
+          setLoading(false);
+        }
+      }
+    }, 15000); // 15 segundos timeout
+    
+    if (barbershopId || (!authLoading && user)) {
       fetchConversations();
       fetchTags();
-    } else {
-      console.warn('⚠️ barbershopId não disponível, pulando fetch');
+    } else if (!authLoading && !user) {
+      setError('Usuário não autenticado');
+      setLoading(false);
     }
-  }, [barbershopId]);
+    
+    return () => clearTimeout(timeoutId);
+  }, [barbershopId, authLoading]);
+
+  const manualRetry = () => {
+    setRetryCount(0);
+    setError(null);
+    setLoading(true);
+    setIsRetrying(false);
+    fetchConversations(0);
+  };
 
   return {
     conversations,
     tags,
     loading,
     error,
+    retryCount,
+    isRetrying,
     refetch: fetchConversations,
+    manualRetry,
     takeoverConversation,
     releaseConversation,
     applyTag,

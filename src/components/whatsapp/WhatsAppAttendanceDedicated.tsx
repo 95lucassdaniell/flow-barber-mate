@@ -15,6 +15,9 @@ const WhatsAppAttendanceDedicated = () => {
     tags,
     loading,
     error,
+    retryCount,
+    isRetrying,
+    manualRetry,
     takeoverConversation,
     releaseConversation,
     applyTag,
@@ -30,8 +33,19 @@ const WhatsAppAttendanceDedicated = () => {
         <div className="flex items-center justify-center h-full">
           <Alert className="max-w-md">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Erro ao carregar conversas: {error}
+            <AlertDescription className="space-y-2">
+              <div>Erro ao carregar conversas: {error}</div>
+              {retryCount > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  Tentativas: {retryCount}/3
+                </div>
+              )}
+              <button 
+                onClick={manualRetry}
+                className="mt-2 px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90"
+              >
+                Tentar Novamente
+              </button>
             </AlertDescription>
           </Alert>
         </div>
@@ -59,6 +73,8 @@ const WhatsAppAttendanceDedicated = () => {
               selectedConversation={selectedConversation}
               onSelectConversation={setSelectedConversation}
               loading={loading}
+              isRetrying={isRetrying}
+              retryCount={retryCount}
             />
           </div>
           
