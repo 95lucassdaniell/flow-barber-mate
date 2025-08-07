@@ -132,14 +132,6 @@ serve(async (req) => {
       status: instance.status
     });
 
-    const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
-    const evolutionApiKey = Deno.env.get('EVOLUTION_GLOBAL_API_KEY');
-
-    console.log('Environment check:', {
-      evolutionApiUrl: evolutionApiUrl ? `${evolutionApiUrl.substring(0, 20)}...` : 'NOT SET',
-      evolutionApiKey: evolutionApiKey ? 'SET' : 'NOT SET'
-    });
-
     // Check if this is an Evolution API instance
     if (instance.api_type === 'evolution') {
       console.log('=== EVOLUTION API FLOW ===');
