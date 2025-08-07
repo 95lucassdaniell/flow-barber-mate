@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CheckCircle, XCircle, AlertCircle, Loader2, RefreshCw, Phone, MessageSquare } from "lucide-react";
+import { CheckCircle, XCircle, AlertCircle, Loader2, RefreshCw, Phone, MessageSquare, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface WhatsAppStatusData {
@@ -17,6 +17,7 @@ interface WhatsAppStatusData {
 const WhatsAppStatusChecker = () => {
   const [statusData, setStatusData] = useState<WhatsAppStatusData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
 
   const checkStatus = async () => {
@@ -40,6 +41,33 @@ const WhatsAppStatusChecker = () => {
       toast.error("Erro ao verificar status");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const reconnectWhatsApp = async () => {
+    setReconnecting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('whatsapp-reconnect');
+      
+      if (error) {
+        toast.error("Erro ao tentar reconectar WhatsApp");
+        return;
+      }
+
+      if (data.success) {
+        toast.success("Reconexão iniciada com sucesso!");
+        // Aguardar um pouco e verificar status novamente
+        setTimeout(() => {
+          checkStatus();
+        }, 3000);
+      } else {
+        toast.error("Falha na reconexão: " + (data.details || "Erro desconhecido"));
+      }
+    } catch (error) {
+      console.error('Error reconnecting:', error);
+      toast.error("Erro ao tentar reconectar");
+    } finally {
+      setReconnecting(false);
     }
   };
 
@@ -168,17 +196,32 @@ const WhatsAppStatusChecker = () => {
                 {lastChecked ? lastChecked.toLocaleTimeString() : 'Nunca'}
               </div>
               
-              {statusData.connected && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={testMessage}
-                  className="w-full"
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Enviar Teste
-                </Button>
-              )}
+              <div className="space-y-2">
+                {statusData.connected && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={testMessage}
+                    className="w-full"
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Enviar Teste
+                  </Button>
+                )}
+                
+                {!statusData.connected && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={reconnectWhatsApp}
+                    disabled={reconnecting}
+                    className="w-full"
+                  >
+                    <RotateCcw className={`h-4 w-4 mr-2 ${reconnecting ? 'animate-spin' : ''}`} />
+                    {reconnecting ? 'Reconectando...' : 'Reconectar'}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}
