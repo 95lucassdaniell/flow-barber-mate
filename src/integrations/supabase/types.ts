@@ -4179,6 +4179,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      user_belongs_to_barbershop: {
+        Args: { barbershop_uuid: string }
+        Returns: boolean
+      }
       validate_email: {
         Args: { email_input: string }
         Returns: boolean
