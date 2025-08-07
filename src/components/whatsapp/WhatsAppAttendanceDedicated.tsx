@@ -6,7 +6,6 @@ import { AttendanceHeader } from "./attendance/AttendanceHeader";
 import { useWhatsAppConversations } from "@/hooks/useWhatsAppConversations";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { AuthStatusIndicator } from "@/components/debug/AuthStatusIndicator";
 
 const WhatsAppAttendanceDedicated = () => {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -92,7 +91,6 @@ const WhatsAppAttendanceDedicated = () => {
           </div>
         </div>
       </div>
-      <AuthStatusIndicator />
     </AttendanceLayout>
   );
 };
