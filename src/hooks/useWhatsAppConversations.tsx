@@ -461,23 +461,41 @@ export const useWhatsAppConversations = () => {
       authLoading
     });
     
-    // Só executar se não estiver carregando auth e tiver barbershop_id
-    if (!authLoading && barbershopId) {
+    // Aguardar tanto o fim do carregamento quanto o profile estar disponível
+    if (!authLoading && user && profile && barbershopId) {
       console.log('✅ Condições atendidas, iniciando fetch de conversas');
       fetchConversations();
       fetchTags();
-    } else if (!authLoading && user && !barbershopId) {
-      console.warn('⚠️ Usuário autenticado mas sem barbershop_id');
-      setError('Perfil incompleto. Faça logout e login novamente.');
+    } else if (!authLoading && user && !profile) {
+      // Dar tempo adicional para o profile carregar após a autenticação
+      console.log('⏳ Usuário autenticado, aguardando profile carregar...');
+      const profileTimeout = setTimeout(() => {
+        if (!profile) {
+          console.warn('⚠️ Timeout: Profile não carregou após 5 segundos');
+          setError('Erro ao carregar perfil. Faça logout e login novamente.');
+          setLoading(false);
+        }
+      }, 5000);
+      
+      // Cleanup do timeout se o componente for desmontado
+      return () => clearTimeout(profileTimeout);
+    } else if (!authLoading && user && profile && !barbershopId) {
+      console.warn('⚠️ Usuário autenticado com profile mas sem barbershop_id');
+      setError('Perfil incompleto. Entre em contato com o suporte.');
       setLoading(false);
     } else if (!authLoading && !user) {
       console.warn('⚠️ Usuário não autenticado');
       setError('Usuário não autenticado');
       setLoading(false);
     } else {
-      console.log('⏳ Aguardando autenticação completar...');
+      console.log('⏳ Aguardando autenticação e profile completarem...', {
+        authLoading,
+        hasUser: !!user,
+        hasProfile: !!profile,
+        hasBarbershopId: !!barbershopId
+      });
     }
-  }, [barbershopId, authLoading, user]);
+  }, [barbershopId, authLoading, user, profile]);
 
   const manualRetry = () => {
     setRetryCount(0);
