@@ -16,6 +16,7 @@ import WhatsAppAdvancedDiagnostics from "./WhatsAppAdvancedDiagnostics";
 import WhatsAppRealStatusChecker from "./WhatsAppRealStatusChecker";
 import { WhatsAppConnectionMonitor } from "./WhatsAppConnectionMonitor";
 import WhatsAppCompleteReset from "./WhatsAppCompleteReset";
+import WhatsAppGhostConnectionFixer from "./WhatsAppGhostConnectionFixer";
 import WhatsAppMessageTester from "./WhatsAppMessageTester";
 import EvolutionApiTester from "./EvolutionApiTester";
 import EvolutionApiConfig from "./EvolutionApiConfig";
@@ -66,8 +67,9 @@ const WhatsAppManagement = () => {
         </TabsList>
 
         <TabsContent value="connection" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             <WhatsAppConnectionWizard />
+            <WhatsAppGhostConnectionFixer />
             <WhatsAppCompleteReset />
           </div>
         </TabsContent>
