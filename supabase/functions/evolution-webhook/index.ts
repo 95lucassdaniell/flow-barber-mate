@@ -78,9 +78,10 @@ serve(async (req) => {
         let phoneNumber = null;
 
         if (data?.state === 'open') {
-          newStatus = 'connected';
           phoneNumber = data?.user?.id?.split('@')[0] || null;
-          console.log('WhatsApp connected successfully! Phone:', phoneNumber);
+          // Only mark as connected if we have a real phone number
+          newStatus = phoneNumber ? 'connected' : 'awaiting_qr_scan';
+          console.log(`WhatsApp status: ${newStatus} (Phone: ${phoneNumber || 'none'})`);
         } else if (data?.state === 'connecting') {
           newStatus = 'connecting';
           console.log('WhatsApp connecting...');
