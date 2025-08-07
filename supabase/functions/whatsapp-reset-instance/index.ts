@@ -76,7 +76,6 @@ serve(async (req) => {
         instance_token: null,
         evolution_instance_name: null,
         webhook_url: null,
-        last_seen: null,
         updated_at: new Date().toISOString()
       })
       .eq('barbershop_id', barbershopId);
