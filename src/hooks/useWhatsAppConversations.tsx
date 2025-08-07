@@ -163,7 +163,7 @@ export const useWhatsAppConversations = () => {
             .from('whatsapp_conversation_tags')
             .select(`
               tag_id,
-              whatsapp_tags!inner (
+              whatsapp_tags!left (
                 id,
                 name,
                 color,
