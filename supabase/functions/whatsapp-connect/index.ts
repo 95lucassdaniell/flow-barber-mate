@@ -261,19 +261,24 @@ serve(async (req) => {
 
         // Now try to get QR code
         console.log('Getting QR code from Evolution API...');
-        const qrResponse = await fetch(`${evolutionApiUrl}/instance/connect/${instance.evolution_instance_name}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': evolutionApiKey,
-          },
-        });
-
-        console.log('Evolution API QR response status:', qrResponse.status);
+        console.log('Instance name for QR request:', instance.evolution_instance_name);
+        console.log('Evolution API URL:', `${evolutionApiUrl}/instance/connect/${instance.evolution_instance_name}`);
         
-        if (!qrResponse.ok) {
-          const errorText = await qrResponse.text();
-          console.error('Evolution API QR error:', errorText);
+        try {
+          const qrResponse = await fetch(`${evolutionApiUrl}/instance/connect/${instance.evolution_instance_name}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': evolutionApiKey,
+            },
+          });
+
+          console.log('Evolution API QR response status:', qrResponse.status);
+          console.log('Evolution API QR response headers:', Object.fromEntries(qrResponse.headers.entries()));
+          
+          if (!qrResponse.ok) {
+            const errorText = await qrResponse.text();
+            console.error('Evolution API QR error:', errorText);
           
           // If instance not found (404), try to recreate it once
           if (qrResponse.status === 404) {
@@ -370,8 +375,14 @@ serve(async (req) => {
           });
         }
 
+        } catch (fetchError) {
+          console.error('Error fetching QR code:', fetchError);
+          throw fetchError;
+        }
       } catch (error) {
         console.error('Error in Evolution API flow:', error);
+        console.error('Error stack:', error.stack);
+        console.error('Error type:', error.constructor.name);
         
         // Update instance status to error
         await supabase
@@ -385,6 +396,8 @@ serve(async (req) => {
         return new Response(JSON.stringify({ 
           error: 'Failed to connect to Evolution API',
           details: error.message,
+          type: error.constructor.name,
+          stack: error.stack,
           instance: {
             id: instance.id,
             evolution_instance_name: instance.evolution_instance_name,
