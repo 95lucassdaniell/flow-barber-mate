@@ -49,9 +49,48 @@ export const AttendanceChatInterface = ({
   
   const { messages, loading: messagesLoading } = useWhatsAppMessages();
   
-  const conversationMessages = messages.filter(
-    msg => msg.phone_number === conversation?.client_phone
-  );
+  // Função para normalizar números de telefone
+  const normalizePhone = (phone: string) => {
+    return phone.replace(/\D/g, ''); // Remove tudo que não é dígito
+  };
+  
+  const conversationMessages = messages.filter(msg => {
+    if (!conversation) return false;
+    
+    // 1. Primeiro, tentar filtrar por conversation_id (método preferido)
+    if (msg.conversation_id && conversation.id) {
+      const match = msg.conversation_id === conversation.id;
+      if (match) {
+        console.log('✅ Mensagem encontrada por conversation_id:', msg.id);
+        return true;
+      }
+    }
+    
+    // 2. Fallback: comparar números de telefone normalizados
+    const msgPhone = normalizePhone(msg.phone_number || '');
+    const convPhone = normalizePhone(conversation.client_phone || '');
+    
+    const phoneMatch = msgPhone === convPhone;
+    if (phoneMatch) {
+      console.log('✅ Mensagem encontrada por telefone normalizado:', msg.id, { msgPhone, convPhone });
+    }
+    
+    return phoneMatch;
+  });
+
+  // Debug das mensagens filtradas
+  useEffect(() => {
+    if (conversation) {
+      console.log('🔍 AttendanceChatInterface Debug:', {
+        conversationId: conversation.id,
+        conversationPhone: conversation.client_phone,
+        totalMessages: messages.length,
+        filteredMessages: conversationMessages.length,
+        messagesWithConvId: messages.filter(m => m.conversation_id).length,
+        messagesForThisConv: messages.filter(m => m.conversation_id === conversation.id).length
+      });
+    }
+  }, [conversation, messages, conversationMessages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -208,7 +247,11 @@ export const AttendanceChatInterface = ({
                 <div className="text-muted-foreground">Carregando mensagens...</div>
               </div>
             ) : conversationMessages.length > 0 ? (
-              conversationMessages.map((msg, index) => (
+              <>
+                <div className="text-xs text-muted-foreground text-center mb-4 p-2 bg-muted/30 rounded">
+                  {conversationMessages.length} mensagens encontradas
+                </div>
+                {conversationMessages.map((msg, index) => (
                 <div
                   key={msg.id || index}
                   className={`flex ${msg.direction === 'outgoing' ? 'justify-end' : 'justify-start'}`}
@@ -233,12 +276,21 @@ export const AttendanceChatInterface = ({
                     </p>
                   </div>
                 </div>
-              ))
+                ))}
+              </>
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                   <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">Nenhuma mensagem ainda</p>
+                  <div className="text-xs text-muted-foreground mt-4 p-3 bg-muted/20 rounded max-w-md">
+                    <p><strong>Debug Info:</strong></p>
+                    <p>Conversa ID: {conversation?.id}</p>
+                    <p>Telefone: {conversation?.client_phone}</p>
+                    <p>Total mensagens: {messages.length}</p>
+                    <p>Mensagens filtradas: {conversationMessages.length}</p>
+                    <p>Com conversation_id: {messages.filter(m => m.conversation_id).length}</p>
+                  </div>
                 </div>
               </div>
             )}

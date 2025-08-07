@@ -40,19 +40,31 @@ export const useWhatsAppMessages = () => {
 
       const { data, error: queryError } = await supabase
         .from('whatsapp_messages')
-        .select('*')
+        .select(`
+          *,
+          conversation_id
+        `)
         .eq('barbershop_id', barbershopId)
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(200);
 
       if (queryError) {
         throw queryError;
       }
 
-      setMessages((data || []).map(msg => ({
+      const processedMessages = (data || []).map(msg => ({
         ...msg,
         direction: msg.direction as 'incoming' | 'outgoing'
-      })));
+      }));
+
+      console.log('📨 Mensagens carregadas:', {
+        total: processedMessages.length,
+        withConversationId: processedMessages.filter(m => m.conversation_id).length,
+        withoutConversationId: processedMessages.filter(m => !m.conversation_id).length,
+        barbershopId
+      });
+
+      setMessages(processedMessages);
     } catch (err: any) {
       console.error('Error fetching WhatsApp messages:', err);
       setError(err.message || 'Erro ao carregar mensagens');
