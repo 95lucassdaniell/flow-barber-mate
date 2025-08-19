@@ -13,15 +13,33 @@ interface Profile {
   email: string;
 }
 
-// Global flag to prevent multiple auth initializations
-let authInitStarted = false;
+// Global singleton auth state
+let globalAuthState = {
+  user: null as User | null,
+  session: null as Session | null,
+  profile: null as Profile | null,
+  loading: true,
+  authError: null as string | null,
+  initialized: false
+};
+
+// Subscribers for state changes
+const authSubscribers = new Set<() => void>();
+
+// Global auth state change notifier
+const notifyAuthSubscribers = () => {
+  authSubscribers.forEach(callback => callback());
+};
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [, forceUpdate] = useState({});
+  
+  // Use global state instead of local state
+  const user = globalAuthState.user;
+  const session = globalAuthState.session; 
+  const profile = globalAuthState.profile;
+  const loading = globalAuthState.loading;
+  const authError = globalAuthState.authError;
 
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     const circuitKey = `fetchProfile-${userId}`;
@@ -54,16 +72,30 @@ export const useAuth = () => {
   }, []);
 
   useEffect(() => {
+    // Subscribe to global state changes
+    const updateComponent = () => forceUpdate({});
+    authSubscribers.add(updateComponent);
+    
+    // Initialize auth only once globally
+    if (!globalAuthState.initialized) {
+      initializeGlobalAuth();
+    }
+    
+    return () => {
+      authSubscribers.delete(updateComponent);
+    };
+  }, []);
+
+  const initializeGlobalAuth = async () => {
+    if (globalAuthState.initialized) return;
+    
     let mounted = true;
     let retryCount = 0;
     const maxRetries = 3;
     const authKey = 'useAuth-init';
     
-    // Global flag to prevent multiple initializations
-    if (authInitStarted) {
-      return;
-    }
-    authInitStarted = true;
+    globalAuthState.initialized = true;
+    console.log('🔑 Initializing global auth state...');
     
     // Minimal sync when rate limited to prevent stuck loading states
     const minimalSync = async () => {
@@ -71,20 +103,24 @@ export const useAuth = () => {
         console.log('🔄 Executando sync mínimo devido ao rate limit...');
         const { data: { session } } = await supabase.auth.getSession();
         if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
+          globalAuthState.session = session;
+          globalAuthState.user = session?.user ?? null;
           
           if (session?.user) {
             const profileData = await fetchProfile(session.user.id);
-            if (mounted) setProfile(profileData);
+            if (mounted) globalAuthState.profile = profileData;
           }
           
-          setLoading(false);
+          globalAuthState.loading = false;
+          notifyAuthSubscribers();
           console.log('✅ Sync mínimo concluído');
         }
       } catch (error) {
         console.error('❌ Erro no sync mínimo:', error);
-        if (mounted) setLoading(false);
+        if (mounted) {
+          globalAuthState.loading = false;
+          notifyAuthSubscribers();
+        }
       }
     };
     
@@ -105,9 +141,11 @@ export const useAuth = () => {
           (event, session) => {
             if (!mounted) return;
             
-            setAuthError(null);
-            setSession(session);
-            setUser(session?.user ?? null);
+            console.log(`🔑 Auth state change: ${event}, user: ${session?.user?.id || 'none'}`);
+            
+            globalAuthState.authError = null;
+            globalAuthState.session = session;
+            globalAuthState.user = session?.user ?? null;
             
             if (session?.user) {
               // Fetch profile with rate limit
@@ -123,18 +161,22 @@ export const useAuth = () => {
                     }
                     
                     if (mounted) {
-                      setProfile(profileData as Profile);
+                      globalAuthState.profile = profileData as Profile;
+                      notifyAuthSubscribers();
                     }
                   }
                 }, 100);
               }
             } else {
-              if (mounted) setProfile(null);
+              if (mounted) {
+                globalAuthState.profile = null;
+              }
             }
             
             if (mounted) {
-              setLoading(false);
+              globalAuthState.loading = false;
               globalState.clearOperationTimeout('auth-loading');
+              notifyAuthSubscribers();
             }
           }
         );
@@ -168,8 +210,9 @@ export const useAuth = () => {
               }
               
               if (mounted) {
-                setLoading(false);
+                globalAuthState.loading = false;
                 globalState.clearOperationTimeout('auth-loading');
+                notifyAuthSubscribers();
               }
             }
           } catch (error) {
@@ -183,8 +226,9 @@ export const useAuth = () => {
             } else {
               console.error('🚫 Tentativas esgotadas');
               if (mounted) {
-                setLoading(false);
+                globalAuthState.loading = false;
                 globalState.clearOperationTimeout('auth-loading');
+                notifyAuthSubscribers();
               }
             }
           }
@@ -194,7 +238,8 @@ export const useAuth = () => {
         globalState.setOperationTimeout('auth-loading', () => {
           if (mounted) {
             console.warn('⏰ Auth timeout - forçando loading=false');
-            setLoading(false);
+            globalAuthState.loading = false;
+            notifyAuthSubscribers();
           }
         }, 12000);
 
@@ -207,34 +252,31 @@ export const useAuth = () => {
       } catch (error) {
         console.error('❌ Erro na inicialização auth:', error);
         if (mounted) {
-          setLoading(false);
+          globalAuthState.loading = false;
           globalState.clearOperationTimeout('auth-loading');
+          notifyAuthSubscribers();
         }
       }
     };
 
     initializeAuth();
-
-    return () => {
-      mounted = false;
-      globalState.clearOperationTimeout('auth-loading');
-      authInitStarted = false;
-    };
-  }, [fetchProfile]);
+  };
 
   const signOut = async () => {
     try {
-      setLoading(true);
+      globalAuthState.loading = true;
+      notifyAuthSubscribers();
       await supabase.auth.signOut();
-      setSession(null);
-      setUser(null);
-      setProfile(null);
-      setAuthError(null);
+      globalAuthState.session = null;
+      globalAuthState.user = null;
+      globalAuthState.profile = null;
+      globalAuthState.authError = null;
     } catch (error) {
       console.error('Sign out error:', error);
-      setAuthError('Erro ao fazer logout');
+      globalAuthState.authError = 'Erro ao fazer logout';
     } finally {
-      setLoading(false);
+      globalAuthState.loading = false;
+      notifyAuthSubscribers();
     }
   };
 

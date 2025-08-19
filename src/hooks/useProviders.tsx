@@ -26,6 +26,13 @@ export const useProviders = (barbershopId?: string) => {
   const barbershopIdFinal = barbershopId || profile?.barbershop_id;
 
   useEffect(() => {
+    // Enhanced logging for debugging
+    console.log('🏪 useProviders barbershopId resolution:', {
+      fromProfile: profile?.barbershop_id,
+      fromSlug: barbershopId,
+      final: barbershopIdFinal
+    });
+    
     // Safety timeout to prevent stuck loading
     const timeout = setTimeout(() => {
       console.log('⚠️ useProviders: Safety timeout reached, forcing loading false');
@@ -43,7 +50,7 @@ export const useProviders = (barbershopId?: string) => {
     fetchProviders();
     
     return () => clearTimeout(timeout);
-  }, [barbershopIdFinal]);
+  }, [barbershopIdFinal, profile?.barbershop_id]);
 
   const fetchProviders = async () => {
     try {

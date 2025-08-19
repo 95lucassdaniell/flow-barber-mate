@@ -138,37 +138,16 @@ const ProvidersManagement = () => {
     }
   };
 
-  // Render logs for debugging
-  console.log('🏪 ProvidersManagement render:', {
+  // Enhanced logging for debugging
+  console.log('🏪 ProvidersManagement state:', {
+    hasUser: !!user,
+    userRole: profile?.role,
+    authLoading,
+    providersLoading: loading,
     providersCount: providers.length,
     filteredCount: filteredProviders.length,
-    loading,
-    hasUser: !!user,
-    hasResolvedBarbershopId: !!resolvedBarbershopId,
+    resolvedBarbershopId: resolvedBarbershopId
   });
-
-  // Remove the loading block - always show the full layout
-
-  // Check authentication first
-  if (!user) {
-    return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Prestadores</h1>
-        </div>
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center space-y-4">
-              <div className="text-lg font-medium">Autenticação necessária</div>
-              <p className="text-muted-foreground">
-                Você precisa estar logado para gerenciar prestadores.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   // Se não conseguir resolver barbershop_id, mostrar carregando ou erro
   if (!resolvedBarbershopId) {

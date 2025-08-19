@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useProducts } from '@/hooks/useProducts';
+import { useAuth } from '@/hooks/useAuth';
 import { ProductsList } from './ProductsList';
 import { 
   Package, 
@@ -12,7 +13,17 @@ import {
 } from 'lucide-react';
 
 export const ProductsManagement = () => {
-  const { data: products = [] } = useProducts();
+  const { data: products = [], isLoading } = useProducts();
+  const { user, profile, loading: authLoading } = useAuth();
+  
+  // Enhanced logging for debugging
+  console.log('🏪 ProductsManagement state:', {
+    hasUser: !!user,
+    userRole: profile?.role,
+    authLoading,
+    productsLoading: isLoading,
+    productsCount: products.length,
+  });
 
   const totalProducts = products.length;
   const activeProducts = products.filter(p => p.is_active).length;

@@ -56,12 +56,17 @@ const ClientsManagement = () => {
     (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Render logs for debugging
-  console.log('🏪 ClientsManagement render:', {
+  // Enhanced logging for debugging 
+  const { user, profile: userProfile, loading: authLoading } = useAuth();
+  console.log('🏪 ClientsManagement state:', {
+    hasUser: !!user,
+    userRole: userProfile?.role,
+    authLoading,
+    clientsLoading: loading,
     clientsCount: clients.length,
     filteredCount: filteredClients.length,
-    loading,
-    hasResolvedBarbershopId: !!resolvedBarbershopId,
+    resolvedBarbershopId,
+    viewingClient: !!viewingClient
   });
 
   // Se estiver visualizando um cliente específico, mostrar o perfil
