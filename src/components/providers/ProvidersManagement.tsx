@@ -147,24 +147,7 @@ const ProvidersManagement = () => {
     hasResolvedBarbershopId: !!resolvedBarbershopId,
   });
 
-  // Show loading only when we have barbershopId but providers are loading (removed authLoading dependency)
-  if (resolvedBarbershopId && loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Prestadores</h1>
-        </div>
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center space-y-2">
-              <div>Carregando prestadores...</div>
-              <div className="animate-pulse">⏳</div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Remove the loading block - always show the full layout
 
   // Check authentication first
   if (!user) {
@@ -288,83 +271,99 @@ const ProvidersManagement = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProviders.map((provider) => (
-                <TableRow key={provider.id}>
-                  <TableCell className="font-medium">{provider.full_name}</TableCell>
-                  <TableCell>{provider.email}</TableCell>
-                  <TableCell>{provider.phone || "-"}</TableCell>
-                  <TableCell>
-                    <Badge className={getRoleBadgeColor(provider.role)}>
-                      {getRoleLabel(provider.role)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{provider.commission_rate ? `${provider.commission_rate}%` : "-"}</TableCell>
-                  <TableCell>
-                    <Badge variant={provider.is_active ? "default" : "secondary"}>
-                      {provider.is_active ? "Ativo" : "Inativo"}
-                    </Badge>
-                  </TableCell>
-                  {canManageAll && (
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(provider)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleManageServices(provider)}>
-                            <Settings className="mr-2 h-4 w-4" />
-                            Gerenciar Serviços
-                          </DropdownMenuItem>
-                          {provider.role === 'barber' && (
-                            <DropdownMenuItem onClick={() => handleResetPassword(provider)}>
-                              <Key className="mr-2 h-4 w-4" />
-                              Resetar Senha
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem 
-                            onClick={async () => {
-                              try {
-                                await toggleProviderStatus(provider.id, !provider.is_active);
-                                toast({
-                                  title: provider.is_active ? "Prestador desativado" : "Prestador ativado",
-                                  description: `${provider.full_name} foi ${provider.is_active ? 'desativado' : 'ativado'} com sucesso.`,
-                                });
-                              } catch (error: any) {
-                                toast({
-                                  title: "Erro",
-                                  description: error?.message || "Erro ao alterar status do prestador.",
-                                  variant: "destructive",
-                                });
-                              }
-                            }}
-                          >
-                            {provider.is_active ? "Desativar" : "Ativar"}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+              {loading && providers.length === 0 ? (
+                Array.from({ length: 3 }).map((_, index) => (
+                  <TableRow key={`skeleton-${index}`}>
+                    <TableCell><div className="h-4 bg-muted animate-pulse rounded" /></TableCell>
+                    <TableCell><div className="h-4 bg-muted animate-pulse rounded" /></TableCell>
+                    <TableCell><div className="h-4 bg-muted animate-pulse rounded w-20" /></TableCell>
+                    <TableCell><div className="h-6 bg-muted animate-pulse rounded w-24" /></TableCell>
+                    <TableCell><div className="h-4 bg-muted animate-pulse rounded w-12" /></TableCell>
+                    <TableCell><div className="h-6 bg-muted animate-pulse rounded w-16" /></TableCell>
+                    {canManageAll && <TableCell><div className="h-8 bg-muted animate-pulse rounded w-8" /></TableCell>}
+                  </TableRow>
+                ))
+              ) : (
+                <>
+                  {filteredProviders.map((provider) => (
+                    <TableRow key={provider.id}>
+                      <TableCell className="font-medium">{provider.full_name}</TableCell>
+                      <TableCell>{provider.email}</TableCell>
+                      <TableCell>{provider.phone || "-"}</TableCell>
+                      <TableCell>
+                        <Badge className={getRoleBadgeColor(provider.role)}>
+                          {getRoleLabel(provider.role)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{provider.commission_rate ? `${provider.commission_rate}%` : "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant={provider.is_active ? "default" : "secondary"}>
+                          {provider.is_active ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </TableCell>
+                      {canManageAll && (
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEdit(provider)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleManageServices(provider)}>
+                                <Settings className="mr-2 h-4 w-4" />
+                                Gerenciar Serviços
+                              </DropdownMenuItem>
+                              {provider.role === 'barber' && (
+                                <DropdownMenuItem onClick={() => handleResetPassword(provider)}>
+                                  <Key className="mr-2 h-4 w-4" />
+                                  Resetar Senha
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem 
+                                onClick={async () => {
+                                  try {
+                                    await toggleProviderStatus(provider.id, !provider.is_active);
+                                    toast({
+                                      title: provider.is_active ? "Prestador desativado" : "Prestador ativado",
+                                      description: `${provider.full_name} foi ${provider.is_active ? 'desativado' : 'ativado'} com sucesso.`,
+                                    });
+                                  } catch (error: any) {
+                                    toast({
+                                      title: "Erro",
+                                      description: error?.message || "Erro ao alterar status do prestador.",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                              >
+                                {provider.is_active ? "Desativar" : "Ativar"}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                  {filteredProviders.length === 0 && providers.length > 0 && (
+                    <TableRow>
+                      <TableCell colSpan={canManageAll ? 7 : 6} className="text-center text-muted-foreground">
+                        Sem resultados para os filtros/busca aplicados
+                      </TableCell>
+                    </TableRow>
                   )}
-                </TableRow>
-              ))}
-              {filteredProviders.length === 0 && providers.length > 0 && (
-                <TableRow>
-                  <TableCell colSpan={canManageAll ? 7 : 6} className="text-center text-muted-foreground">
-                    Sem resultados para os filtros/busca aplicados
-                  </TableCell>
-                </TableRow>
-              )}
-              {providers.length === 0 && !loading && (
-                <TableRow>
-                  <TableCell colSpan={canManageAll ? 7 : 6} className="text-center text-muted-foreground">
-                    Nenhum prestador cadastrado
-                  </TableCell>
-                </TableRow>
+                  {providers.length === 0 && !loading && (
+                    <TableRow>
+                      <TableCell colSpan={canManageAll ? 7 : 6} className="text-center text-muted-foreground">
+                        Nenhum prestador cadastrado
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
               )}
             </TableBody>
           </Table>
