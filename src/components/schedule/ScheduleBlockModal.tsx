@@ -47,6 +47,8 @@ export const ScheduleBlockModal = ({
   defaultTime,
   defaultBarberId
 }: ScheduleBlockModalProps) => {
+  // Prevent rendering when modal is closed to avoid Radix Select errors
+  if (!isOpen) return null;
   const [formData, setFormData] = useState<ScheduleBlockInput>({
     provider_id: '',
     title: '',
@@ -114,6 +116,7 @@ export const ScheduleBlockModal = ({
     
     const blockData = {
       ...formData,
+      provider_id: formData.provider_id || undefined,
       block_date: blockDate ? format(blockDate, 'yyyy-MM-dd') : undefined,
       start_date: startDate ? format(startDate, 'yyyy-MM-dd') : undefined,
       end_date: endDate ? format(endDate, 'yyyy-MM-dd') : undefined,
@@ -168,19 +171,24 @@ export const ScheduleBlockModal = ({
           <div>
             <Label htmlFor="provider">Barbeiro</Label>
             <Select
-              value={formData.provider_id}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, provider_id: value }))}
+              value={formData.provider_id || 'all'}
+              onValueChange={(value) => setFormData(prev => ({ 
+                ...prev, 
+                provider_id: value === 'all' ? undefined : value 
+              }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecionar barbeiro" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os barbeiros</SelectItem>
-                {barbers.map((barber) => (
-                  <SelectItem key={barber.id} value={barber.id}>
-                    {barber.full_name}
-                  </SelectItem>
-                ))}
+                <SelectItem value="all">Todos os barbeiros</SelectItem>
+                {barbers
+                  .filter(barber => barber.id && barber.id.trim() !== '')
+                  .map((barber) => (
+                    <SelectItem key={barber.id} value={barber.id}>
+                      {barber.full_name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
