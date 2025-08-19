@@ -1,10 +1,11 @@
 import { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Calendar, Clock, User, Scissors, Phone, DollarSign, Edit, Trash2, X, RotateCcw, Receipt, UserX, Plus } from "lucide-react";
+import { Calendar, Clock, User, Scissors, Phone, DollarSign, Edit, Trash2, X, RotateCcw, Receipt, UserX, Plus, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAppointments } from "@/hooks/useAppointments";
 import { useCommands } from "@/hooks/useCommands";
@@ -68,6 +69,8 @@ export const AppointmentDetailsModal = ({
   const { toast } = useToast();
   const { updateAppointment, cancelAppointment, deleteAppointment } = useAppointments();
   const { getCommandByAppointment, commands, refetchCommands } = useCommands();
+  const navigate = useNavigate();
+  const { slug } = useParams();
 
   if (!appointment) return null;
 
@@ -290,6 +293,12 @@ export const AppointmentDetailsModal = ({
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleFinish = () => {
+    if (slug) {
+      navigate(`/${slug}/agendamento`);
     }
   };
 
@@ -527,6 +536,19 @@ export const AppointmentDetailsModal = ({
               </AlertDialogFooter>
             </AlertDialogContent>
             </AlertDialog>
+
+          {/* Botão Finalizar para agendamentos concluídos */}
+          {appointment.status === 'completed' && (
+            <Button 
+              onClick={handleFinish}
+              disabled={isLoading}
+              className="w-full"
+              size="sm"
+            >
+              <LogOut className="h-4 w-4 mr-1" />
+              Finalizar e Voltar ao Agendamento
+            </Button>
+          )}
         </div>
 
         {/* Modais */}
