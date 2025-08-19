@@ -395,7 +395,7 @@ const DashboardLayout = ({ children, activeTab = "dashboard" }: DashboardLayoutP
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-secondary/20 flex w-full">
+      <div className="min-h-screen flex w-full">
         <AppSidebar 
           barbershopData={barbershopData}
           profile={profile}
