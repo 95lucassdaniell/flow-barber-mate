@@ -138,8 +138,17 @@ const ProvidersManagement = () => {
     }
   };
 
-  // Show loading only when auth is loading OR when we have barbershopId but providers are loading
-  if (authLoading || (resolvedBarbershopId && loading)) {
+  // Render logs for debugging
+  console.log('🏪 ProvidersManagement render:', {
+    providersCount: providers.length,
+    filteredCount: filteredProviders.length,
+    loading,
+    hasUser: !!user,
+    hasResolvedBarbershopId: !!resolvedBarbershopId,
+  });
+
+  // Show loading only when we have barbershopId but providers are loading (removed authLoading dependency)
+  if (resolvedBarbershopId && loading) {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -210,7 +219,7 @@ const ProvidersManagement = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Prestadores</h1>
+        <h1 className="text-3xl font-bold">Prestadores ({providers.length})</h1>
         <div className="flex gap-2">
           <Button 
             variant="outline" 
@@ -343,10 +352,17 @@ const ProvidersManagement = () => {
                   )}
                 </TableRow>
               ))}
-              {filteredProviders.length === 0 && (
+              {filteredProviders.length === 0 && providers.length > 0 && (
                 <TableRow>
                   <TableCell colSpan={canManageAll ? 7 : 6} className="text-center text-muted-foreground">
-                    Nenhum prestador encontrado
+                    Sem resultados para os filtros/busca aplicados
+                  </TableCell>
+                </TableRow>
+              )}
+              {providers.length === 0 && !loading && (
+                <TableRow>
+                  <TableCell colSpan={canManageAll ? 7 : 6} className="text-center text-muted-foreground">
+                    Nenhum prestador cadastrado
                   </TableCell>
                 </TableRow>
               )}

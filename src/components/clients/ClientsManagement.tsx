@@ -56,6 +56,14 @@ const ClientsManagement = () => {
     (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // Render logs for debugging
+  console.log('🏪 ClientsManagement render:', {
+    clientsCount: clients.length,
+    filteredCount: filteredClients.length,
+    loading,
+    hasResolvedBarbershopId: !!resolvedBarbershopId,
+  });
+
   // Se estiver visualizando um cliente específico, mostrar o perfil
   if (viewingClient) {
     return (
@@ -77,6 +85,34 @@ const ClientsManagement = () => {
     );
   }
 
+  // Se não conseguir resolver barbershop_id, mostrar carregando
+  if (!resolvedBarbershopId) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Clientes</h1>
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center space-y-4">
+              <div className="text-lg font-medium">Carregando barbearia...</div>
+              <p className="text-muted-foreground">
+                Aguarde enquanto carregamos as informações da barbearia.
+              </p>
+              <Button 
+                variant="outline" 
+                onClick={() => window.location.reload()}
+                className="mt-4"
+              >
+                Atualizar Página
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const thisMonth = new Date();
   const newClientsThisMonth = clients.filter(client => {
     const clientDate = new Date(client.created_at);
@@ -89,11 +125,20 @@ const ClientsManagement = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Clientes</h1>
-        <Button onClick={handleAddClient} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Adicionar Cliente
-        </Button>
+        <h1 className="text-3xl font-bold">Clientes ({clients.length})</h1>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={refetchClients}
+            disabled={loading}
+          >
+            Atualizar
+          </Button>
+          <Button onClick={handleAddClient} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Adicionar Cliente
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-4">

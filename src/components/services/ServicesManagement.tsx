@@ -60,13 +60,49 @@ const ServicesManagement = () => {
     ? plans.reduce((sum, plan) => sum + plan.monthly_price, 0) / plans.length 
     : 0;
 
+  // Render logs for debugging
+  console.log('🏪 ServicesManagement render:', {
+    servicesCount: services?.length || 0,
+    filteredCount: filteredServices.length,
+    loading,
+    hasResolvedBarbershopId: !!resolvedBarbershopId,
+  });
+
+  // Se não conseguir resolver barbershop_id, mostrar carregando
+  if (!resolvedBarbershopId) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <h1 className="text-3xl font-bold">Serviços</h1>
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center space-y-4">
+              <div className="text-lg font-medium">Carregando barbearia...</div>
+              <p className="text-muted-foreground">
+                Aguarde enquanto carregamos as informações da barbearia.
+              </p>
+              <Button 
+                variant="outline" 
+                onClick={() => window.location.reload()}
+                className="mt-4"
+              >
+                Atualizar Página
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">
-            {activeTab === "services" ? "Serviços" : "Planos de Assinatura"}
+            {activeTab === "services" ? `Serviços (${services?.length || 0})` : "Planos de Assinatura"}
           </h1>
           <p className="text-muted-foreground">
             {activeTab === "services" 
@@ -76,10 +112,19 @@ const ServicesManagement = () => {
           </p>
         </div>
         {activeTab === "services" && (
-          <Button onClick={handleAddService} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Novo Serviço
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={refetchServices}
+              disabled={loading}
+            >
+              Atualizar
+            </Button>
+            <Button onClick={handleAddService} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Novo Serviço
+            </Button>
+          </div>
         )}
       </div>
 
