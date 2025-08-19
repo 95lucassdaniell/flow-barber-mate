@@ -9,13 +9,25 @@ import { useAdminSubscriptionPlans } from "@/hooks/useAdminSubscriptionPlans";
 import ServicesList from "./ServicesList";
 import ServiceModal from "./ServiceModal";
 import AdminSubscriptionPlansPage from "@/components/admin/AdminSubscriptionPlansPage";
+import { useAuth } from "@/hooks/useAuth";
+import { useParams } from "react-router-dom";
+import { useBarbershopBySlug } from "@/hooks/useBarbershopBySlug";
 
 const ServicesManagement = () => {
   const [activeTab, setActiveTab] = useState("services");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const { services, loading, refetchServices } = useServices();
+  const { slug } = useParams();
+  const { profile } = useAuth();
+  const { barbershop } = useBarbershopBySlug(slug || '');
+  const resolvedBarbershopId = profile?.barbershop_id ?? barbershop?.id;
+  console.log('🏪 ServicesManagement resolvedBarbershopId:', {
+    fromProfile: profile?.barbershop_id,
+    fromSlug: barbershop?.id,
+    final: resolvedBarbershopId,
+  });
+  const { services, loading, refetchServices } = useServices(resolvedBarbershopId);
   const { plans } = useAdminSubscriptionPlans();
 
   const handleAddService = () => {
@@ -164,6 +176,7 @@ const ServicesManagement = () => {
             onClose={handleCloseModal}
             service={selectedService}
             onSuccess={() => refetchServices()}
+            barbershopId={resolvedBarbershopId}
           />
         </TabsContent>
 

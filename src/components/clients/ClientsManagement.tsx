@@ -7,9 +7,21 @@ import { useClients, Client } from "@/hooks/useClients";
 import ClientsList from "./ClientsList";
 import ClientModal from "./ClientModal";
 import ClientProfile from "@/components/crm/ClientProfile";
+import { useAuth } from "@/hooks/useAuth";
+import { useParams } from "react-router-dom";
+import { useBarbershopBySlug } from "@/hooks/useBarbershopBySlug";
 
 const ClientsManagement = () => {
-  const { clients, loading } = useClients();
+  const { slug } = useParams();
+  const { profile } = useAuth();
+  const { barbershop } = useBarbershopBySlug(slug || '');
+  const resolvedBarbershopId = profile?.barbershop_id ?? barbershop?.id;
+  console.log('🏪 ClientsManagement resolvedBarbershopId:', {
+    fromProfile: profile?.barbershop_id,
+    fromSlug: barbershop?.id,
+    final: resolvedBarbershopId,
+  });
+  const { clients, loading, refetchClients } = useClients(resolvedBarbershopId);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [viewingClient, setViewingClient] = useState<Client | null>(null);
@@ -155,6 +167,8 @@ const ClientsManagement = () => {
         client={selectedClient}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+        onSuccess={() => refetchClients()}
+        barbershopId={resolvedBarbershopId}
       />
     </div>
   );

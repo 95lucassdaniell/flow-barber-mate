@@ -20,9 +20,10 @@ interface ServiceModalProps {
   onClose: () => void;
   service?: Service | null;
   onSuccess?: () => void;
+  barbershopId?: string;
 }
 
-const ServiceModal = ({ isOpen, onClose, service, onSuccess }: ServiceModalProps) => {
+const ServiceModal = ({ isOpen, onClose, service, onSuccess, barbershopId }: ServiceModalProps) => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -30,7 +31,7 @@ const ServiceModal = ({ isOpen, onClose, service, onSuccess }: ServiceModalProps
     is_active: true,
   });
   const [loading, setLoading] = useState(false);
-  const { addService, updateService } = useServices();
+  const { addService, updateService } = useServices(barbershopId);
   const { toast } = useToast();
 
   const isEditing = !!service;

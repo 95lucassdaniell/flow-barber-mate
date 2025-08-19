@@ -18,9 +18,11 @@ interface ClientModalProps {
   isOpen: boolean;
   onClose: () => void;
   client?: Client | null;
+  onSuccess?: () => void;
+  barbershopId?: string;
 }
 
-const ClientModal = ({ isOpen, onClose, client }: ClientModalProps) => {
+const ClientModal = ({ isOpen, onClose, client, onSuccess, barbershopId }: ClientModalProps) => {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -29,7 +31,7 @@ const ClientModal = ({ isOpen, onClose, client }: ClientModalProps) => {
     notes: "",
   });
   const [loading, setLoading] = useState(false);
-  const { addClient, updateClient } = useClients();
+  const { addClient, updateClient } = useClients(barbershopId);
   const { toast } = useToast();
 
   const isEditing = !!client;
