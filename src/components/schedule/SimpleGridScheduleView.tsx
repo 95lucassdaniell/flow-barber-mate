@@ -11,6 +11,8 @@ import { Appointment, Barber } from "@/types/appointment";
 import { useBarbershopSettings } from "@/hooks/useBarbershopSettings";
 import { useScheduleBlocks } from "@/hooks/useScheduleBlocks";
 import { useAuth } from "@/hooks/useAuth";
+import { useBarbershopBySlug } from "@/hooks/useBarbershopBySlug";
+import { useParams } from "react-router-dom";
 import { ScheduleBlockModal } from "./ScheduleBlockModal";
 import { ConflictReport } from "./ConflictReport";
 
@@ -36,14 +38,20 @@ export const SimpleGridScheduleView = ({
   onNewAppointment
 }: SimpleGridScheduleViewProps) => {
   const { profile } = useAuth();
+  const params = useParams();
+  const slug = params.slug || '';
+  const { barbershop: barbershopBySlug } = useBarbershopBySlug(slug);
+  
   const [selectedBarbers, setSelectedBarbers] = useState<Barber[]>([]);
   const [showConflictReport, setShowConflictReport] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<{ barberId: string; time: string } | null>(null);
   const { generateAllTimeSlots, isOpenOnDate, loading } = useBarbershopSettings();
   
-  // Get barbershop_id from the current user's profile
-  const barbershopId = profile?.barbershop_id || '';
+  // Get barbershop_id from profile or fallback to slug-based barbershop
+  const barbershopId = profile?.barbershop_id || barbershopBySlug?.id || '';
+  console.log('📋 SimpleGridScheduleView barbershopId:', barbershopId, { profile: profile?.barbershop_id, slug: barbershopBySlug?.id });
+  
   const { blocks, isTimeBlocked, createBlock } = useScheduleBlocks(barbershopId);
 
   // Initialize selected barbers when barbers prop changes

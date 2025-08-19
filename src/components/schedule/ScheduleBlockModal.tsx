@@ -337,7 +337,11 @@ export const ScheduleBlockModal = ({
           </Button>
           <Button 
             onClick={handleSave} 
-            disabled={loading || !formData.title}
+            disabled={loading || !formData.title || 
+              (formData.recurrence_type === 'none' && !blockDate) ||
+              (formData.recurrence_type === 'weekly' && (!formData.days_of_week || formData.days_of_week.length === 0)) ||
+              (!formData.is_full_day && formData.start_time >= formData.end_time)
+            }
             className="flex-1"
           >
             {loading ? 'Salvando...' : 'Salvar'}

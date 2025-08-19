@@ -81,7 +81,56 @@ export const useScheduleBlocks = (barbershopId?: string) => {
   }, [fetchBlocks]);
 
   const createBlock = async (blockData: ScheduleBlockInput) => {
-    if (!barbershopId) return false;
+    console.log('💾 createBlock chamado com:', { barbershopId, blockData });
+    
+    // Early validation
+    if (!barbershopId) {
+      console.error('❌ createBlock: barbershopId está vazio');
+      toast({
+        title: 'Erro',
+        description: 'ID da barbearia não encontrado',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    if (!blockData.title?.trim()) {
+      toast({
+        title: 'Erro',
+        description: 'Título é obrigatório',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    // Validate recurrence-specific fields
+    if (blockData.recurrence_type === 'none' && !blockData.block_date) {
+      toast({
+        title: 'Erro',
+        description: 'Data do bloqueio é obrigatória para bloqueios específicos',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    if (blockData.recurrence_type === 'weekly' && (!blockData.days_of_week || blockData.days_of_week.length === 0)) {
+      toast({
+        title: 'Erro',
+        description: 'Selecione pelo menos um dia da semana para bloqueios recorrentes',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    // Validate time intervals for non-full-day blocks
+    if (!blockData.is_full_day && blockData.start_time >= blockData.end_time) {
+      toast({
+        title: 'Erro',
+        description: 'Horário de fim deve ser posterior ao horário de início',
+        variant: 'destructive',
+      });
+      return false;
+    }
 
     try {
       const { error } = await supabase
@@ -91,8 +140,12 @@ export const useScheduleBlocks = (barbershopId?: string) => {
           barbershop_id: barbershopId,
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro Supabase ao criar bloqueio:', error);
+        throw error;
+      }
 
+      console.log('✅ Bloqueio criado com sucesso');
       toast({
         title: 'Sucesso',
         description: 'Bloqueio criado com sucesso',
@@ -101,10 +154,10 @@ export const useScheduleBlocks = (barbershopId?: string) => {
       await fetchBlocks();
       return true;
     } catch (error) {
-      console.error('Error creating schedule block:', error);
+      console.error('❌ Erro ao criar bloqueio:', error);
       toast({
         title: 'Erro',
-        description: 'Erro ao criar bloqueio',
+        description: `Erro ao criar bloqueio: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
         variant: 'destructive',
       });
       return false;
