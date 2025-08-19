@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,13 +29,25 @@ import {
 import { useProviders } from "@/hooks/useProviders";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useBarbershopBySlug } from "@/hooks/useBarbershopBySlug";
 import { supabase } from "@/integrations/supabase/client";
 import ProviderModal from "./ProviderModal";
 import ProviderServicesModal from "./ProviderServicesModalSimple";
 
 const ProvidersManagement = () => {
-  const { providers, loading, toggleProviderStatus, fetchProviders } = useProviders();
+  const { slug } = useParams<{ slug: string }>();
+  const { barbershop } = useBarbershopBySlug(slug || '');
   const { canManageAll, profile, loading: authLoading, user } = useAuth();
+  
+  // Resolve barbershop ID with fallback to slug-based data
+  const resolvedBarbershopId = profile?.barbershop_id ?? barbershop?.id;
+  console.log('🏪 ProvidersManagement resolvedBarbershopId:', { 
+    fromProfile: profile?.barbershop_id, 
+    fromSlug: barbershop?.id, 
+    final: resolvedBarbershopId 
+  });
+  
+  const { providers, loading, toggleProviderStatus, fetchProviders } = useProviders(resolvedBarbershopId);
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -160,8 +173,8 @@ const ProvidersManagement = () => {
     );
   }
 
-  // Se não há perfil ou barbershop_id, mostrar orientação
-  if (!profile?.barbershop_id) {
+  // Se não conseguir resolver barbershop_id, mostrar carregando ou erro
+  if (!resolvedBarbershopId) {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -170,10 +183,9 @@ const ProvidersManagement = () => {
         <Card>
           <CardContent className="p-6">
             <div className="text-center space-y-4">
-              <div className="text-lg font-medium">Configuração necessária</div>
+              <div className="text-lg font-medium">Carregando barbearia...</div>
               <p className="text-muted-foreground">
-                Para gerenciar prestadores, você precisa estar vinculado a uma barbearia. 
-                Entre em contato com o administrador do sistema.
+                Aguarde enquanto carregamos as informações da barbearia.
               </p>
             </div>
           </CardContent>

@@ -17,32 +17,54 @@ interface Provider {
   updated_at: string;
 }
 
-export const useProviders = () => {
+export const useProviders = (barbershopId?: string) => {
   const { profile } = useAuth();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Resolve final barbershop ID
+  const barbershopIdFinal = barbershopId || profile?.barbershop_id;
+
   useEffect(() => {
-    if (!profile) return;
+    if (!barbershopIdFinal) {
+      console.log('⚠️ useProviders: No barbershopId available yet');
+      return;
+    }
     fetchProviders();
-  }, [profile]);
+    
+    // Safety timeout to prevent stuck loading
+    const timeout = setTimeout(() => {
+      console.log('⚠️ useProviders: Safety timeout reached');
+      setLoading(false);
+    }, 2000);
+    
+    return () => clearTimeout(timeout);
+  }, [barbershopIdFinal]);
 
   const fetchProviders = async () => {
     try {
       setLoading(true);
-      if (!profile?.barbershop_id) {
+      if (!barbershopIdFinal) {
+        console.log('⚠️ fetchProviders: No barbershopIdFinal available');
         setLoading(false);
         return;
       }
       
+      console.log(`🏪 fetchProviders: Using barbershopId: ${barbershopIdFinal} (source: ${barbershopId ? 'slug' : 'profile'})`);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('barbershop_id', profile.barbershop_id)
+        .eq('barbershop_id', barbershopIdFinal)
         .in('role', ['barber', 'receptionist'])
         .order('full_name');
       
-      if (error) throw error;
+      if (error) {
+        console.error('❌ fetchProviders error:', error);
+        throw error;
+      }
+      
+      console.log(`✅ fetchProviders: Loaded ${data?.length || 0} providers`);
       setProviders((data || []) as Provider[]);
     } catch (error) {
       console.error('Error fetching providers:', error);
@@ -63,7 +85,7 @@ export const useProviders = () => {
     try {
       console.log('Creating provider with data:', providerData);
       
-      if (!profile?.barbershop_id) {
+      if (!barbershopIdFinal) {
         throw new Error('Perfil de usuário não encontrado ou barbearia não configurada.');
       }
 
@@ -81,7 +103,7 @@ export const useProviders = () => {
         .from('profiles')
         .select('email')
         .eq('email', providerData.email)
-        .eq('barbershop_id', profile.barbershop_id)
+        .eq('barbershop_id', barbershopIdFinal)
         .single();
 
       if (existingError && existingError.code !== 'PGRST116') {
@@ -102,7 +124,7 @@ export const useProviders = () => {
 
       const insertData = {
         ...providerData,
-        barbershop_id: profile.barbershop_id,
+        barbershop_id: barbershopIdFinal,
         user_id: user_id,
         status: 'active',
         full_name: providerData.full_name.trim(),
@@ -174,7 +196,7 @@ export const useProviders = () => {
           .from('profiles')
           .select('id, email')
           .eq('email', updates.email)
-          .eq('barbershop_id', profile!.barbershop_id)
+          .eq('barbershop_id', barbershopIdFinal!)
           .neq('id', id)
           .single();
 
