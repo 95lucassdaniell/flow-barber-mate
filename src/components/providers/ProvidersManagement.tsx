@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -137,7 +138,8 @@ const ProvidersManagement = () => {
     }
   };
 
-  if (loading || authLoading) {
+  // Show loading only when auth is loading OR when we have barbershopId but providers are loading
+  if (authLoading || (resolvedBarbershopId && loading)) {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -145,7 +147,10 @@ const ProvidersManagement = () => {
         </div>
         <Card>
           <CardContent className="p-6">
-            <div className="text-center">Carregando...</div>
+            <div className="text-center space-y-2">
+              <div>Carregando prestadores...</div>
+              <div className="animate-pulse">⏳</div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -187,6 +192,14 @@ const ProvidersManagement = () => {
               <p className="text-muted-foreground">
                 Aguarde enquanto carregamos as informações da barbearia.
               </p>
+              <Button 
+                variant="outline" 
+                onClick={() => window.location.reload()}
+                className="mt-4"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Atualizar Página
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -198,12 +211,22 @@ const ProvidersManagement = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Prestadores</h1>
-        {canManageAll && (
-          <Button onClick={handleAdd}>
-            <Plus className="w-4 h-4 mr-2" />
-            Adicionar Prestador
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={fetchProviders}
+            disabled={loading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Atualizar
           </Button>
-        )}
+          {canManageAll && (
+            <Button onClick={handleAdd}>
+              <Plus className="w-4 h-4 mr-2" />
+              Adicionar Prestador
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>

@@ -20,23 +20,27 @@ interface Provider {
 export const useProviders = (barbershopId?: string) => {
   const { profile } = useAuth();
   const [providers, setProviders] = useState<Provider[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start with false
 
   // Resolve final barbershop ID
   const barbershopIdFinal = barbershopId || profile?.barbershop_id;
 
   useEffect(() => {
-    if (!barbershopIdFinal) {
-      console.log('⚠️ useProviders: No barbershopId available yet');
-      return;
-    }
-    fetchProviders();
-    
     // Safety timeout to prevent stuck loading
     const timeout = setTimeout(() => {
-      console.log('⚠️ useProviders: Safety timeout reached');
+      console.log('⚠️ useProviders: Safety timeout reached, forcing loading false');
       setLoading(false);
-    }, 2000);
+    }, 3000);
+
+    if (!barbershopIdFinal) {
+      console.log('⚠️ useProviders: No barbershopId available yet, waiting...');
+      setLoading(false); // Don't stay loading if no ID
+      clearTimeout(timeout);
+      return;
+    }
+    
+    console.log(`🏪 useProviders: Starting fetch with barbershopId: ${barbershopIdFinal}`);
+    fetchProviders();
     
     return () => clearTimeout(timeout);
   }, [barbershopIdFinal]);
