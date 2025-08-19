@@ -56,7 +56,14 @@ export const useScheduleBlocks = (barbershopId?: string) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setBlocks(data || []);
+      
+      // Type assertion to ensure recurrence_type matches our interface
+      const typedBlocks = (data || []).map(block => ({
+        ...block,
+        recurrence_type: block.recurrence_type as 'none' | 'weekly'
+      })) as ScheduleBlock[];
+      
+      setBlocks(typedBlocks);
     } catch (error) {
       console.error('Error fetching schedule blocks:', error);
       toast({

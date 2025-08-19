@@ -39,7 +39,10 @@ export const SimpleGridScheduleView = ({
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<{ barberId: string; time: string } | null>(null);
   const { generateAllTimeSlots, isOpenOnDate, loading } = useBarbershopSettings();
-  const { blocks, isTimeBlocked, createBlock } = useScheduleBlocks(barbers[0]?.barbershop_id);
+  
+  // Get barbershop_id from the first barber or from settings
+  const barbershopId = barbers.length > 0 ? barbers[0].barbershop_id || '' : '';
+  const { blocks, isTimeBlocked, createBlock } = useScheduleBlocks(barbershopId);
 
   // Initialize selected barbers when barbers prop changes
   useEffect(() => {
