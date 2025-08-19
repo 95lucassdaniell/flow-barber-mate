@@ -15,25 +15,32 @@ export interface Client {
   updated_at: string;
 }
 
-export const useClients = () => {
+export const useClients = (barbershopId?: string) => {
   const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const { profile } = useAuth();
   const { toast } = useToast();
 
+  const barbershopIdFinal = barbershopId || profile?.barbershop_id;
+
   const fetchClients = async () => {
-    if (!profile?.barbershop_id) return;
+    if (!barbershopIdFinal) {
+      console.log('⚠️ useClients: No barbershopId available yet, waiting...');
+      setLoading(false);
+      return;
+    }
 
     try {
+      console.log(`🏪 useClients: Starting fetch with barbershopId: ${barbershopIdFinal}`);
       setLoading(true);
       const { data, error } = await supabase
         .from('clients')
         .select('*')
-        .eq('barbershop_id', profile.barbershop_id)
+        .eq('barbershop_id', barbershopIdFinal)
         .order('name', { ascending: true });
 
       if (error) {
-        console.error('Erro ao buscar clientes:', error);
+        console.error('❌ useClients error:', error);
         toast({
           title: "Erro ao carregar clientes",
           description: "Ocorreu um erro ao buscar os clientes.",
@@ -42,9 +49,10 @@ export const useClients = () => {
         return;
       }
 
+      console.log(`✅ useClients: Loaded ${data?.length || 0} clients`);
       setClients(data || []);
     } catch (error) {
-      console.error('Erro ao buscar clientes:', error);
+      console.error('❌ useClients unexpected error:', error);
       toast({
         title: "Erro ao carregar clientes",
         description: "Ocorreu um erro inesperado.",
@@ -56,7 +64,14 @@ export const useClients = () => {
   };
 
   const addClient = async (clientData: Omit<Client, 'id' | 'created_at' | 'updated_at' | 'barbershop_id'>) => {
-    if (!profile?.barbershop_id) return false;
+    if (!barbershopIdFinal) {
+      toast({
+        title: "Barbearia não resolvida",
+        description: "Ainda estamos resolvendo a barbearia. Tente novamente em instantes.",
+        variant: "destructive",
+      });
+      return false;
+    }
 
     try {
       const { data, error } = await supabase
@@ -64,8 +79,8 @@ export const useClients = () => {
         .insert([
           {
             ...clientData,
-            phone: normalizePhone(clientData.phone), // Normalizar telefone antes de salvar
-            barbershop_id: profile.barbershop_id,
+            phone: normalizePhone(clientData.phone),
+            barbershop_id: barbershopIdFinal,
           }
         ])
         .select()
@@ -81,7 +96,8 @@ export const useClients = () => {
         return false;
       }
 
-      setClients(prev => [...prev, data]);
+      // Refetch to ensure UI consistency
+      await fetchClients();
       toast({
         title: "Cliente adicionado",
         description: `${clientData.name} foi adicionado com sucesso.`,
@@ -177,8 +193,21 @@ export const useClients = () => {
   };
 
   useEffect(() => {
+    const timeout = setTimeout(() => {
+      console.log('⚠️ useClients: Safety timeout reached, forcing loading false');
+      setLoading(false);
+    }, 3000);
+
+    if (!barbershopIdFinal) {
+      console.log('⚠️ useClients: No barbershopId available yet, waiting...');
+      setLoading(false);
+      clearTimeout(timeout);
+      return;
+    }
+
     fetchClients();
-  }, [profile?.barbershop_id]);
+    return () => clearTimeout(timeout);
+  }, [barbershopIdFinal]);
 
   const normalizePhone = (phone: string): string => {
     // Remove todos os caracteres não numéricos

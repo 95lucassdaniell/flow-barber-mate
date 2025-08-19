@@ -14,25 +14,32 @@ export interface Service {
   updated_at: string;
 }
 
-export const useServices = () => {
+export const useServices = (barbershopId?: string) => {
   const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const { profile } = useAuth();
   const { toast } = useToast();
 
+  const barbershopIdFinal = barbershopId || profile?.barbershop_id;
+
   const fetchServices = async () => {
-    if (!profile?.barbershop_id) return;
+    if (!barbershopIdFinal) {
+      console.log('⚠️ useServices: No barbershopId available yet, waiting...');
+      setLoading(false);
+      return;
+    }
 
     try {
+      console.log(`🏪 useServices: Starting fetch with barbershopId: ${barbershopIdFinal}`);
       setLoading(true);
       const { data, error } = await supabase
         .from('services')
         .select('*')
-        .eq('barbershop_id', profile.barbershop_id)
+        .eq('barbershop_id', barbershopIdFinal)
         .order('name', { ascending: true });
 
       if (error) {
-        console.error('Erro ao buscar serviços:', error);
+        console.error('❌ useServices error:', error);
         toast({
           title: "Erro ao carregar serviços",
           description: "Ocorreu um erro ao buscar os serviços.",
@@ -41,9 +48,10 @@ export const useServices = () => {
         return;
       }
 
+      console.log(`✅ useServices: Loaded ${data?.length || 0} services`);
       setServices(data || []);
     } catch (error) {
-      console.error('Erro ao buscar serviços:', error);
+      console.error('❌ useServices unexpected error:', error);
       toast({
         title: "Erro ao carregar serviços",
         description: "Ocorreu um erro inesperado.",
@@ -55,7 +63,14 @@ export const useServices = () => {
   };
 
   const addService = async (serviceData: Omit<Service, 'id' | 'created_at' | 'updated_at' | 'barbershop_id'>) => {
-    if (!profile?.barbershop_id) return false;
+    if (!barbershopIdFinal) {
+      toast({
+        title: "Barbearia não resolvida",
+        description: "Ainda estamos resolvendo a barbearia. Tente novamente em instantes.",
+        variant: "destructive",
+      });
+      return false;
+    }
 
     try {
       const { data, error } = await supabase
@@ -63,7 +78,7 @@ export const useServices = () => {
         .insert([
           {
             ...serviceData,
-            barbershop_id: profile.barbershop_id,
+            barbershop_id: barbershopIdFinal,
           }
         ])
         .select()
@@ -177,8 +192,21 @@ export const useServices = () => {
   };
 
   useEffect(() => {
+    const timeout = setTimeout(() => {
+      console.log('⚠️ useServices: Safety timeout reached, forcing loading false');
+      setLoading(false);
+    }, 3000);
+
+    if (!barbershopIdFinal) {
+      console.log('⚠️ useServices: No barbershopId available yet, waiting...');
+      setLoading(false);
+      clearTimeout(timeout);
+      return;
+    }
+
     fetchServices();
-  }, [profile?.barbershop_id]);
+    return () => clearTimeout(timeout);
+  }, [barbershopIdFinal]);
 
   return {
     services,
