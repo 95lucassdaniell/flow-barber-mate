@@ -56,9 +56,31 @@ export const useAuth = () => {
     const maxRetries = 3;
     const authKey = 'useAuth-init';
     
+    // Minimal sync when rate limited to prevent stuck loading states
+    const minimalSync = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          if (session?.user) {
+            const profileData = await fetchProfile(session.user.id);
+            if (mounted) setProfile(profileData);
+          }
+          
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Minimal sync error:', error);
+        if (mounted) setLoading(false);
+      }
+    };
+    
     // Verificar rate limit para prevenir loops
     if (!globalState.checkRateLimit(authKey, 3, 5000)) {
-      console.warn('🚨 Auth rate limit atingido, ignorando inicialização');
+      console.warn('🚨 Auth rate limit atingido, fazendo sync mínimo');
+      minimalSync();
       return;
     }
     
