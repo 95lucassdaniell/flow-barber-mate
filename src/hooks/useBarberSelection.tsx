@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useBarbershopBySlug } from './useBarbershopBySlug';
+import { useParams } from 'react-router-dom';
 import { globalState } from '@/lib/globalState';
 
 interface Barber {
@@ -12,12 +14,19 @@ interface Barber {
 
 export const useBarberSelection = () => {
   const { profile, canManageAll } = useAuth();
+  const { slug } = useParams();
+  const { barbershop: barbershopBySlug } = useBarbershopBySlug(slug || '');
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [selectedBarberId, setSelectedBarberId] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!profile) return;
+    // Use barbershop_id from profile or fallback to barbershop from slug
+    const barbershopId = profile?.barbershop_id || barbershopBySlug?.id;
+    if (!barbershopId) {
+      console.log('⏳ Aguardando barbershop_id ou dados do slug para carregar barbeiros...');
+      return;
+    }
 
     let mounted = true;
 
@@ -31,10 +40,12 @@ export const useBarberSelection = () => {
 
     const fetchBarbers = async () => {
       try {
+        console.log('👥 Fetching barbers for barbershop:', barbershopId);
+        
         const { data } = await supabase
           .from('profiles')
           .select('id, full_name, role, is_active')
-          .eq('barbershop_id', profile.barbershop_id)
+          .eq('barbershop_id', barbershopId)
           .eq('is_active', true)
           .eq('role', 'barber')
           .order('full_name');
@@ -42,9 +53,10 @@ export const useBarberSelection = () => {
         if (!mounted) return;
 
         setBarbers(data || []);
+        console.log('✅ Barbers loaded:', data?.length || 0);
 
         // Auto-select barber based on role
-        if (!canManageAll) {
+        if (!canManageAll && profile) {
           // If user is a barber, auto-select themselves
           setSelectedBarberId(profile.id);
         } else {
@@ -72,7 +84,7 @@ export const useBarberSelection = () => {
       mounted = false;
       globalState.clearOperationTimeout('barber-selection-loading');
     };
-  }, [profile, canManageAll]);
+  }, [profile, canManageAll, barbershopBySlug?.id]);
 
   const handleBarberChange = (barberId: string) => {
     if (!canManageAll && barberId !== profile?.id) {

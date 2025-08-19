@@ -88,17 +88,8 @@ const SchedulePage = () => {
     fetchAppointments(undefined, formattedDate, 'day');
   };
 
-  // Loading states simplificados
-  if (!profile) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">Carregando perfil...</p>
-        </div>
-      </div>
-    );
-  }
+  // Loading states simplificados - removido bloqueio por profile
+  // A agenda pode funcionar com dados do slug mesmo sem profile carregado
 
   if (isLoading('schedule')) {
     return (

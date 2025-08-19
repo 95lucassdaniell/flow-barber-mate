@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { useBarbershopBySlug } from "./useBarbershopBySlug";
+import { useParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { createLocalDateTime } from "@/lib/dateUtils";
 
@@ -21,16 +23,25 @@ export const useBarbershopSettings = () => {
   const [settings, setSettings] = useState<BarbershopSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const { profile } = useAuth();
+  const { slug } = useParams();
+  const { barbershop: barbershopBySlug } = useBarbershopBySlug(slug || '');
 
   const fetchSettings = async () => {
-    if (!profile?.barbershop_id) return;
+    // Use barbershop_id from profile or fallback to barbershop from slug
+    const barbershopId = profile?.barbershop_id || barbershopBySlug?.id;
+    if (!barbershopId) {
+      console.log('⏳ Aguardando barbershop_id ou dados do slug...');
+      return;
+    }
 
     try {
       setLoading(true);
+      console.log('🏪 Fetching barbershop settings for:', barbershopId);
+      
       const { data, error } = await supabase
         .from("barbershops")
         .select("id, name, opening_hours")
-        .eq("id", profile.barbershop_id)
+        .eq("id", barbershopId)
         .single();
 
       if (error) throw error;
@@ -39,6 +50,8 @@ export const useBarbershopSettings = () => {
         ...data,
         opening_hours: data.opening_hours as OpeningHours,
       });
+      
+      console.log('✅ Barbershop settings loaded:', data.name);
     } catch (error) {
       console.error("Error fetching barbershop settings:", error);
       toast({
@@ -234,8 +247,18 @@ export const useBarbershopSettings = () => {
   };
 
   useEffect(() => {
+    // Add timeout for settings loading
+    const timer = setTimeout(() => {
+      if (loading) {
+        console.warn('⏰ Barbershop settings timeout - setting loading to false');
+        setLoading(false);
+      }
+    }, 2000);
+
     fetchSettings();
-  }, [profile?.barbershop_id]);
+    
+    return () => clearTimeout(timer);
+  }, [profile?.barbershop_id, barbershopBySlug?.id]);
 
   return {
     settings,

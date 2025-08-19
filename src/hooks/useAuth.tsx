@@ -13,6 +13,9 @@ interface Profile {
   email: string;
 }
 
+// Global flag to prevent multiple auth initializations
+let authInitStarted = false;
+
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -56,9 +59,16 @@ export const useAuth = () => {
     const maxRetries = 3;
     const authKey = 'useAuth-init';
     
+    // Global flag to prevent multiple initializations
+    if (authInitStarted) {
+      return;
+    }
+    authInitStarted = true;
+    
     // Minimal sync when rate limited to prevent stuck loading states
     const minimalSync = async () => {
       try {
+        console.log('🔄 Executando sync mínimo devido ao rate limit...');
         const { data: { session } } = await supabase.auth.getSession();
         if (mounted) {
           setSession(session);
@@ -70,16 +80,17 @@ export const useAuth = () => {
           }
           
           setLoading(false);
+          console.log('✅ Sync mínimo concluído');
         }
       } catch (error) {
-        console.error('Minimal sync error:', error);
+        console.error('❌ Erro no sync mínimo:', error);
         if (mounted) setLoading(false);
       }
     };
     
     // Verificar rate limit para prevenir loops
     if (!globalState.checkRateLimit(authKey, 3, 5000)) {
-      console.warn('🚨 Auth rate limit atingido, fazendo sync mínimo');
+      console.warn('🚨 Auth rate limit atingido, executando sync mínimo');
       minimalSync();
       return;
     }
@@ -207,6 +218,7 @@ export const useAuth = () => {
     return () => {
       mounted = false;
       globalState.clearOperationTimeout('auth-loading');
+      authInitStarted = false;
     };
   }, [fetchProfile]);
 
