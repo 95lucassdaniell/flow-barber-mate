@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { useScheduleBlocks } from './useScheduleBlocks';
 
 interface Service {
   id: string;
@@ -34,6 +35,8 @@ export const useBookingAvailability = (barbershopId: string) => {
   const [providerServices, setProviderServices] = useState<ProviderService[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const { isTimeBlocked } = useScheduleBlocks(barbershopId);
 
   useEffect(() => {
     const isMobile = window.innerWidth <= 768;
@@ -45,13 +48,10 @@ export const useBookingAvailability = (barbershopId: string) => {
       userAgent: navigator.userAgent.substring(0, 50) + '...'
     });
     
-    // Wait for a valid barbershopId before fetching
     if (barbershopId && barbershopId.trim() !== '' && barbershopId !== 'undefined') {
       console.log('✅ Valid barbershopId detected, fetching data...');
       
-      // Add mobile-specific retry logic
       if (isMobile) {
-        // Small delay for mobile to ensure proper state management
         setTimeout(() => {
           fetchInitialData();
         }, 200);
@@ -60,7 +60,6 @@ export const useBookingAvailability = (barbershopId: string) => {
       }
     } else {
       console.warn('⚠️ useBookingAvailability: waiting for valid barbershopId:', barbershopId);
-      // Reset state when waiting for valid ID
       setServices([]);
       setProviders([]);
       setProviderServices([]);
@@ -75,7 +74,6 @@ export const useBookingAvailability = (barbershopId: string) => {
     setError(null);
 
     try {
-      // Fetch all data in parallel for better performance
       const [servicesResult, providersResult] = await Promise.allSettled([
         supabase
           .from('services')
@@ -90,7 +88,6 @@ export const useBookingAvailability = (barbershopId: string) => {
           .eq('is_active', true)
       ]);
 
-      // Handle services result
       let servicesData: Service[] = [];
       if (servicesResult.status === 'fulfilled' && !servicesResult.value.error) {
         servicesData = servicesResult.value.data || [];
@@ -98,7 +95,6 @@ export const useBookingAvailability = (barbershopId: string) => {
         console.error('❌ Error fetching services:', servicesResult.status === 'fulfilled' ? servicesResult.value.error : servicesResult.reason);
       }
 
-      // Handle providers result
       let providersData: Provider[] = [];
       if (providersResult.status === 'fulfilled' && !providersResult.value.error) {
         providersData = providersResult.value.data || [];
@@ -106,7 +102,6 @@ export const useBookingAvailability = (barbershopId: string) => {
         console.error('❌ Error fetching providers:', providersResult.status === 'fulfilled' ? providersResult.value.error : providersResult.reason);
       }
 
-      // Fetch provider services only if we have providers, but don't block services loading
       let providerServicesData: ProviderService[] = [];
       if (providersData.length > 0) {
         const { data: psData, error: providerServicesError } = await supabase
@@ -119,11 +114,9 @@ export const useBookingAvailability = (barbershopId: string) => {
           providerServicesData = psData || [];
         } else {
           console.error('❌ Error fetching provider services:', providerServicesError);
-          // Don't throw error - services can still be shown even without provider services
         }
       }
 
-      // Always set services and providers, even if provider_services fails
       setServices(servicesData);
       setProviders(providersData);
       setProviderServices(providerServicesData);
@@ -135,7 +128,6 @@ export const useBookingAvailability = (barbershopId: string) => {
         servicesAvailable: servicesData.length > 0
       });
 
-      // Clear error if we successfully loaded services
       if (servicesData.length > 0) {
         setError(null);
       }
@@ -255,13 +247,22 @@ export const useBookingAvailability = (barbershopId: string) => {
         if (slotEnd <= endTime) {
           const timeSlot = format(currentTime, 'HH:mm');
           
-          // Check if slot is available (simplified logic)
-          const isAvailable = !appointments?.some(apt => {
-            const aptStart = new Date(`${selectedDate}T${apt.start_time}`);
-            const aptEnd = new Date(`${selectedDate}T${apt.end_time}`);
+          // Check if any target provider is available (not booked and not blocked)
+          const isAvailable = targetProviders.some(provId => {
+            // Check for appointment conflicts
+            const hasAppointmentConflict = appointments?.some(apt => {
+              if (apt.barber_id !== provId) return false;
+              
+              const aptStart = new Date(`${selectedDate}T${apt.start_time}`);
+              const aptEnd = new Date(`${selectedDate}T${apt.end_time}`);
+              
+              return currentTime < aptEnd && slotEnd > aptStart;
+            });
+
+            // Check for schedule blocks
+            const isBlocked = isTimeBlocked(date, timeSlot, provId);
             
-            // Simple overlap check: slot starts before appointment ends AND slot ends after appointment starts
-            return currentTime < aptEnd && slotEnd > aptStart;
+            return !hasAppointmentConflict && !isBlocked;
           });
 
           if (isAvailable) {
@@ -272,7 +273,7 @@ export const useBookingAvailability = (barbershopId: string) => {
         currentTime = new Date(currentTime.getTime() + slotDuration * 60000);
       }
 
-      console.log('✅ Generated slots:', slots);
+      console.log('✅ Generated slots (considering blocks):', slots);
       return slots;
     } catch (error) {
       console.error('❌ Error getting available time slots:', error);
@@ -288,7 +289,6 @@ export const useBookingAvailability = (barbershopId: string) => {
       if (providerService) return providerService.price;
     }
     
-    // If no provider-specific price, get default price from provider_services
     const defaultProviderService = providerServices.find(ps => ps.service_id === serviceId);
     return defaultProviderService?.price || 0;
   };

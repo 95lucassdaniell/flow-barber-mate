@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
@@ -3230,6 +3230,66 @@ export type Database = {
         }
         Relationships: []
       }
+      schedule_blocks: {
+        Row: {
+          barbershop_id: string
+          block_date: string | null
+          created_at: string
+          created_by: string | null
+          days_of_week: number[] | null
+          description: string | null
+          end_date: string | null
+          end_time: string
+          id: string
+          is_full_day: boolean
+          provider_id: string | null
+          recurrence_type: string
+          start_date: string | null
+          start_time: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          barbershop_id: string
+          block_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          days_of_week?: number[] | null
+          description?: string | null
+          end_date?: string | null
+          end_time: string
+          id?: string
+          is_full_day?: boolean
+          provider_id?: string | null
+          recurrence_type?: string
+          start_date?: string | null
+          start_time: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          barbershop_id?: string
+          block_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          days_of_week?: number[] | null
+          description?: string | null
+          end_date?: string | null
+          end_time?: string
+          id?: string
+          is_full_day?: boolean
+          provider_id?: string | null
+          recurrence_type?: string
+          start_date?: string | null
+          start_time?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       services: {
         Row: {
           barbershop_id: string
@@ -3470,6 +3530,39 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_ai_context: {
+        Row: {
+          collected_data: Json
+          context_data: Json
+          conversation_id: string
+          created_at: string
+          id: string
+          intent: string | null
+          step: string | null
+          updated_at: string
+        }
+        Insert: {
+          collected_data?: Json
+          context_data?: Json
+          conversation_id: string
+          created_at?: string
+          id?: string
+          intent?: string | null
+          step?: string | null
+          updated_at?: string
+        }
+        Update: {
+          collected_data?: Json
+          context_data?: Json
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          intent?: string | null
+          step?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_automation_logs: {
         Row: {
           appointment_id: string | null
@@ -3548,6 +3641,72 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_conversation_tags: {
+        Row: {
+          applied_at: string
+          applied_by: string | null
+          conversation_id: string
+          id: string
+          tag_id: string
+        }
+        Insert: {
+          applied_at?: string
+          applied_by?: string | null
+          conversation_id: string
+          id?: string
+          tag_id: string
+        }
+        Update: {
+          applied_at?: string
+          applied_by?: string | null
+          conversation_id?: string
+          id?: string
+          tag_id?: string
+        }
+        Relationships: []
+      }
+      whatsapp_conversations: {
+        Row: {
+          ai_enabled: boolean
+          barbershop_id: string
+          client_name: string | null
+          client_phone: string
+          created_at: string
+          human_agent_id: string | null
+          human_takeover: boolean
+          id: string
+          last_message_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ai_enabled?: boolean
+          barbershop_id: string
+          client_name?: string | null
+          client_phone: string
+          created_at?: string
+          human_agent_id?: string | null
+          human_takeover?: boolean
+          id?: string
+          last_message_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_enabled?: boolean
+          barbershop_id?: string
+          client_name?: string | null
+          client_phone?: string
+          created_at?: string
+          human_agent_id?: string | null
+          human_takeover?: boolean
+          id?: string
+          last_message_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_instances: {
         Row: {
           api_type: string | null
@@ -3621,13 +3780,16 @@ export type Database = {
       }
       whatsapp_messages: {
         Row: {
+          ai_handled: boolean | null
           appointment_id: string | null
           barbershop_id: string
           client_id: string | null
           contact_name: string | null
           content: Json
+          conversation_id: string | null
           created_at: string
           direction: string
+          human_agent_id: string | null
           id: string
           instance_id: string
           message_id: string | null
@@ -3636,13 +3798,16 @@ export type Database = {
           status: string
         }
         Insert: {
+          ai_handled?: boolean | null
           appointment_id?: string | null
           barbershop_id: string
           client_id?: string | null
           contact_name?: string | null
           content: Json
+          conversation_id?: string | null
           created_at?: string
           direction: string
+          human_agent_id?: string | null
           id?: string
           instance_id: string
           message_id?: string | null
@@ -3651,13 +3816,16 @@ export type Database = {
           status?: string
         }
         Update: {
+          ai_handled?: boolean | null
           appointment_id?: string | null
           barbershop_id?: string
           client_id?: string | null
           contact_name?: string | null
           content?: Json
+          conversation_id?: string | null
           created_at?: string
           direction?: string
+          human_agent_id?: string | null
           id?: string
           instance_id?: string
           message_id?: string | null
@@ -3740,6 +3908,36 @@ export type Database = {
           },
         ]
       }
+      whatsapp_tags: {
+        Row: {
+          barbershop_id: string
+          color: string
+          created_at: string
+          description: string | null
+          id: string
+          is_system: boolean
+          name: string
+        }
+        Insert: {
+          barbershop_id: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+        }
+        Update: {
+          barbershop_id?: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
       whatsapp_templates: {
         Row: {
           barbershop_id: string
@@ -3795,9 +3993,9 @@ export type Database = {
       archive_old_data: {
         Args: { retention_months?: number }
         Returns: {
-          table_name: string
-          records_archived: number
           partitions_dropped: number
+          records_archived: number
+          table_name: string
         }[]
       }
       cleanup_ancient_archives: {
@@ -3812,8 +4010,12 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      create_conversations_for_existing_messages: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       create_monthly_partition: {
-        Args: { table_name: string; start_date: string }
+        Args: { start_date: string; table_name: string }
         Returns: undefined
       }
       create_super_admin: {
@@ -3835,124 +4037,124 @@ export type Database = {
       get_archive_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
-          table_name: string
           active_records: number
           archived_records: number
+          oldest_archive_date: string
+          table_name: string
           total_active_size: string
           total_archive_size: string
-          oldest_archive_date: string
         }[]
       }
       get_barbershop_performance_stats: {
         Args: { barbershop_uuid: string }
         Returns: {
+          metric_date: string
           metric_name: string
           metric_value: number
-          metric_date: string
         }[]
       }
       get_connection_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
-          total_connections: number
           active_connections: number
+          connection_usage_percent: number
           idle_connections: number
           idle_in_transaction: number
           max_connections: number
-          connection_usage_percent: number
+          total_connections: number
         }[]
       }
       get_financial_overview: {
         Args: Record<PropertyKey, never>
         Returns: {
-          total_active_accounts: number
-          total_trial_accounts: number
-          total_overdue_accounts: number
-          total_cancelled_accounts: number
-          monthly_revenue: number
           annual_revenue: number
+          monthly_revenue: number
+          total_active_accounts: number
+          total_cancelled_accounts: number
+          total_overdue_accounts: number
+          total_trial_accounts: number
         }[]
       }
       get_historical_data: {
         Args: {
-          p_table_name: string
           p_barbershop_id: string
-          p_start_date: string
           p_end_date?: string
+          p_start_date: string
+          p_table_name: string
         }
         Returns: {
-          id: string
+          amount: number
           barbershop_id: string
           date_field: string
-          amount: number
-          status: string
+          id: string
           source_table: string
+          status: string
         }[]
       }
       get_lock_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
-          lock_type: string
           database_name: string
-          relation_name: string
-          mode_lock: string
           granted: boolean
-          waiting_duration: unknown
+          lock_type: string
+          mode_lock: string
           query_text: string
+          relation_name: string
+          waiting_duration: unknown
         }[]
       }
       get_memory_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
-          shared_buffers_size: string
-          effective_cache_size: string
-          work_mem: string
-          maintenance_work_mem: string
           buffer_hit_ratio: number
+          effective_cache_size: string
           index_hit_ratio: number
+          maintenance_work_mem: string
+          shared_buffers_size: string
           table_hit_ratio: number
-          temp_files_count: number
           temp_bytes: number
+          temp_files_count: number
+          work_mem: string
         }[]
       }
       get_optimization_recommendations: {
         Args: Record<PropertyKey, never>
         Returns: {
           category: string
-          recommendation: string
           current_value: string
-          recommended_value: string
-          priority: string
           description: string
+          priority: string
+          recommendation: string
+          recommended_value: string
         }[]
       }
       get_slow_queries: {
         Args: Record<PropertyKey, never>
         Returns: {
-          query_text: string
           calls: number
-          total_time: number
-          mean_time: number
           max_time: number
-          stddev_time: number
+          mean_time: number
+          query_text: string
           rows_affected: number
+          stddev_time: number
+          total_time: number
         }[]
       }
       get_super_admin_info: {
         Args: Record<PropertyKey, never>
         Returns: {
-          id: string
-          full_name: string
           email: string
+          full_name: string
+          id: string
         }[]
       }
       get_table_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
-          table_name: string
-          row_count: number
-          table_size: string
           index_size: string
+          row_count: number
+          table_name: string
+          table_size: string
         }[]
       }
       get_user_barbershop_id: {
@@ -3962,23 +4164,39 @@ export type Database = {
       get_vacuum_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
-          schema_name: string
-          table_name: string
-          last_vacuum: string
-          last_autovacuum: string
-          last_analyze: string
-          last_autoanalyze: string
-          vacuum_count: number
-          autovacuum_count: number
           analyze_count: number
           autoanalyze_count: number
+          autovacuum_count: number
+          dead_tuple_percent: number
+          last_analyze: string
+          last_autoanalyze: string
+          last_autovacuum: string
+          last_vacuum: string
           n_dead_tup: number
           n_live_tup: number
-          dead_tuple_percent: number
+          schema_name: string
+          table_name: string
+          vacuum_count: number
+        }[]
+      }
+      get_whatsapp_conversations_debug: {
+        Args: { p_barbershop_id: string }
+        Returns: {
+          ai_enabled: boolean
+          barbershop_id: string
+          client_name: string
+          client_phone: string
+          created_at: string
+          human_agent_id: string
+          human_takeover: boolean
+          id: string
+          last_message_at: string
+          status: string
+          updated_at: string
         }[]
       }
       increment_verification_attempts: {
-        Args: { phone_input: string; barbershop_id_input: string }
+        Args: { barbershop_id_input: string; phone_input: string }
         Returns: undefined
       }
       is_super_admin: {
@@ -3990,7 +4208,7 @@ export type Database = {
         Returns: boolean
       }
       log_security_event: {
-        Args: { event_type: string; details?: Json }
+        Args: { details?: Json; event_type: string }
         Returns: undefined
       }
       process_overdue_subscriptions: {
@@ -4002,7 +4220,7 @@ export type Database = {
         Returns: number
       }
       replace_template_variables: {
-        Args: { template_content: string; appointment_id: string }
+        Args: { appointment_id: string; template_content: string }
         Returns: string
       }
       reset_monthly_subscription_services: {
@@ -4010,16 +4228,20 @@ export type Database = {
         Returns: undefined
       }
       reset_verification_attempts: {
-        Args: { phone_input: string; barbershop_id_input: string }
+        Args: { barbershop_id_input: string; phone_input: string }
         Returns: undefined
       }
       set_provider_password: {
-        Args: { provider_id: string; new_password: string }
+        Args: { new_password: string; provider_id: string }
         Returns: boolean
       }
       update_barbershop_stats: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      user_belongs_to_barbershop: {
+        Args: { barbershop_uuid: string }
+        Returns: boolean
       }
       validate_email: {
         Args: { email_input: string }
