@@ -92,14 +92,16 @@ export default function ExpenseModal({ open, onOpenChange, expense, categories }
           <div className="space-y-2">
             <Label htmlFor="category">Categoria</Label>
             <Select
-              value={formData.category}
+              value={formData.category || ""}
               onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione uma categoria" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map(category => (
+                {categories
+                  .filter(category => category && category.trim() !== '') // Filter out empty categories
+                  .map(category => (
                   <SelectItem key={category} value={category}>
                     {category}
                   </SelectItem>
@@ -167,7 +169,7 @@ export default function ExpenseModal({ open, onOpenChange, expense, categories }
           <div className="space-y-2">
             <Label htmlFor="status">Status do Pagamento</Label>
             <Select
-              value={formData.payment_status}
+              value={formData.payment_status || "pending"}
               onValueChange={(value: any) => setFormData(prev => ({ ...prev, payment_status: value }))}
             >
               <SelectTrigger>

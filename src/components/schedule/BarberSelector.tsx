@@ -1,3 +1,4 @@
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -40,12 +41,14 @@ export const BarberSelector = () => {
   return (
     <div className="flex items-center space-x-3">
       <User className="w-5 h-5 text-muted-foreground" />
-      <Select value={selectedBarberId} onValueChange={handleBarberChange}>
+      <Select value={selectedBarberId || ""} onValueChange={handleBarberChange}>
         <SelectTrigger className="w-48">
           <SelectValue placeholder="Selecione o barbeiro" />
         </SelectTrigger>
         <SelectContent>
-          {barbers.map((barber) => (
+          {barbers
+            .filter(barber => barber.id && barber.id.trim() !== '') // Filter out empty IDs
+            .map((barber) => (
             <SelectItem key={barber.id} value={barber.id}>
               <div className="flex items-center space-x-2">
                 <Avatar className="w-6 h-6">

@@ -171,14 +171,16 @@ export default function ClientSubscriptionModal({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Prestador</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione um prestador" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {providers.map((provider) => (
+                      {providers
+                        .filter(provider => provider.id && provider.id.trim() !== '') // Filter out empty IDs
+                        .map((provider) => (
                         <SelectItem key={provider.id} value={provider.id}>
                           {provider.full_name}
                         </SelectItem>
@@ -198,7 +200,7 @@ export default function ClientSubscriptionModal({
                   <FormLabel>Plano</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
-                    defaultValue={field.value}
+                    defaultValue={field.value || ""}
                     disabled={!selectedProvider}
                   >
                     <FormControl>
@@ -207,7 +209,9 @@ export default function ClientSubscriptionModal({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {plans.map((plan) => (
+                      {plans
+                        .filter(plan => plan.id && plan.id.trim() !== '') // Filter out empty IDs
+                        .map((plan) => (
                         <SelectItem key={plan.id} value={plan.id}>
                           <div className="flex flex-col">
                             <span className="font-medium">{plan.name}</span>
