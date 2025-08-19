@@ -10,6 +10,7 @@ import { ptBR } from "date-fns/locale";
 import { Appointment, Barber } from "@/types/appointment";
 import { useBarbershopSettings } from "@/hooks/useBarbershopSettings";
 import { useScheduleBlocks } from "@/hooks/useScheduleBlocks";
+import { useAuth } from "@/hooks/useAuth";
 import { ScheduleBlockModal } from "./ScheduleBlockModal";
 import { ConflictReport } from "./ConflictReport";
 
@@ -34,14 +35,15 @@ export const SimpleGridScheduleView = ({
   onGoToToday,
   onNewAppointment
 }: SimpleGridScheduleViewProps) => {
+  const { profile } = useAuth();
   const [selectedBarbers, setSelectedBarbers] = useState<Barber[]>([]);
   const [showConflictReport, setShowConflictReport] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<{ barberId: string; time: string } | null>(null);
   const { generateAllTimeSlots, isOpenOnDate, loading } = useBarbershopSettings();
   
-  // Get barbershop_id from the first barber or from settings
-  const barbershopId = barbers.length > 0 ? barbers[0].barbershop_id || '' : '';
+  // Get barbershop_id from the current user's profile
+  const barbershopId = profile?.barbershop_id || '';
   const { blocks, isTimeBlocked, createBlock } = useScheduleBlocks(barbershopId);
 
   // Initialize selected barbers when barbers prop changes
