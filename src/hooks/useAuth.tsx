@@ -24,7 +24,7 @@ export const useAuth = () => {
     const circuitKey = `fetchProfile-${userId}`;
     
     if (globalState.isEmergencyStopActive()) return null;
-    if (!globalState.checkCircuitBreaker(circuitKey, 10, 5000)) return null; // Menos restritivo
+    if (!globalState.checkCircuitBreaker(circuitKey, 5, 2000)) return null;
 
     const cacheKey = `profile-${userId}`;
     
@@ -33,24 +33,19 @@ export const useAuth = () => {
     if (cached) return cached;
 
     try {
-      console.log('🔍 Buscando profile para userId:', userId);
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .single();
       
-      if (error) {
-        console.error('❌ Erro ao buscar profile:', error);
-        throw error;
-      }
+      if (error) throw error;
       
       const profile = profileData as Profile;
-      cacheManager.set(cacheKey, profile, 60000); // 1 min cache
-      console.log('✅ Profile encontrado:', profile.id);
+      cacheManager.set(cacheKey, profile, 300000); // 5 min cache
       return profile;
     } catch (error) {
-      console.error('❌ Profile fetch error:', error);
+      console.error('Profile fetch error:', error);
       return null;
     }
   }, []);
@@ -58,37 +53,33 @@ export const useAuth = () => {
   useEffect(() => {
     let mounted = true;
     let retryCount = 0;
-    const maxRetries = 2;
+    const maxRetries = 3;
+    const authKey = 'useAuth-init';
     
-    console.log('🔐 Iniciando useAuth...');
+    // Verificar rate limit para prevenir loops
+    if (!globalState.checkRateLimit(authKey, 3, 5000)) {
+      console.warn('🚨 Auth rate limit atingido, ignorando inicialização');
+      return;
+    }
     
     const initializeAuth = async () => {
       try {
         // Verificação síncrona imediata do localStorage
         const storedSession = localStorage.getItem('sb-yzqwmxffjufefocgkevz-auth-token');
 
-        // Set up auth state listener with debouncing
-        let authChangeTimeout: NodeJS.Timeout;
+        // Set up auth state listener FIRST
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           (event, session) => {
             if (!mounted) return;
             
-            // Clear previous timeout to debounce rapid auth changes
-            if (authChangeTimeout) {
-              clearTimeout(authChangeTimeout);
-            }
+            setAuthError(null);
+            setSession(session);
+            setUser(session?.user ?? null);
             
-            authChangeTimeout = setTimeout(() => {
-              if (!mounted) return;
-              
-              console.log('🔐 Auth state changed:', event, session ? 'authenticated' : 'no session');
-              
-              setAuthError(null);
-              setSession(session);
-              setUser(session?.user ?? null);
-              
-              if (session?.user) {
-                // Fetch profile sem rate limiting
+            if (session?.user) {
+              // Fetch profile with rate limit
+              const profileKey = `profile-${session.user.id}`;
+              if (globalState.checkRateLimit(profileKey, 2, 3000)) {
                 setTimeout(async () => {
                   if (mounted) {
                     let profileData = await fetchProfile(session.user.id);
@@ -103,15 +94,15 @@ export const useAuth = () => {
                     }
                   }
                 }, 100);
-              } else {
-                if (mounted) setProfile(null);
               }
-              
-              if (mounted) {
-                setLoading(false);
-                globalState.clearOperationTimeout('auth-loading');
-              }
-            }, 150); // Debounce auth changes
+            } else {
+              if (mounted) setProfile(null);
+            }
+            
+            if (mounted) {
+              setLoading(false);
+              globalState.clearOperationTimeout('auth-loading');
+            }
           }
         );
 
@@ -166,13 +157,13 @@ export const useAuth = () => {
           }
         };
 
-        // Timeout de segurança mais curto
+        // Timeout de segurança mais longo
         globalState.setOperationTimeout('auth-loading', () => {
           if (mounted) {
             console.warn('⏰ Auth timeout - forçando loading=false');
             setLoading(false);
           }
-        }, 8000); // Reduzido para 8 segundos
+        }, 12000);
 
         // Start session check
         await checkSession();

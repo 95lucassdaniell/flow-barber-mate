@@ -8,17 +8,14 @@ export interface WhatsAppMessage {
   contact_name?: string | null;
   content: any; // JSONB field
   message_type: string;
-  direction: 'incoming' | 'outgoing';
-  status: string;
+  direction: string; // Will be cast to 'incoming' | 'outgoing'
+  status: string; // Will be cast to proper status type
   message_id?: string | null;
   instance_id?: string | null;
   appointment_id?: string | null;
   client_id?: string | null;
   barbershop_id: string;
   created_at: string;
-  conversation_id?: string;
-  ai_handled?: boolean;
-  human_agent_id?: string;
 }
 
 export const useWhatsAppMessages = () => {
@@ -40,31 +37,16 @@ export const useWhatsAppMessages = () => {
 
       const { data, error: queryError } = await supabase
         .from('whatsapp_messages')
-        .select(`
-          *,
-          conversation_id
-        `)
+        .select('*')
         .eq('barbershop_id', barbershopId)
         .order('created_at', { ascending: false })
-        .limit(200);
+        .limit(100);
 
       if (queryError) {
         throw queryError;
       }
 
-      const processedMessages = (data || []).map(msg => ({
-        ...msg,
-        direction: msg.direction as 'incoming' | 'outgoing'
-      }));
-
-      console.log('📨 Mensagens carregadas:', {
-        total: processedMessages.length,
-        withConversationId: processedMessages.filter(m => m.conversation_id).length,
-        withoutConversationId: processedMessages.filter(m => !m.conversation_id).length,
-        barbershopId
-      });
-
-      setMessages(processedMessages);
+      setMessages((data || []) as WhatsAppMessage[]);
     } catch (err: any) {
       console.error('Error fetching WhatsApp messages:', err);
       setError(err.message || 'Erro ao carregar mensagens');

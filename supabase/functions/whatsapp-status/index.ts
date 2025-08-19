@@ -103,22 +103,15 @@ serve(async (req) => {
         let phoneNumber = null;
         let connected = false;
 
-        const instanceState = statusData.instance?.state || 'disconnected';
-        phoneNumber = statusData.instance?.user?.id?.split('@')[0] || null;
-        
-        // A conexão só é realmente válida se tem estado 'open' E número de telefone
-        if (instanceState === 'open' && phoneNumber) {
+        if (statusData.instance?.state === 'open') {
           newStatus = 'connected';
           connected = true;
-        } else if (instanceState === 'connecting' || instanceState === 'open') {
-          newStatus = 'awaiting_qr_scan';
-          connected = false;
+          phoneNumber = statusData.instance?.user?.id?.split('@')[0] || null;
+        } else if (statusData.instance?.state === 'connecting') {
+          newStatus = 'connecting';
         } else {
           newStatus = 'disconnected';
-          connected = false;
         }
-        
-        console.log(`Instance state: ${instanceState}, Phone: ${phoneNumber}, Final status: ${newStatus}`);
 
         // Update instance status
         await supabase

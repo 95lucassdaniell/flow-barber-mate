@@ -8,9 +8,6 @@ import { toast } from "sonner";
 import { Loader2, CheckCircle, XCircle, QrCode, Smartphone, Wifi, WifiOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cacheManager } from "@/lib/globalState";
-import WhatsAppStatusChecker from "./WhatsAppStatusChecker";
-import WhatsAppConnectionWizard from "./WhatsAppConnectionWizard";
-import WhatsAppAutomationTester from "./WhatsAppAutomationTester";
 
 interface WhatsAppConfigProps {
   isConnected: boolean;
@@ -191,46 +188,6 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
     }
   };
 
-  const resetAndReconnect = async () => {
-    setLoading(true);
-    try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return;
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('barbershop_id')
-        .eq('user_id', user.user.id)
-        .single();
-
-      if (!profile?.barbershop_id) return;
-
-      const { data: resetData, error: resetError } = await supabase.functions.invoke('whatsapp-reset-instance', {
-        body: { barbershopId: profile.barbershop_id }
-      });
-      
-      if (resetError) {
-        console.error('Error resetting instance:', resetError);
-        toast.error('Erro ao resetar instância WhatsApp');
-        return;
-      }
-
-      console.log('Instance reset successfully:', resetData);
-      toast.success('Instância resetada com sucesso! Reconectando...');
-
-      // Wait a moment and then generate new QR code
-      setTimeout(async () => {
-        await generateQRCode();
-      }, 2000);
-      
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error('Erro ao resetar WhatsApp');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const generateQRCode = async () => {
     setQrLoading(true);
     try {
@@ -332,47 +289,6 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
 
   return (
     <div className="space-y-6">
-      {/* Status Checker */}
-      <WhatsAppStatusChecker />
-      
-      {/* Connection Wizard */}
-      <WhatsAppConnectionWizard />
-      
-      {/* Automation Tester */}
-      <WhatsAppAutomationTester />
-      
-      {/* Configuration Status Alert */}
-      <Card className="border-amber-200 bg-amber-50">
-        <CardHeader>
-          <CardTitle className="text-amber-800">⚙️ Configuração Necessária</CardTitle>
-          <CardDescription className="text-amber-700">
-            Para completar a integração, configure as variáveis de ambiente no Supabase Dashboard:
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="bg-white p-3 rounded border">
-            <p className="font-mono text-sm text-gray-800">
-              <strong>EVOLUTION_API_URL:</strong><br/>
-              https://atendimento-evolution-api.qna796.easypanel.host
-            </p>
-          </div>
-          <div className="bg-white p-3 rounded border">
-            <p className="font-mono text-sm text-gray-800">
-              <strong>EVOLUTION_GLOBAL_API_KEY:</strong><br/>
-              shHxOuaaWufn4uirAI95CfGbgIqLFivUCehX22Fmv7gI2kTLKZ52QfKkR0jDFNrlv7DLXUL0kBFRJBn9cgi4UlzDYIWDzERRG9oEmDBCXxRiqye31VGNJsY1Ue0eziEQ
-            </p>
-          </div>
-          <div className="text-sm text-amber-700 bg-amber-100 p-3 rounded">
-            <p><strong>Passos:</strong></p>
-            <ol className="list-decimal list-inside space-y-1 mt-2">
-              <li>Acesse o <strong>Supabase Dashboard</strong></li>
-              <li>Vá em <strong>Settings → Edge Functions</strong></li>
-              <li>Adicione as duas variáveis acima</li>
-              <li>Salve e volte aqui para continuar</li>
-            </ol>
-          </div>
-        </CardContent>
-      </Card>
       
       <Card>
         <CardHeader>
@@ -438,18 +354,11 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
                   <p className="text-muted-foreground">
                     Clique no botão abaixo para gerar o QR Code e conectar seu WhatsApp
                   </p>
-                  <div className="space-y-2">
-                    <Button onClick={generateQRCode} disabled={qrLoading}>
-                      {qrLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      <QrCode className="mr-2 h-4 w-4" />
-                      Gerar QR Code
-                    </Button>
-                    <Button onClick={resetAndReconnect} disabled={loading} variant="outline">
-                      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      <WifiOff className="mr-2 h-4 w-4" />
-                      Resetar e Reconectar
-                    </Button>
-                  </div>
+                  <Button onClick={generateQRCode} disabled={qrLoading}>
+                    {qrLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <QrCode className="mr-2 h-4 w-4" />
+                    Gerar QR Code
+                  </Button>
                 </div>
               )}
             </div>

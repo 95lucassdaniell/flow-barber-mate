@@ -22,19 +22,24 @@ serve(async (req) => {
     
     // Test environment variables first
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
     const evolutionApiKey = Deno.env.get('EVOLUTION_GLOBAL_API_KEY');
     
     console.log('Environment variables check:');
     console.log('- SUPABASE_URL:', supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'NOT SET');
-    console.log('- SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? 'SET' : 'NOT SET');
+    console.log('- SUPABASE_ANON_KEY:', supabaseAnonKey ? 'SET' : 'NOT SET');
     console.log('- EVOLUTION_API_URL:', evolutionApiUrl ? `${evolutionApiUrl.substring(0, 30)}...` : 'NOT SET');
     console.log('- EVOLUTION_GLOBAL_API_KEY:', evolutionApiKey ? 'SET' : 'NOT SET');
     
     const supabase = createClient(
       supabaseUrl ?? '',
-      supabaseServiceKey ?? ''
+      supabaseAnonKey ?? '',
+      {
+        global: {
+          headers: { Authorization: req.headers.get('Authorization')! },
+        },
+      }
     );
 
     let requestBody;
@@ -109,57 +114,6 @@ serve(async (req) => {
       const instanceName = `barber_${barbershop.slug.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
       console.log('Generated instance name:', instanceName);
 
-      // Check if instance already exists in Evolution API
-      console.log('Checking if instance exists in Evolution API...');
-      try {
-        const checkResponse = await fetch(`${evolutionApiUrl}/instance/fetchInstances`, {
-          method: 'GET',
-          headers: {
-            'apikey': evolutionApiKey,
-          },
-        });
-
-        if (checkResponse.ok) {
-          const existingInstances = await checkResponse.json();
-          console.log('Existing instances check response:', JSON.stringify(existingInstances, null, 2));
-          
-          // Check if our instance already exists
-          const instanceExists = existingInstances.some((inst: any) => 
-            inst.instanceName === instanceName || inst.instance?.instanceName === instanceName
-          );
-          
-          if (instanceExists) {
-            console.log(`Instance ${instanceName} already exists. Deleting orphaned instance...`);
-            
-            // Delete the existing instance first
-            try {
-              const deleteResponse = await fetch(`${evolutionApiUrl}/instance/delete/${instanceName}`, {
-                method: 'DELETE',
-                headers: {
-                  'apikey': evolutionApiKey,
-                },
-              });
-              
-              console.log('Delete orphaned instance response status:', deleteResponse.status);
-              
-              if (deleteResponse.ok) {
-                console.log('Orphaned instance deleted successfully');
-                // Wait a moment for the deletion to process
-                await new Promise(resolve => setTimeout(resolve, 2000));
-              } else {
-                console.log('Failed to delete orphaned instance, proceeding anyway...');
-              }
-            } catch (deleteError) {
-              console.error('Error deleting orphaned instance:', deleteError);
-              console.log('Proceeding with creation anyway...');
-            }
-          }
-        }
-      } catch (checkError) {
-        console.error('Error checking existing instances:', checkError);
-        console.log('Proceeding with instance creation...');
-      }
-
       try {
         const createPayload = {
           instanceName: instanceName,
@@ -168,14 +122,14 @@ serve(async (req) => {
           typebot: "",
           integration: "WHATSAPP-BAILEYS",
           webhookUrl: `${Deno.env.get('SUPABASE_URL')}/functions/v1/evolution-webhook`,
-          webhookByEvents: true,
+          webhookByEvents: false,
           events: [
-            "application.startup",
-            "qrcode.updated",
-            "connection.update",
-            "messages.upsert",
-            "messages.update",
-            "send.message"
+            "APPLICATION_STARTUP",
+            "QRCODE_UPDATED",
+            "CONNECTION_UPDATE",
+            "MESSAGES_UPSERT",
+            "MESSAGES_UPDATE",
+            "SEND_MESSAGE"
           ]
         };
 
@@ -201,62 +155,6 @@ serve(async (req) => {
         if (!createResponse.ok) {
           console.error('Evolution API Error - Status:', createResponse.status);
           console.error('Evolution API Error - Body:', createResult);
-          
-          // If it's still a name conflict, try with a timestamp suffix
-          if (createResponse.status === 403 && createResult?.response?.message?.some((msg: string) => msg.includes('already in use'))) {
-            console.log('Name still in use, trying with timestamp suffix...');
-            const timestampSuffix = Date.now().toString().slice(-6);
-            const fallbackInstanceName = `${instanceName}_${timestampSuffix}`;
-            
-            const fallbackPayload = { ...createPayload, instanceName: fallbackInstanceName };
-            console.log('Retrying with fallback name:', fallbackInstanceName);
-            
-            const retryResponse = await fetch(`${evolutionApiUrl}/instance/create`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'apikey': evolutionApiKey,
-              },
-              body: JSON.stringify(fallbackPayload),
-            });
-            
-            if (retryResponse.ok) {
-              const retryResult = await retryResponse.json();
-              console.log('Fallback instance created successfully');
-              
-              // Update database with fallback instance name
-              const updateData = {
-                instance_id: fallbackInstanceName,
-                instance_token: `token_${fallbackInstanceName}`,
-                evolution_instance_name: fallbackInstanceName,
-                api_type: 'evolution',
-                status: 'disconnected',
-                webhook_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/evolution-webhook`
-              };
-
-              const { error: updateError } = await supabase
-                .from('whatsapp_instances')
-                .update(updateData)
-                .eq('barbershop_id', barbershopId);
-
-              if (updateError) {
-                console.error('Database update error:', updateError);
-              } else {
-                console.log('Database updated with fallback instance name');
-              }
-
-              return new Response(JSON.stringify({
-                success: true,
-                instance: retryResult,
-                instanceName: fallbackInstanceName,
-                updated: true,
-                fallback: true
-              }), {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              });
-            }
-          }
-          
           return new Response(JSON.stringify({ 
             error: 'Failed to create instance in EvolutionAPI',
             status: createResponse.status,

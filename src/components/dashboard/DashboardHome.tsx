@@ -11,15 +11,11 @@ import {
   Clock,
   MessageCircle,
   Plus,
-  Eye,
-  Headphones
+  Eye
 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
 
 const DashboardHome = () => {
   const { stats, todaySchedule, loading } = useDashboardStats();
-  const navigate = useNavigate();
-  const { slug } = useParams();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -349,14 +345,6 @@ const DashboardHome = () => {
                 <Button variant="outline" className="w-full justify-start">
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Enviar WhatsApp
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => navigate(`/app/${slug}/atendimento`)}
-                >
-                  <Headphones className="w-4 h-4 mr-2" />
-                  Atendimento WhatsApp
                 </Button>
               </div>
             </CardContent>

@@ -12,15 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { 
-      phone, 
-      message, 
-      messageType = 'text', 
-      barbershop_id,
-      conversation_id: conversationId,
-      ai_handled: aiHandled,
-      human_agent_id: humanAgentId 
-    } = await req.json();
+    const { phone, message, messageType = 'text', barbershop_id } = await req.json();
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -181,66 +173,22 @@ serve(async (req) => {
       }
     }
 
-    // Create or get conversation if not provided
-    let finalConversationId = conversationId;
-    
-    if (!finalConversationId) {
-      console.log('Creating/finding conversation for phone:', formattedPhone);
-      
-      const { data: conversation, error: convError } = await supabase
-        .from('whatsapp_conversations')
-        .upsert({
-          barbershop_id: targetBarbershopId,
-          client_phone: formattedPhone,
-          client_name: formattedPhone, // Use phone as name initially
-          status: 'active',
-          ai_enabled: true,
-          human_takeover: false,
-          last_message_at: new Date().toISOString()
-        }, {
-          onConflict: 'barbershop_id,client_phone'
-        })
-        .select()
-        .single();
-
-      if (convError) {
-        console.error('Error creating conversation:', convError);
-      } else {
-        finalConversationId = conversation?.id;
-        console.log('Conversation created/found:', finalConversationId);
-      }
-    }
-
-    // Save message to database with conversation support
+    // Save message to database
     const { error: dbError } = await supabase
       .from('whatsapp_messages')
       .insert({
-        conversation_id: finalConversationId,
         barbershop_id: targetBarbershopId,
         instance_id: instance.id,
         message_id: sendData.key?.id || sendData.value || null,
         phone_number: formattedPhone,
         message_type: messageType,
-        content: message,
+        content: { text: message },
         direction: 'outgoing',
-        status: 'sent',
-        ai_handled: !!aiHandled,
-        human_agent_id: humanAgentId
+        status: 'sent'
       });
 
     if (dbError) {
       console.error('Error saving message:', dbError);
-    }
-
-    // Update conversation timestamp if we have a conversation
-    if (finalConversationId) {
-      await supabase
-        .from('whatsapp_conversations')
-        .update({ 
-          last_message_at: new Date().toISOString(),
-          human_agent_id: humanAgentId 
-        })
-        .eq('id', finalConversationId);
     }
 
     return new Response(JSON.stringify({

@@ -14,53 +14,22 @@ serve(async (req) => {
   try {
     console.log('=== WHATSAPP CONNECT STARTED ===');
     
-    // Environment validation
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
-    const evolutionApiKey = Deno.env.get('EVOLUTION_GLOBAL_API_KEY');
-    
-    console.log('Environment check:');
-    console.log('- SUPABASE_URL:', supabaseUrl ? 'SET' : 'NOT SET');
-    console.log('- SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? 'SET' : 'NOT SET');
-    console.log('- EVOLUTION_API_URL:', evolutionApiUrl ? 'SET' : 'NOT SET');
-    console.log('- EVOLUTION_GLOBAL_API_KEY:', evolutionApiKey ? 'SET' : 'NOT SET');
-    
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing Supabase configuration');
-      return new Response(JSON.stringify({ 
-        error: 'Server configuration error',
-        details: 'Missing Supabase credentials'
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    
     const supabase = createClient(
-      supabaseUrl,
-      supabaseServiceKey
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: req.headers.get('Authorization')! },
+        },
+      }
     );
 
-    // Get Authorization header for user authentication
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error('No authorization header provided');
-      return new Response(JSON.stringify({ error: 'Unauthorized - No auth header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     console.log('Getting user from auth...');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
       console.error('Auth error:', authError);
-      return new Response(JSON.stringify({ 
-        error: 'Unauthorized',
-        details: authError?.message || 'No user found'
-      }), {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -132,6 +101,14 @@ serve(async (req) => {
       status: instance.status
     });
 
+    const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
+    const evolutionApiKey = Deno.env.get('EVOLUTION_GLOBAL_API_KEY');
+
+    console.log('Environment check:', {
+      evolutionApiUrl: evolutionApiUrl ? `${evolutionApiUrl.substring(0, 20)}...` : 'NOT SET',
+      evolutionApiKey: evolutionApiKey ? 'SET' : 'NOT SET'
+    });
+
     // Check if this is an Evolution API instance
     if (instance.api_type === 'evolution') {
       console.log('=== EVOLUTION API FLOW ===');
@@ -150,201 +127,79 @@ serve(async (req) => {
         });
       }
 
+      // Create instance if not exists
+      if (!instance.evolution_instance_name || !instance.instance_id) {
+        console.log('Instance not properly configured, creating...');
+        console.log('Current instance state:', {
+          evolution_instance_name: instance.evolution_instance_name,
+          instance_id: instance.instance_id,
+          instance_token: instance.instance_token
+        });
+        
+        console.log('Calling evolution-instance-manager...');
+        const { data, error } = await supabase.functions.invoke('evolution-instance-manager', {
+          body: { action: 'create', barbershopId: profile.barbershop_id }
+        });
+
+        console.log('Evolution instance manager response:', { data, error });
+
+        if (error) {
+          console.error('Failed to create Evolution instance:', error);
+          return new Response(JSON.stringify({ 
+            error: 'Failed to create Evolution instance',
+            details: error 
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        if (!data?.success) {
+          console.error('Evolution instance manager returned failure:', data);
+          return new Response(JSON.stringify({ 
+            error: 'Failed to create Evolution instance',
+            details: data 
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // Refresh instance data
+        console.log('Refreshing instance data...');
+        const { data: updatedInstance, error: refreshError } = await supabase
+          .from('whatsapp_instances')
+          .select('*')
+          .eq('barbershop_id', profile.barbershop_id)
+          .single();
+
+        if (refreshError) {
+          console.error('Error refreshing instance:', refreshError);
+          return new Response(JSON.stringify({ 
+            error: 'Failed to refresh instance data',
+            details: refreshError 
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        if (updatedInstance) {
+          console.log('Updated instance:', updatedInstance);
+          Object.assign(instance, updatedInstance);
+        }
+      }
+
+      // Get QR code from Evolution API
       try {
-        // First, verify if instance exists in Evolution API
-        console.log('Checking if instance exists in Evolution API...');
-        const instanceCheckResponse = await fetch(`${evolutionApiUrl}/instance/fetchInstances`, {
+        const qrResponse = await fetch(`${evolutionApiUrl}/instance/connect/${instance.evolution_instance_name}`, {
           method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
             'apikey': evolutionApiKey,
           },
         });
 
-        console.log('Instance check response status:', instanceCheckResponse.status);
-        
-        let instanceExists = false;
-        if (instanceCheckResponse.ok) {
-          const instancesData = await instanceCheckResponse.json();
-          console.log('Evolution API instances count:', instancesData.length);
-          
-          // Check if our instance exists in the list
-          instanceExists = instancesData.some((inst: any) => 
-            inst.instanceName === instance.evolution_instance_name
-          );
-          console.log(`Instance ${instance.evolution_instance_name} exists in Evolution API:`, instanceExists);
-        } else {
-          console.error('Failed to check instances:', await instanceCheckResponse.text());
-        }
-
-        // If instance doesn't exist in Evolution API or not configured, create it
-        if (!instanceExists || !instance.instance_id || !instance.instance_token) {
-          console.log('Instance needs to be created/recreated...');
-          console.log('Current instance state:', {
-            evolution_instance_name: instance.evolution_instance_name,
-            instance_id: instance.instance_id,
-            instance_token: instance.instance_token,
-            instanceExists
-          });
-          
-          // Reset instance data in database first
-          console.log('Resetting instance data...');
-          await supabase
-            .from('whatsapp_instances')
-            .update({
-              instance_id: null,
-              instance_token: null,
-              qr_code: null,
-              status: 'disconnected',
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', instance.id);
-          
-          console.log('Calling evolution-instance-manager...');
-          const { data, error } = await supabase.functions.invoke('evolution-instance-manager', {
-            body: { action: 'create', barbershopId: profile.barbershop_id }
-          });
-
-          console.log('Evolution instance manager response:', { data, error });
-
-          if (error) {
-            console.error('Failed to create Evolution instance:', error);
-            return new Response(JSON.stringify({ 
-              error: 'Failed to create Evolution instance',
-              details: error 
-            }), {
-              status: 500,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-
-          if (!data?.success) {
-            console.error('Evolution instance manager returned failure:', data);
-            return new Response(JSON.stringify({ 
-              error: 'Failed to create Evolution instance',
-              details: data 
-            }), {
-              status: 500,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-
-          // Refresh instance data
-          console.log('Refreshing instance data...');
-          const { data: updatedInstance, error: refreshError } = await supabase
-            .from('whatsapp_instances')
-            .select('*')
-            .eq('barbershop_id', profile.barbershop_id)
-            .single();
-
-          if (refreshError) {
-            console.error('Error refreshing instance:', refreshError);
-            return new Response(JSON.stringify({ 
-              error: 'Failed to refresh instance data',
-              details: refreshError 
-            }), {
-              status: 500,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-
-          if (updatedInstance) {
-            console.log('Updated instance:', {
-              id: updatedInstance.id,
-              evolution_instance_name: updatedInstance.evolution_instance_name,
-              instance_id: updatedInstance.instance_id,
-              status: updatedInstance.status
-            });
-            Object.assign(instance, updatedInstance);
-          }
-        }
-
-        // Now try to get QR code
-        console.log('Getting QR code from Evolution API...');
-        console.log('Instance name for QR request:', instance.evolution_instance_name);
-        console.log('Evolution API URL:', `${evolutionApiUrl}/instance/connect/${instance.evolution_instance_name}`);
-        
-        try {
-          const qrResponse = await fetch(`${evolutionApiUrl}/instance/connect/${instance.evolution_instance_name}`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': evolutionApiKey,
-            },
-          });
-
-          console.log('Evolution API QR response status:', qrResponse.status);
-          console.log('Evolution API QR response headers:', Object.fromEntries(qrResponse.headers.entries()));
-          
-          if (!qrResponse.ok) {
-            const errorText = await qrResponse.text();
-            console.error('Evolution API QR error:', errorText);
-          
-          // If instance not found (404), try to recreate it once
-          if (qrResponse.status === 404) {
-            console.log('Instance not found (404), attempting to recreate...');
-            
-            const recreateResponse = await supabase.functions.invoke('evolution-instance-manager', {
-              body: { action: 'create', barbershopId: profile.barbershop_id }
-            });
-
-            if (recreateResponse.error) {
-              throw new Error(`Failed to recreate instance: ${recreateResponse.error.message}`);
-            }
-
-            // Refresh instance data after recreation
-            const { data: recreatedInstance } = await supabase
-              .from('whatsapp_instances')
-              .select('*')
-              .eq('barbershop_id', profile.barbershop_id)
-              .single();
-
-            if (recreatedInstance) {
-              Object.assign(instance, recreatedInstance);
-            }
-
-            // Try QR code again after recreation
-            const retryQrResponse = await fetch(`${evolutionApiUrl}/instance/connect/${instance.evolution_instance_name}`, {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-                'apikey': evolutionApiKey,
-              },
-            });
-
-            if (!retryQrResponse.ok) {
-              throw new Error(`Evolution API error after retry: ${retryQrResponse.status} - ${await retryQrResponse.text()}`);
-            }
-
-            const retryQrData = await retryQrResponse.json();
-            console.log('Evolution API QR response after retry success');
-
-            // Update instance with QR code and status
-            await supabase
-              .from('whatsapp_instances')
-              .update({
-                qr_code: retryQrData.base64,
-                status: 'connecting',
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', instance.id);
-
-            return new Response(JSON.stringify({
-              qr_code: retryQrData.base64,
-              instance_id: instance.evolution_instance_name,
-              status: 'connecting',
-              api_type: 'evolution',
-              recreated: true
-            }), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-          
-          throw new Error(`Evolution API error: ${qrResponse.status} - ${errorText}`);
-        }
-
         const qrData = await qrResponse.json();
-        console.log('Evolution API QR response success');
         
         if (qrData.base64) {
           // Update instance with QR code
@@ -352,8 +207,7 @@ serve(async (req) => {
             .from('whatsapp_instances')
             .update({
               qr_code: qrData.base64,
-              status: 'connecting',
-              updated_at: new Date().toISOString()
+              status: 'connecting'
             })
             .eq('id', instance.id);
 
@@ -374,35 +228,11 @@ serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
-
-        } catch (fetchError) {
-          console.error('Error fetching QR code:', fetchError);
-          throw fetchError;
-        }
       } catch (error) {
-        console.error('Error in Evolution API flow:', error);
-        console.error('Error stack:', error.stack);
-        console.error('Error type:', error.constructor.name);
-        
-        // Update instance status to error
-        await supabase
-          .from('whatsapp_instances')
-          .update({
-            status: 'error',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', instance.id);
-        
+        console.error('Evolution API QR Error:', error);
         return new Response(JSON.stringify({ 
           error: 'Failed to connect to Evolution API',
-          details: error.message,
-          type: error.constructor.name,
-          stack: error.stack,
-          instance: {
-            id: instance.id,
-            evolution_instance_name: instance.evolution_instance_name,
-            status: 'error'
-          }
+          details: error.message 
         }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
