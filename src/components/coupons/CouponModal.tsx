@@ -1,3 +1,4 @@
+import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from 'react';
 import { CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
@@ -98,9 +99,24 @@ export const CouponModal = ({ isOpen, onClose, coupon }: CouponModalProps) => {
   };
 
   const loadApplicableItems = async (couponId: string) => {
-    // This would require another hook or API call to get applicable items
-    // For now, we'll leave it empty and the user will need to re-select items when editing
-    debugLogger.billing.info('CouponModal', 'Loading applicable items', { couponId });
+    try {
+      const { data: applicableItems } = await supabase
+        .from('coupon_applicable_items')
+        .select('item_id, item_type')
+        .eq('coupon_id', couponId);
+
+      if (applicableItems) {
+        setSelectedItems(applicableItems.map(item => ({
+          item_type: item.item_type as 'service' | 'product',
+          item_id: item.item_id,
+          name: services.find(s => s.id === item.item_id && item.item_type === 'service')?.name ||
+                products?.find(p => p.id === item.item_id && item.item_type === 'product')?.name ||
+                'Item não encontrado'
+        })));
+      }
+    } catch (error) {
+      debugLogger.billing.error('CouponModal', 'Error loading applicable items', error);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

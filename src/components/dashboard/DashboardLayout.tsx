@@ -93,9 +93,10 @@ const AppSidebar = ({ barbershopData, profile, handleLogout, slug }: {
     { id: "financial-providers", name: "Prestadores", icon: UsersIcon, href: `/app/${slug}/financial/prestadores` },
     { id: "comandas", name: "Comandas", icon: Receipt, href: `/app/${slug}/comandas` },
     { id: "caixa", name: "Caixa", icon: DollarSign, href: `/app/${slug}/caixa` },
+    { id: "cupons", name: "Cupons", icon: Receipt, href: `/app/${slug}/cupons` },
   ];
 
-  const isFinancialActive = currentPath.includes('/financial') || currentPath.includes('/comandas') || currentPath.includes('/caixa');
+  const isFinancialActive = currentPath.includes('/financial') || currentPath.includes('/comandas') || currentPath.includes('/caixa') || currentPath.includes('/cupons');
   const isAIActive = currentPath.includes('/ai');
   const isCadastrosActive = currentPath.includes('/clients') || currentPath.includes('/prestadores') || currentPath.includes('/produtos') || currentPath.includes('/services');
   const getNavCls = (href: string) => 

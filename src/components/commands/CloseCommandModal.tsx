@@ -147,8 +147,8 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
     try {
       // Prepare items for coupon validation
       const items = currentCommand?.command_items?.map((item: any) => ({
-        item_type: item.service ? 'service' : 'product',
-        item_id: item.service?.id || item.product?.id,
+        item_type: item.item_type,
+        item_id: item.service_id || item.product_id,
         price: item.total_price
       })) || [];
 
@@ -216,7 +216,9 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
         command.id, 
         paymentMethod, 
         totalDiscount, // Include both manual discount and coupon discount
-        notes
+        notes,
+        appliedCoupon?.code || null,
+        couponDiscount
       );
       
       if (success) {
@@ -237,6 +239,13 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
       setLoading(false);
     }
   };
+
+  // Revalidar cupom quando os itens da comanda mudarem
+  useEffect(() => {
+    if (appliedCoupon && couponCode) {
+      handleApplyCoupon();
+    }
+  }, [currentCommand?.command_items]);
 
   // Função para obter o label do método de pagamento
   const getPaymentMethodLabel = (methodId: string) => {

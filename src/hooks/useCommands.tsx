@@ -278,7 +278,9 @@ export const useCommands = () => {
     commandId: string, 
     paymentMethod: string, 
     discount: number = 0,
-    notes?: string
+    notes?: string,
+    couponCode?: string | null,
+    couponDiscount?: number
   ): Promise<boolean> => {
     try {
       // Buscar dados da comanda
@@ -304,7 +306,9 @@ export const useCommands = () => {
           payment_status: 'paid',
           closed_at: new Date().toISOString(),
           notes: notes,
-          total_amount: finalAmount
+          total_amount: finalAmount,
+          coupon_code: couponCode,
+          discount_amount: discount
         })
         .eq('id', commandId);
 
@@ -325,6 +329,7 @@ export const useCommands = () => {
           payment_status: 'paid',
           notes: notes,
           cash_register_id: currentCashRegister?.id, // Associar ao caixa aberto
+          coupon_code: couponCode,
         })
         .select()
         .single();

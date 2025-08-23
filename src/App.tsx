@@ -20,6 +20,7 @@ import CRMPage from "./pages/CRMPage";
 import ProductsPage from "./pages/ProductsPage";
 import CommandsPage from "./pages/CommandsPage";
 import CaixaPage from "./pages/CaixaPage";
+import CouponsPage from "./pages/CouponsPage";
 import SuperAdminPage from "./pages/SuperAdminPage";
 import SuperAdminBarbershopsPage from "./pages/SuperAdminBarbershopsPage";
 import SuperAdminUsersPage from "./pages/SuperAdminUsersPage";
@@ -144,6 +145,13 @@ function App() {
               <SessionGuard>
                 <ProtectedRoute>
                   <CaixaPage />
+                </ProtectedRoute>
+              </SessionGuard>
+            } />
+            <Route path="/app/:slug/cupons" element={
+              <SessionGuard>
+                <ProtectedRoute requiresRole="admin">
+                  <CouponsPage />
                 </ProtectedRoute>
               </SessionGuard>
             } />
