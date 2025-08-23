@@ -1324,7 +1324,9 @@ export type Database = {
           client_id: string
           closed_at: string | null
           command_number: number
+          coupon_code: string | null
           created_at: string
+          discount_amount: number | null
           id: string
           notes: string | null
           payment_method: string | null
@@ -1340,7 +1342,9 @@ export type Database = {
           client_id: string
           closed_at?: string | null
           command_number: number
+          coupon_code?: string | null
           created_at?: string
+          discount_amount?: number | null
           id?: string
           notes?: string | null
           payment_method?: string | null
@@ -1356,7 +1360,9 @@ export type Database = {
           client_id?: string
           closed_at?: string | null
           command_number?: number
+          coupon_code?: string | null
           created_at?: string
+          discount_amount?: number | null
           id?: string
           notes?: string | null
           payment_method?: string | null
@@ -2005,6 +2011,123 @@ export type Database = {
         }
         Relationships: []
       }
+      coupon_applicable_items: {
+        Row: {
+          coupon_id: string
+          created_at: string
+          id: string
+          item_id: string
+          item_type: string
+        }
+        Insert: {
+          coupon_id: string
+          created_at?: string
+          id?: string
+          item_id: string
+          item_type: string
+        }
+        Update: {
+          coupon_id?: string
+          created_at?: string
+          id?: string
+          item_id?: string
+          item_type?: string
+        }
+        Relationships: []
+      }
+      coupon_redemptions: {
+        Row: {
+          barbershop_id: string
+          client_id: string | null
+          command_id: string | null
+          coupon_id: string
+          discount_amount: number
+          id: string
+          redeemed_at: string
+          sale_id: string | null
+        }
+        Insert: {
+          barbershop_id: string
+          client_id?: string | null
+          command_id?: string | null
+          coupon_id: string
+          discount_amount: number
+          id?: string
+          redeemed_at?: string
+          sale_id?: string | null
+        }
+        Update: {
+          barbershop_id?: string
+          client_id?: string | null
+          command_id?: string | null
+          coupon_id?: string
+          discount_amount?: number
+          id?: string
+          redeemed_at?: string
+          sale_id?: string | null
+        }
+        Relationships: []
+      }
+      coupons: {
+        Row: {
+          applies_to: string
+          barbershop_id: string
+          code: string
+          created_at: string
+          description: string | null
+          discount_type: string
+          discount_value: number
+          id: string
+          is_active: boolean
+          max_discount_amount: number | null
+          min_order_amount: number | null
+          name: string
+          updated_at: string
+          usage_count: number
+          usage_limit: number | null
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          applies_to?: string
+          barbershop_id: string
+          code: string
+          created_at?: string
+          description?: string | null
+          discount_type: string
+          discount_value: number
+          id?: string
+          is_active?: boolean
+          max_discount_amount?: number | null
+          min_order_amount?: number | null
+          name: string
+          updated_at?: string
+          usage_count?: number
+          usage_limit?: number | null
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Update: {
+          applies_to?: string
+          barbershop_id?: string
+          code?: string
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          is_active?: boolean
+          max_discount_amount?: number | null
+          min_order_amount?: number | null
+          name?: string
+          updated_at?: string
+          usage_count?: number
+          usage_limit?: number | null
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
@@ -2544,6 +2667,7 @@ export type Database = {
           barbershop_id: string
           cash_register_id: string | null
           client_id: string
+          coupon_code: string | null
           created_at: string
           created_by: string
           discount_amount: number
@@ -2562,6 +2686,7 @@ export type Database = {
           barbershop_id: string
           cash_register_id?: string | null
           client_id: string
+          coupon_code?: string | null
           created_at?: string
           created_by: string
           discount_amount?: number
@@ -2580,6 +2705,7 @@ export type Database = {
           barbershop_id?: string
           cash_register_id?: string | null
           client_id?: string
+          coupon_code?: string | null
           created_at?: string
           created_by?: string
           discount_amount?: number

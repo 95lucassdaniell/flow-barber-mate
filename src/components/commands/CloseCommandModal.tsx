@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { 
   CreditCard, 
   Banknote, 
@@ -16,15 +17,18 @@ import {
   Plus,
   ShoppingCart,
   Printer,
-  Trash2
+  Trash2,
+  Ticket
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useCommands } from "@/hooks/useCommands";
+import { useCoupons } from "@/hooks/useCoupons";
 import { useToast } from "@/hooks/use-toast";
 import { printReceipt } from "@/lib/printUtils";
 import { ReceiptTemplate } from "./ReceiptTemplate";
 import AddItemModal from "./AddItemModal";
 import { useBarbershopSettings } from "@/hooks/useBarbershopSettings";
+import { debugLogger } from "@/lib/debugLogger";
 
 interface CloseCommandModalProps {
   command: any;
@@ -40,9 +44,14 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
   const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [currentCommand, setCurrentCommand] = useState(command);
   const [removingItems, setRemovingItems] = useState<string[]>([]);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [couponError, setCouponError] = useState("");
   
   const receiptRef = useRef<HTMLDivElement>(null);
   const { closeCommand, refetchCommand, removeItemFromCommand } = useCommands();
+  const { validateCoupon, recordRedemption } = useCoupons();
   const { toast } = useToast();
   const { settings: barbershopSettings } = useBarbershopSettings();
   const [refreshing, setRefreshing] = useState(false);
@@ -55,7 +64,8 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
   if (!command) return null;
 
   const subtotal = currentCommand?.total_amount || 0;
-  const finalAmount = subtotal - discount;
+  const totalDiscount = discount + couponDiscount;
+  const finalAmount = subtotal - totalDiscount;
 
   // Função para atualizar a comanda após adicionar itens
   const handleItemAdded = async () => {
@@ -127,10 +137,55 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
     }
   };
 
-  // Função para obter o label do método de pagamento
-  const getPaymentMethodLabel = (methodId: string) => {
-    const method = paymentMethods.find(m => m.id === methodId);
-    return method ? method.label : methodId;
+  // Função para aplicar cupom
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    
+    debugLogger.billing.info('CloseCommandModal', 'Applying coupon', { code: couponCode });
+    setCouponError("");
+
+    try {
+      // Prepare items for coupon validation
+      const items = currentCommand?.command_items?.map((item: any) => ({
+        item_type: item.service ? 'service' : 'product',
+        item_id: item.service?.id || item.product?.id,
+        price: item.total_price
+      })) || [];
+
+      const result = await validateCoupon(couponCode.trim(), subtotal, items);
+      
+      if (result.isValid && result.discount_amount && result.coupon) {
+        setCouponDiscount(result.discount_amount);
+        setAppliedCoupon(result.coupon);
+        debugLogger.billing.info('CloseCommandModal', 'Coupon applied successfully', { 
+          code: couponCode, 
+          discount: result.discount_amount 
+        });
+        
+        toast({
+          title: "Cupom aplicado",
+          description: `Desconto de ${formatCurrency(result.discount_amount)} aplicado!`
+        });
+      } else {
+        setCouponError(result.error || 'Cupom inválido');
+        debugLogger.billing.warn('CloseCommandModal', 'Coupon validation failed', { 
+          code: couponCode, 
+          error: result.error 
+        });
+      }
+    } catch (error) {
+      setCouponError('Erro ao validar cupom');
+      debugLogger.billing.error('CloseCommandModal', 'Error applying coupon', error);
+    }
+  };
+
+  // Função para remover cupom
+  const handleRemoveCoupon = () => {
+    debugLogger.billing.info('CloseCommandModal', 'Removing coupon');
+    setCouponCode("");
+    setCouponDiscount(0);
+    setAppliedCoupon(null);
+    setCouponError("");
   };
 
   const handleClose = async () => {
@@ -146,19 +201,47 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
     setLoading(true);
     
     try {
-      const success = await closeCommand(command.id, paymentMethod, discount, notes);
+      // Record coupon redemption if coupon was applied
+      if (appliedCoupon && couponDiscount > 0) {
+        await recordRedemption(
+          appliedCoupon.id,
+          command.id,
+          null, // sale_id
+          command.client_id,
+          couponDiscount
+        );
+      }
+
+      const success = await closeCommand(
+        command.id, 
+        paymentMethod, 
+        totalDiscount, // Include both manual discount and coupon discount
+        notes
+      );
+      
       if (success) {
         onClose();
         // Reset form
         setPaymentMethod("cash");
         setDiscount(0);
         setNotes("");
+        setCouponCode("");
+        setCouponDiscount(0);
+        setAppliedCoupon(null);
+        setCouponError("");
       }
     } catch (error) {
       console.error('Erro ao fechar comanda:', error);
+      debugLogger.billing.error('CloseCommandModal', 'Error closing command', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Função para obter o label do método de pagamento
+  const getPaymentMethodLabel = (methodId: string) => {
+    const method = paymentMethods.find(m => m.id === methodId);
+    return method ? method.label : methodId;
   };
 
   const paymentMethods = [
@@ -327,6 +410,13 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
                   <span className="font-bold">{formatCurrency(subtotal)}</span>
                 </div>
                 
+                {couponDiscount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Cupom ({appliedCoupon?.code}):</span>
+                    <span>- {formatCurrency(couponDiscount)}</span>
+                  </div>
+                )}
+                
                 {discount > 0 && (
                   <div className="flex justify-between text-red-600">
                     <span>Desconto:</span>
@@ -342,6 +432,66 @@ const CloseCommandModal = ({ command, isOpen, onClose }: CloseCommandModalProps)
                     {formatCurrency(finalAmount)}
                   </span>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Cupom de Desconto */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Ticket className="w-5 h-5" />
+                  Cupom de Desconto
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!appliedCoupon ? (
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="coupon">Código do cupom</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="coupon"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                          placeholder="Digite o código do cupom"
+                          onKeyPress={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                        />
+                        <Button 
+                          onClick={handleApplyCoupon}
+                          disabled={!couponCode.trim()}
+                          variant="outline"
+                        >
+                          Aplicar
+                        </Button>
+                      </div>
+                    </div>
+                    {couponError && (
+                      <div className="text-sm text-destructive">{couponError}</div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-3 border rounded-lg bg-green-50 border-green-200">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Ticket className="w-4 h-4 text-green-600" />
+                        <Badge variant="outline" className="text-green-700 border-green-300">
+                          {appliedCoupon.code}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-green-600 mt-1">
+                        {appliedCoupon.name} - {formatCurrency(couponDiscount)} de desconto
+                      </div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={handleRemoveCoupon}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
