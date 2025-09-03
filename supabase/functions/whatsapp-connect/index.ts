@@ -190,25 +190,80 @@ serve(async (req) => {
         }
       }
 
-      // Get QR code from Evolution API
+      // Check current connection state first to make this idempotent
       try {
-        const qrResponse = await fetch(`${evolutionApiUrl}/instance/connect/${instance.evolution_instance_name}`, {
+        console.log('Checking Evolution API connection state for instance:', instance.evolution_instance_name);
+        const stateRes = await fetch(`${evolutionApiUrl}/instance/connectionState/${instance.evolution_instance_name}`, {
           method: 'GET',
-          headers: {
-            'apikey': evolutionApiKey,
-          },
+          headers: { 'apikey': evolutionApiKey },
         });
 
-        const qrData = await qrResponse.json();
+        let stateJson: any = null;
+        try {
+          stateJson = await stateRes.json();
+        } catch (_e) {
+          console.warn('Could not parse connectionState response as JSON');
+        }
+        console.log('Evolution API connectionState response status:', stateRes.status);
+        if (stateJson) console.log('Evolution API connectionState response:', JSON.stringify(stateJson));
+
+        const currentState = stateJson?.instance?.state ?? stateJson?.state;
+        if (stateRes.ok && (currentState === 'open' || currentState === 'CONNECTED' || currentState === 'connected')) {
+          console.log('Instance already connected. Returning connected state.');
+          // Ensure DB reflects connected state and clear any stale QR
+          await supabase
+            .from('whatsapp_instances')
+            .update({ status: 'connected', qr_code: null })
+            .eq('id', instance.id);
+
+          return new Response(JSON.stringify({
+            status: 'connected',
+            connected: true,
+            phone_number: stateJson?.instance?.user?.id ?? null,
+            instance_id: instance.evolution_instance_name,
+            api_type: 'evolution'
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // Not connected yet – request a QR code
+        console.log('Requesting QR code from Evolution API...');
+        const qrResponse = await fetch(`${evolutionApiUrl}/instance/connect/${instance.evolution_instance_name}`, {
+          method: 'GET',
+          headers: { 'apikey': evolutionApiKey },
+        });
+
+        if (!qrResponse.ok) {
+          const errText = await qrResponse.text();
+          console.error('Evolution API connect error:', qrResponse.status, errText);
+          return new Response(JSON.stringify({
+            error: 'Failed to generate QR code',
+            details: { status: qrResponse.status, body: errText }
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        let qrData: any = null;
+        try {
+          qrData = await qrResponse.json();
+        } catch (e) {
+          console.error('Failed to parse Evolution API QR response JSON:', e);
+          return new Response(JSON.stringify({
+            error: 'Invalid QR response from Evolution API'
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
         
-        if (qrData.base64) {
+        if (qrData?.base64) {
           // Update instance with QR code
           await supabase
             .from('whatsapp_instances')
-            .update({
-              qr_code: qrData.base64,
-              status: 'connecting'
-            })
+            .update({ qr_code: qrData.base64, status: 'connecting' })
             .eq('id', instance.id);
 
           return new Response(JSON.stringify({
@@ -220,24 +275,26 @@ serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         } else {
-          return new Response(JSON.stringify({ 
+          console.error('QR data did not include base64 field:', qrData);
+          return new Response(JSON.stringify({
             error: 'Failed to generate QR code',
-            details: qrData 
+            details: qrData
           }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
       } catch (error) {
-        console.error('Evolution API QR Error:', error);
+        console.error('Evolution API flow error:', error);
         return new Response(JSON.stringify({ 
           error: 'Failed to connect to Evolution API',
-          details: error.message 
+          details: (error as Error).message 
         }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+
     } else {
       // Legacy Z-API support
       const zapiToken = Deno.env.get('ZAPI_CLIENT_TOKEN');

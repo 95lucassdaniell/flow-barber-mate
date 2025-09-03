@@ -179,10 +179,22 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
       const { data, error } = await supabase.functions.invoke('whatsapp-connect');
       
       if (error) {
-        toast.error("Erro ao gerar QR Code");
+        console.error('whatsapp-connect error:', error);
+        toast.error(error.message || 'Erro ao gerar QR Code');
         return;
       }
 
+      // If already connected, no QR is returned
+      if (data?.status === 'connected' && !data?.qr_code) {
+        setQrCode(null);
+        setInstanceStatus('connected');
+        setIsConnected(true);
+        setPhoneNumber(data?.phone_number ?? null);
+        toast.success('WhatsApp já está conectado');
+        return;
+      }
+
+      // Otherwise show QR and start polling
       setQrCode(data.qr_code);
       setInstanceStatus(data.status);
       
@@ -194,20 +206,24 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
         qrStatusInterval = setInterval(async () => {
           if (!document.hidden && !checkingStatus) {
             await checkConnectionStatus();
-            if (instanceStatus === 'connected') {
-              clearInterval(qrStatusInterval);
-              clearTimeout(timeoutId);
-              setQrCode(null);
-              toast.success("WhatsApp conectado com sucesso!");
+            // Read latest status after check
+            if (document.hidden === false) {
+              // If connection becomes connected, stop polling
+              if ((await supabase.functions.invoke('whatsapp-status')).data?.connected) {
+                clearInterval(qrStatusInterval);
+                clearTimeout(timeoutId);
+                setQrCode(null);
+                toast.success('WhatsApp conectado com sucesso!');
+              }
             }
           }
-        }, 5000); // Increased to 5 seconds during QR scanning
+        }, 5000);
 
         // Clear interval after 5 minutes
         timeoutId = setTimeout(() => {
           clearInterval(qrStatusInterval);
           setQrCode(null);
-          toast.info("QR Code expirou. Gere um novo código se necessário.");
+          toast.info('QR Code expirou. Gere um novo código se necessário.');
         }, 300000);
       };
 
@@ -220,7 +236,8 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
       };
       
     } catch (error) {
-      toast.error("Erro ao conectar WhatsApp");
+      console.error('Erro ao conectar WhatsApp:', error);
+      toast.error('Erro ao conectar WhatsApp');
     } finally {
       setQrLoading(false);
     }
