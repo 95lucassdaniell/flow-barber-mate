@@ -218,6 +218,102 @@ const MessageTemplates = () => {
     return colors[category];
   };
 
+  const createDefaultTemplates = async () => {
+    if (!profile?.barbershop_id) return;
+
+    try {
+      const defaultTemplates = [
+        {
+          barbershop_id: profile.barbershop_id,
+          name: 'Confirmação de Agendamento',
+          content: 'Olá {client_name}! Seu agendamento foi confirmado para {appointment_date} às {appointment_time} com {barber_name}. Aguardamos você! 💈',
+          variables: ['client_name', 'appointment_date', 'appointment_time', 'barber_name'],
+          category: 'confirmation',
+          trigger_type: 'appointment_confirmation',
+          is_active: true
+        },
+        {
+          barbershop_id: profile.barbershop_id,
+          name: 'Lembrete de Agendamento',
+          content: 'Oi {client_name}! Lembrando que você tem agendamento hoje às {appointment_time} com {barber_name} na {barbershop_name}. Te esperamos! ⏰',
+          variables: ['client_name', 'appointment_time', 'barber_name', 'barbershop_name'],
+          category: 'reminder',
+          trigger_type: 'appointment_reminder',
+          is_active: true
+        },
+        {
+          barbershop_id: profile.barbershop_id,
+          name: 'Agradecimento Pós-Atendimento',
+          content: 'Obrigado por escolher a {barbershop_name}, {client_name}! Esperamos que tenha gostado do atendimento com {barber_name}. Volte sempre! 😊',
+          variables: ['barbershop_name', 'client_name', 'barber_name'],
+          category: 'general',
+          trigger_type: null,
+          is_active: true
+        }
+      ];
+
+      const { data: templatesData, error: templatesError } = await supabase
+        .from('whatsapp_templates')
+        .insert(defaultTemplates)
+        .select();
+
+      if (templatesError) throw templatesError;
+
+      // Criar automações padrão
+      if (templatesData && templatesData.length >= 2) {
+        const confirmationTemplate = templatesData.find(t => t.category === 'confirmation');
+        const reminderTemplate = templatesData.find(t => t.category === 'reminder');
+
+        if (confirmationTemplate && reminderTemplate) {
+          const defaultAutomations = [
+            {
+              barbershop_id: profile.barbershop_id,
+              name: 'Confirmação Imediata',
+              description: 'Envia confirmação imediatamente após o agendamento',
+              event_type: 'scheduled',
+              timing_type: 'immediate',
+              template_id: confirmationTemplate.id,
+              trigger_type: 'automatic',
+              is_active: true
+            },
+            {
+              barbershop_id: profile.barbershop_id,
+              name: 'Lembrete 2 Horas Antes',
+              description: 'Envia lembrete 2 horas antes do agendamento',
+              event_type: 'scheduled',
+              timing_type: 'before',
+              timing_value: 2,
+              timing_unit: 'hours',
+              template_id: reminderTemplate.id,
+              trigger_type: 'automatic',
+              is_active: true
+            }
+          ];
+
+          const { error: automationsError } = await supabase
+            .from('whatsapp_automations')
+            .insert(defaultAutomations);
+
+          if (automationsError) throw automationsError;
+        }
+      }
+
+      toast({
+        title: "Templates criados!",
+        description: "Templates e automações padrão criados com sucesso.",
+      });
+
+      fetchTemplates();
+    } catch (error) {
+      console.error('Error creating default templates:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao criar templates padrão.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -236,71 +332,79 @@ const MessageTemplates = () => {
           </p>
         </div>
         
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Template
+        <div className="flex gap-2">
+          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Novo Template
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingTemplate ? 'Editar Template' : 'Novo Template'}
+                </DialogTitle>
+              </DialogHeader>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome do Template</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Ex: Confirmação de Agendamento"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="category">Categoria</Label>
+                  <select
+                    className="w-full p-2 border border-input rounded-md bg-background"
+                    value={formData.category}
+                    onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value as Template['category'] }))}
+                  >
+                    <option value="appointment">Agendamento</option>
+                    <option value="reminder">Lembrete</option>
+                    <option value="confirmation">Confirmação</option>
+                    <option value="marketing">Marketing</option>
+                    <option value="general">Geral</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="content">Conteúdo da Mensagem</Label>
+                  <Textarea
+                    id="content"
+                    rows={4}
+                    value={formData.content}
+                    onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+                    placeholder="Digite sua mensagem. Use {variavel} para campos dinâmicos como {nome}, {data}, {hora}"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Use chaves para variáveis dinâmicas: {"{nome}"}, {"{data}"}, {"{hora}"}, {"{barbeiro}"}, {"{endereco}"}
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSave}>
+                    {editingTemplate ? 'Atualizar' : 'Criar'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
+          {templates.length === 0 && (
+            <Button variant="outline" onClick={createDefaultTemplates}>
+              Criar Templates Padrão
             </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>
-                {editingTemplate ? 'Editar Template' : 'Novo Template'}
-              </DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome do Template</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Ex: Confirmação de Agendamento"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="category">Categoria</Label>
-                <select
-                  className="w-full p-2 border border-input rounded-md bg-background"
-                  value={formData.category}
-                  onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value as Template['category'] }))}
-                >
-                  <option value="appointment">Agendamento</option>
-                  <option value="reminder">Lembrete</option>
-                  <option value="confirmation">Confirmação</option>
-                  <option value="marketing">Marketing</option>
-                  <option value="general">Geral</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="content">Conteúdo da Mensagem</Label>
-                <Textarea
-                  id="content"
-                  rows={4}
-                  value={formData.content}
-                  onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                  placeholder="Digite sua mensagem. Use {variavel} para campos dinâmicos como {nome}, {data}, {hora}"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Use chaves para variáveis dinâmicas: {"{nome}"}, {"{data}"}, {"{hora}"}, {"{barbeiro}"}, {"{endereco}"}
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={handleSave}>
-                  {editingTemplate ? 'Atualizar' : 'Criar'}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+          )}
+        </div>
       </div>
 
       {/* Templates List */}
@@ -314,12 +418,17 @@ const MessageTemplates = () => {
               <MessageSquare className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">Nenhum template criado</h3>
               <p className="text-muted-foreground mb-4">
-                Crie seu primeiro template de mensagem para automatizar a comunicação.
+                Crie templates para automatizar a comunicação via WhatsApp.
               </p>
-              <Button onClick={() => setIsModalOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Criar Primeiro Template
-              </Button>
+              <div className="flex gap-2 justify-center">
+                <Button onClick={createDefaultTemplates}>
+                  Criar Templates Padrão
+                </Button>
+                <Button variant="outline" onClick={() => setIsModalOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Criar Manualmente
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="border rounded-lg">

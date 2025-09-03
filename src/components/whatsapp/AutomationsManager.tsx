@@ -214,6 +214,13 @@ const AutomationsManager = () => {
     fetchTemplates();
   }, [profile?.barbershop_id]);
 
+  // Refresh data when modal opens to check for new templates
+  useEffect(() => {
+    if (isModalOpen) {
+      fetchTemplates();
+    }
+  }, [isModalOpen]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -248,12 +255,21 @@ const AutomationsManager = () => {
               <Clock className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">Nenhuma automação criada</h3>
               <p className="text-muted-foreground mb-4">
-                Crie sua primeira automação para começar a enviar mensagens automáticas.
+                {templates.length === 0 
+                  ? "Primeiro crie templates na aba 'Templates' para poder configurar automações." 
+                  : "Crie sua primeira automação para começar a enviar mensagens automáticas."
+                }
               </p>
-              <Button onClick={() => setIsModalOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Nova Automação
-              </Button>
+              {templates.length === 0 ? (
+                <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-950 dark:text-amber-400 p-3 rounded-md">
+                  💡 Dica: Vá na aba "Templates" e clique em "Criar Templates Padrão" para começar rapidamente!
+                </p>
+              ) : (
+                <Button onClick={() => setIsModalOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nova Automação
+                </Button>
+              )}
             </div>
           ) : (
             <div className="border rounded-lg">
