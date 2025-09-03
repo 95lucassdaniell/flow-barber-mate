@@ -3,9 +3,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Settings, Send, History, Plus } from "lucide-react";
+import { MessageSquare, Settings, Send, History, Plus, Clock } from "lucide-react";
 import WhatsAppConfig from "./WhatsAppConfig";
 import MessageTemplates from "./MessageTemplates";
+import AutomationsManager from "./AutomationsManager";
 import SendMessage from "./SendMessage";
 import MessageHistory from "./MessageHistory";
 
@@ -59,7 +60,7 @@ const WhatsAppManagement = () => {
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-4 w-full">
+        <TabsList className="grid grid-cols-5 w-full">
           <TabsTrigger value="config" className="flex items-center gap-2">
             <Settings className="w-4 h-4" />
             Configuração
@@ -67,6 +68,10 @@ const WhatsAppManagement = () => {
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4" />
             Templates
+          </TabsTrigger>
+          <TabsTrigger value="automations" className="flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            Automações
           </TabsTrigger>
           <TabsTrigger value="send" className="flex items-center gap-2">
             <Send className="w-4 h-4" />
@@ -87,6 +92,10 @@ const WhatsAppManagement = () => {
 
         <TabsContent value="templates" className="space-y-6">
           <MessageTemplates />
+        </TabsContent>
+
+        <TabsContent value="automations" className="space-y-6">
+          <AutomationsManager />
         </TabsContent>
 
         <TabsContent value="send" className="space-y-6">

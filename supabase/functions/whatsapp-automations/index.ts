@@ -43,11 +43,11 @@ serve(async (req) => {
     );
 
     const body = await req.json();
-    const { appointment_id, trigger_type } = body;
+    const { appointment_id, trigger_type, automation_id, scheduled_job_id } = body;
 
-    if (!appointment_id || !trigger_type) {
+    if (!appointment_id) {
       return new Response(
-        JSON.stringify({ error: 'appointment_id and trigger_type are required' }),
+        JSON.stringify({ error: 'appointment_id is required' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -79,35 +79,58 @@ serve(async (req) => {
       );
     }
 
-    // Get active automations for this trigger type and barbershop
-    const { data: automations, error: automationsError } = await supabase
-      .from('whatsapp_automations')
-      .select(`
-        id,
-        barbershop_id,
-        name,
-        description,
-        trigger_type,
-        template_id,
-        delay_minutes,
-        is_active,
-        created_at,
-        updated_at
-      `)
-      .eq('barbershop_id', appointment.barbershop_id)
-      .eq('trigger_type', trigger_type)
-      .eq('is_active', true);
+    let automations = [];
+    
+    if (automation_id) {
+      // Process specific automation (from scheduler)
+      const { data: specificAutomation, error: automationError } = await supabase
+        .from('whatsapp_automations')
+        .select(`
+          *,
+          whatsapp_templates (*)
+        `)
+        .eq('id', automation_id)
+        .eq('is_active', true)
+        .single();
 
-    console.log('Automations query result:', automations, automationsError);
+      if (automationError || !specificAutomation) {
+        console.error('Error fetching specific automation:', automationError);
+        return new Response(
+          JSON.stringify({ error: 'Automation not found or inactive' }), 
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      automations = [specificAutomation];
+    } else if (trigger_type) {
+      // Process all automations for trigger type (immediate triggers)
+      const { data: triggerAutomations, error: automationsError } = await supabase
+        .from('whatsapp_automations')
+        .select(`
+          *,
+          whatsapp_templates (*)
+        `)
+        .eq('barbershop_id', appointment.barbershop_id)
+        .eq('event_type', getEventTypeFromTrigger(trigger_type))
+        .eq('timing_type', 'immediate')
+        .eq('is_active', true);
 
-    if (automationsError) {
-      console.error('Error fetching automations:', automationsError);
+      if (automationsError) {
+        console.error('Error fetching automations:', automationsError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch automations' }), 
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      automations = triggerAutomations || [];
+    }
+
+    if (!automations || automations.length === 0) {
+      console.log('No active automations found');
       return new Response(
-        JSON.stringify({ error: 'Error fetching automations' }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+        JSON.stringify({ message: 'No active automations found', processed: 0 }), 
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -115,99 +138,109 @@ serve(async (req) => {
 
     for (const automation of automations || []) {
       try {
-        console.log('Processing automation:', automation.id, 'for trigger:', trigger_type);
+        console.log('Processing automation:', automation.id, 'Name:', automation.name);
         
-        // Get the template for this automation
-        const { data: template, error: templateError } = await supabase
-          .from('whatsapp_templates')
-          .select('*')
-          .eq('id', automation.template_id)
-          .eq('is_active', true)
-          .single();
-
-        if (templateError || !template) {
-          console.error('Error fetching template:', templateError);
+        if (!automation.whatsapp_templates) {
+          console.error(`No template found for automation ${automation.id}`);
           results.push({
             automation_id: automation.id,
-            template_name: 'Template not found',
-            phone: appointment.client?.phone || 'Unknown',
-            status: 'failed',
-            error: 'Template not found or inactive'
+            status: 'error',
+            error: 'Template not found'
           });
           continue;
         }
 
-        console.log('Found template:', template.name, 'Content:', template.content);
+        // Get the template content using the existing RPC function
+        const { data: processedContent, error: rpcError } = await supabase
+          .rpc('replace_template_variables', {
+            template_content: automation.whatsapp_templates.content,
+            appointment_id: appointment_id
+          });
 
-        // Replace template variables
-        const processedMessage = await supabase.rpc('replace_template_variables', {
-          template_content: template.content,
-          appointment_id: appointment_id
-        });
-
-        if (processedMessage.error) {
-          console.error('Error processing template:', processedMessage.error);
+        if (rpcError) {
+          console.error('Error processing template variables:', rpcError);
+          results.push({
+            automation_id: automation.id,
+            status: 'error',
+            error: 'Failed to process template variables'
+          });
           continue;
         }
 
-        const finalMessage = processedMessage.data;
+        const messageContent = processedContent || automation.whatsapp_templates.content;
         const clientPhone = appointment.client?.phone;
 
         if (!clientPhone) {
-          console.error('No phone number for client');
+          console.error('Client phone not found');
           results.push({
             automation_id: automation.id,
-            template_name: template.name,
-            phone: 'No phone',
-            status: 'failed',
-            error: 'Client has no phone number'
+            status: 'error',
+            error: 'Client phone not found'
           });
           continue;
         }
 
-        console.log('Sending WhatsApp message to:', clientPhone, 'Message:', finalMessage);
+        console.log(`Sending message to ${clientPhone}: ${messageContent.substring(0, 50)}...`);
 
-        // Send WhatsApp message
-        const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-whatsapp-message', {
-          body: {
-            phone: clientPhone,
-            message: finalMessage,
-            messageType: 'text',
-            barbershop_id: appointment.barbershop_id
-          }
-        });
+        // Send WhatsApp message via send-whatsapp-message function
+        const { data: messageResult, error: messageError } = await supabase.functions
+          .invoke('send-whatsapp-message', {
+            body: {
+              phone: clientPhone,
+              message: messageContent,
+              barbershop_id: appointment.barbershop_id
+            }
+          });
 
-        console.log('WhatsApp send result:', messageResult, 'Error:', messageError);
+        if (messageError) {
+          console.error('Error sending WhatsApp message:', messageError);
+          
+          // Log the failed automation
+          await supabase
+            .from('whatsapp_automation_logs')
+            .insert([{
+              barbershop_id: appointment.barbershop_id,
+              automation_id: automation.id,
+              appointment_id: appointment_id,
+              phone: clientPhone,
+              message_content: messageContent,
+              status: 'failed',
+              error_message: messageError.message || 'Unknown error'
+            }]);
 
-        // Log the automation execution
-        const logData = {
-          barbershop_id: appointment.barbershop_id,
-          appointment_id: appointment_id,
-          automation_id: automation.id,
-          phone: clientPhone,
-          message_content: finalMessage,
-          status: messageError ? 'failed' : 'sent',
-          error_message: messageError?.message || null
-        };
+          results.push({
+            automation_id: automation.id,
+            status: 'failed',
+            error: messageError.message
+          });
+        } else {
+          console.log(`Message sent successfully for automation ${automation.id}`);
+          
+          // Log the successful automation
+          await supabase
+            .from('whatsapp_automation_logs')
+            .insert([{
+              barbershop_id: appointment.barbershop_id,
+              automation_id: automation.id,
+              appointment_id: appointment_id,
+              phone: clientPhone,
+              message_content: messageContent,
+              status: 'sent',
+              sent_at: new Date().toISOString()
+            }]);
 
-        await supabase
-          .from('whatsapp_automation_logs')
-          .insert([logData]);
-
-        results.push({
-          automation_id: automation.id,
-          template_name: template.name,
-          phone: clientPhone,
-          status: messageError ? 'failed' : 'sent',
-          error: messageError?.message || null
-        });
+          results.push({
+            automation_id: automation.id,
+            status: 'sent',
+            phone: clientPhone
+          });
+        }
 
       } catch (error) {
-        console.error('Error processing automation:', error);
+        console.error(`Error processing automation ${automation.id}:`, error);
         results.push({
           automation_id: automation.id,
-          template_name: 'Unknown',
-          status: 'failed',
+          status: 'error',
           error: error instanceof Error ? error.message : 'Unknown error'
         });
       }
@@ -215,27 +248,38 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
-        success: true, 
-        processed_automations: results.length,
-        results 
-      }),
+        success: true,
+        processed: results.filter(r => r.status === 'sent').length,
+        total: automations.length,
+        results: results
+      }), 
       { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
-
+    
   } catch (error) {
     console.error('Error in whatsapp-automations function:', error);
     return new Response(
-      JSON.stringify({ 
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Internal server error' }), 
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
+
+// Helper function to map trigger types to event types
+function getEventTypeFromTrigger(trigger_type: string): string {
+  switch (trigger_type) {
+    case 'appointment_created':
+      return 'scheduled';
+    case 'appointment_cancelled':
+      return 'cancelled';
+    case 'appointment_completed':
+      return 'completed';
+    case 'appointment_no_show':
+      return 'no_show';
+    default:
+      return 'scheduled';
+  }
+}

@@ -3731,37 +3731,52 @@ export type Database = {
       whatsapp_automations: {
         Row: {
           barbershop_id: string
+          conditions: Json | null
           created_at: string
           delay_minutes: number | null
           description: string | null
+          event_type: string | null
           id: string
           is_active: boolean
           name: string
           template_id: string
+          timing_type: string | null
+          timing_unit: string | null
+          timing_value: number | null
           trigger_type: string
           updated_at: string
         }
         Insert: {
           barbershop_id: string
+          conditions?: Json | null
           created_at?: string
           delay_minutes?: number | null
           description?: string | null
+          event_type?: string | null
           id?: string
           is_active?: boolean
           name: string
           template_id: string
+          timing_type?: string | null
+          timing_unit?: string | null
+          timing_value?: number | null
           trigger_type: string
           updated_at?: string
         }
         Update: {
           barbershop_id?: string
+          conditions?: Json | null
           created_at?: string
           delay_minutes?: number | null
           description?: string | null
+          event_type?: string | null
           id?: string
           is_active?: boolean
           name?: string
           template_id?: string
+          timing_type?: string | null
+          timing_unit?: string | null
+          timing_value?: number | null
           trigger_type?: string
           updated_at?: string
         }
@@ -3990,6 +4005,60 @@ export type Database = {
           },
         ]
       }
+      whatsapp_scheduled_jobs: {
+        Row: {
+          appointment_id: string
+          attempts: number | null
+          automation_id: string
+          barbershop_id: string
+          created_at: string | null
+          id: string
+          last_error: string | null
+          processed_at: string | null
+          scheduled_for: string
+          status: string
+        }
+        Insert: {
+          appointment_id: string
+          attempts?: number | null
+          automation_id: string
+          barbershop_id: string
+          created_at?: string | null
+          id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          scheduled_for: string
+          status?: string
+        }
+        Update: {
+          appointment_id?: string
+          attempts?: number | null
+          automation_id?: string
+          barbershop_id?: string
+          created_at?: string | null
+          id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          scheduled_for?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_scheduled_jobs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_automations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_scheduled_jobs_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_settings: {
         Row: {
           auto_reply: boolean
@@ -4123,6 +4192,10 @@ export type Database = {
           records_archived: number
           table_name: string
         }[]
+      }
+      cancel_whatsapp_jobs_for_appointment: {
+        Args: { p_appointment_id: string }
+        Returns: number
       }
       cleanup_ancient_archives: {
         Args: { years_to_keep?: number }
@@ -4357,9 +4430,21 @@ export type Database = {
         Args: { barbershop_id_input: string; phone_input: string }
         Returns: undefined
       }
+      schedule_whatsapp_automations_for_event: {
+        Args: {
+          p_appointment_id: string
+          p_event_time: string
+          p_event_type: string
+        }
+        Returns: number
+      }
       set_provider_password: {
         Args: { new_password: string; provider_id: string }
         Returns: boolean
+      }
+      trigger_immediate_whatsapp_automations: {
+        Args: { p_appointment_id: string; p_event_type: string }
+        Returns: number
       }
       update_barbershop_stats: {
         Args: Record<PropertyKey, never>

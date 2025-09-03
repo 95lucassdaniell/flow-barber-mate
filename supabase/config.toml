@@ -103,6 +103,9 @@ verify_jwt = false
 [functions.whatsapp-auto-configurator]
 verify_jwt = false
 
+[functions.whatsapp-automation-scheduler]
+verify_jwt = false
+
 [functions.whatsapp-reminders]
 verify_jwt = false
 
