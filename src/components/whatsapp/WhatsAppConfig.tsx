@@ -27,12 +27,6 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
     autoReply: false,
     autoReplyMessage: "Olá! Obrigado por entrar em contato. Em breve responderemos sua mensagem.",
   });
-  const [notifications, setNotifications] = useState({
-    appointmentConfirmation: true,
-    appointmentReminder24h: true,
-    appointmentReminder1h: true,
-    appointmentCancellation: true,
-  });
 
   useEffect(() => {
     checkConnectionStatus();
@@ -163,7 +157,7 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
 
       const { data, error } = await supabase
         .from('whatsapp_instances')
-        .select('business_name, auto_reply, auto_reply_message, notification_settings')
+        .select('business_name, auto_reply, auto_reply_message')
         .eq('barbershop_id', profile.barbershop_id)
         .single();
 
@@ -173,15 +167,6 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
           autoReply: data.auto_reply || false,
           autoReplyMessage: data.auto_reply_message || "Olá! Obrigado por entrar em contato. Em breve responderemos sua mensagem.",
         });
-        const notificationSettings = data.notification_settings as any;
-        if (notificationSettings) {
-          setNotifications({
-            appointmentConfirmation: notificationSettings.appointmentConfirmation ?? true,
-            appointmentReminder24h: notificationSettings.appointmentReminder24h ?? true,
-            appointmentReminder1h: notificationSettings.appointmentReminder1h ?? true,
-            appointmentCancellation: notificationSettings.appointmentCancellation ?? true,
-          });
-        }
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -268,7 +253,6 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
           business_name: settings.businessName,
           auto_reply: settings.autoReply,
           auto_reply_message: settings.autoReplyMessage,
-          notification_settings: notifications,
         })
         .eq('barbershop_id', profile.barbershop_id);
 
@@ -420,64 +404,17 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
 
       <Card>
         <CardHeader>
-          <CardTitle>Configurações de Notificação</CardTitle>
+          <CardTitle>Automações WhatsApp</CardTitle>
           <CardDescription>
-            Configure quando e como enviar notificações automáticas
+            As notificações agora são gerenciadas pela aba Automações
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Confirmação de Agendamento</Label>
-                <div className="text-sm text-muted-foreground">
-                  Enviar confirmação quando um agendamento for criado
-                </div>
-              </div>
-              <Switch
-                checked={notifications.appointmentConfirmation}
-                onCheckedChange={(checked) => setNotifications({ ...notifications, appointmentConfirmation: checked })}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Lembrete 24h antes</Label>
-                <div className="text-sm text-muted-foreground">
-                  Enviar lembrete 24 horas antes do agendamento
-                </div>
-              </div>
-              <Switch
-                checked={notifications.appointmentReminder24h}
-                onCheckedChange={(checked) => setNotifications({ ...notifications, appointmentReminder24h: checked })}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Lembrete 1h antes</Label>
-                <div className="text-sm text-muted-foreground">
-                  Enviar lembrete 1 hora antes do agendamento
-                </div>
-              </div>
-              <Switch
-                checked={notifications.appointmentReminder1h}
-                onCheckedChange={(checked) => setNotifications({ ...notifications, appointmentReminder1h: checked })}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Cancelamento de Agendamento</Label>
-                <div className="text-sm text-muted-foreground">
-                  Notificar quando um agendamento for cancelado
-                </div>
-              </div>
-              <Switch
-                checked={notifications.appointmentCancellation}
-                onCheckedChange={(checked) => setNotifications({ ...notifications, appointmentCancellation: checked })}
-              />
-            </div>
+        <CardContent>
+          <div className="p-4 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-700">
+              <strong>Nova funcionalidade:</strong> As notificações automáticas (confirmações, lembretes, etc.) agora são configuradas na aba "Automações". 
+              Lá você pode criar regras personalizadas, definir templates e controlar quando as mensagens são enviadas.
+            </p>
           </div>
         </CardContent>
       </Card>
