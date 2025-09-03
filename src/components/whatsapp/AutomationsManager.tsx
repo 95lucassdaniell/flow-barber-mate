@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -56,6 +57,7 @@ const AutomationsManager = () => {
   const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -112,6 +114,101 @@ const AutomationsManager = () => {
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      event_type: 'scheduled',
+      timing_type: 'immediate',
+      timing_value: 1,
+      timing_unit: 'hours',
+      template_id: '',
+      is_active: true
+    });
+  };
+
+  const handleSave = async () => {
+    if (!profile?.barbershop_id) return;
+    
+    // Validation
+    if (!formData.name.trim()) {
+      toast({
+        title: "Erro",
+        description: "Nome da automação é obrigatório.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.template_id) {
+      toast({
+        title: "Erro",
+        description: "Template é obrigatório.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.timing_type !== 'immediate' && formData.timing_value <= 0) {
+      toast({
+        title: "Erro",
+        description: "Valor de tempo deve ser maior que zero.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.timing_type === 'before' && formData.event_type !== 'scheduled') {
+      toast({
+        title: "Erro",
+        description: "Timing 'before' só é válido para eventos 'scheduled'.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const payload = {
+        barbershop_id: profile.barbershop_id,
+        name: formData.name.trim(),
+        description: formData.description.trim() || null,
+        event_type: formData.event_type,
+        timing_type: formData.timing_type,
+        timing_value: formData.timing_type === 'immediate' ? null : formData.timing_value,
+        timing_unit: formData.timing_type === 'immediate' ? null : formData.timing_unit,
+        template_id: formData.template_id,
+        is_active: formData.is_active,
+        trigger_type: 'manual' // Required field based on database schema
+      };
+
+      const { error } = await supabase
+        .from('whatsapp_automations')
+        .insert([payload])
+        .select();
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Automação criada com sucesso.",
+      });
+
+      setIsModalOpen(false);
+      resetForm();
+      fetchAutomations();
+    } catch (error) {
+      console.error('Error creating automation:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao criar automação.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   useEffect(() => {
     fetchAutomations();
     fetchTemplates();
@@ -135,7 +232,7 @@ const AutomationsManager = () => {
           </p>
         </div>
         
-        <Button>
+        <Button onClick={() => setIsModalOpen(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Nova Automação
         </Button>
@@ -153,6 +250,10 @@ const AutomationsManager = () => {
               <p className="text-muted-foreground mb-4">
                 Crie sua primeira automação para começar a enviar mensagens automáticas.
               </p>
+              <Button onClick={() => setIsModalOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Nova Automação
+              </Button>
             </div>
           ) : (
             <div className="border rounded-lg">
@@ -188,6 +289,146 @@ const AutomationsManager = () => {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nova Automação</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Nome da automação"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="template">Template *</Label>
+              {templates.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum template disponível. Crie um template primeiro na aba Templates.
+                </p>
+              ) : (
+                <Select 
+                  value={formData.template_id} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, template_id: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="event_type">Evento</Label>
+              <Select 
+                value={formData.event_type} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, event_type: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="scheduled">Agendamento</SelectItem>
+                  <SelectItem value="cancelled">Cancelamento</SelectItem>
+                  <SelectItem value="completed">Concluído</SelectItem>
+                  <SelectItem value="no_show">Não compareceu</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="timing_type">Quando enviar</Label>
+              <Select 
+                value={formData.timing_type} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, timing_type: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="immediate">Imediatamente</SelectItem>
+                  <SelectItem value="before">Antes do evento</SelectItem>
+                  <SelectItem value="after">Depois do evento</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {formData.timing_type !== 'immediate' && (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <Label htmlFor="timing_value">Valor</Label>
+                  <Input
+                    id="timing_value"
+                    type="number"
+                    min="1"
+                    value={formData.timing_value}
+                    onChange={(e) => setFormData(prev => ({ ...prev, timing_value: parseInt(e.target.value) || 1 }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="timing_unit">Unidade</Label>
+                  <Select 
+                    value={formData.timing_unit} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, timing_unit: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="minutes">Minutos</SelectItem>
+                      <SelectItem value="hours">Horas</SelectItem>
+                      <SelectItem value="days">Dias</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Descrição</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Descrição opcional"
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is_active"
+                checked={formData.is_active}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+              />
+              <Label htmlFor="is_active">Automação ativa</Label>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSave} disabled={saving || templates.length === 0}>
+                {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Salvar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
