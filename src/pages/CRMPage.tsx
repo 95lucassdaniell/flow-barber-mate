@@ -7,7 +7,6 @@ import CRMDashboard from "@/components/crm/CRMDashboard";
 import ClientSegments from "@/components/crm/ClientSegments";
 import CampaignsManager from "@/components/crm/CampaignsManager";
 import ClientProfile from "@/components/crm/ClientProfile";
-import AutomationsManager from "@/components/crm/AutomationsManager";
 import ReportsManager from "@/components/crm/ReportsManager";
 import { Client } from "@/hooks/useClients";
 
@@ -55,11 +54,10 @@ const CRMPage = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="segments">Segmentação</TabsTrigger>
             <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
-            <TabsTrigger value="automations">Automações</TabsTrigger>
             <TabsTrigger value="reports">Relatórios</TabsTrigger>
           </TabsList>
 
@@ -73,10 +71,6 @@ const CRMPage = () => {
 
           <TabsContent value="campaigns" className="space-y-6">
             <CampaignsManager />
-          </TabsContent>
-
-          <TabsContent value="automations" className="space-y-6">
-            <AutomationsManager />
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">
