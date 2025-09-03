@@ -226,6 +226,31 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
     }
   };
 
+  const reconnectWhatsApp = async () => {
+    setQrLoading(true);
+    try {
+      // Clear the connection cache
+      const cacheKey = 'whatsapp_connection_status';
+      cacheManager.clear(); // Clear all cache to ensure fresh status
+      
+      // Update local state
+      setIsConnected(false);
+      setInstanceStatus('disconnected');
+      setPhoneNumber(null);
+      
+      toast.info("Iniciando reconexão...");
+      
+      // Generate new QR code
+      await generateQRCode();
+      
+    } catch (error) {
+      console.error('Error during reconnection:', error);
+      toast.error("Erro ao tentar reconectar");
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
   const saveSettings = async () => {
     setLoading(true);
     try {
@@ -301,13 +326,60 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 relative">
           {isConnected && phoneNumber ? (
-            <div className="flex items-center space-x-2 p-4 bg-green-50 rounded-lg">
-              <Smartphone className="h-5 w-5 text-green-600" />
-              <span className="text-green-700">
-                WhatsApp conectado: {phoneNumber}
-              </span>
+            <div className="relative">
+              {/* Connected overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border-2 border-green-200 p-6 z-10">
+                <div className="flex flex-col items-center justify-center space-y-4 h-full min-h-[200px]">
+                  <div className="flex items-center space-x-3">
+                    <div className="relative">
+                      <CheckCircle className="h-12 w-12 text-green-600" />
+                      <div className="absolute -top-1 -right-1">
+                        <div className="h-4 w-4 bg-green-500 rounded-full animate-pulse"></div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center space-y-2">
+                    <h3 className="text-lg font-semibold text-green-800">WhatsApp Conectado</h3>
+                    <div className="flex items-center justify-center space-x-2 text-green-700">
+                      <Smartphone className="h-4 w-4" />
+                      <span className="font-medium">{phoneNumber}</span>
+                    </div>
+                    <p className="text-sm text-green-600">
+                      Sua conta está conectada e pronta para enviar mensagens
+                    </p>
+                  </div>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={reconnectWhatsApp}
+                    disabled={qrLoading}
+                    className="bg-white border-green-300 hover:bg-green-50 text-green-700 hover:text-green-800"
+                  >
+                    {qrLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Reconectando...
+                      </>
+                    ) : (
+                      <>
+                        <QrCode className="mr-2 h-4 w-4" />
+                        Reconectar
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Background content (blurred) */}
+              <div className="blur-sm pointer-events-none">
+                <div className="text-center space-y-4 min-h-[200px] flex items-center justify-center">
+                  <QrCode className="h-12 w-12 text-muted-foreground" />
+                </div>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
