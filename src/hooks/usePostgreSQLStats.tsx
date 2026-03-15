@@ -78,8 +78,8 @@ export const usePostgreSQLStats = () => {
 
   const fetchConnectionStats = async () => {
     try {
-      const { data } = await supabase.rpc('get_connection_stats');
-      if (data && data.length > 0) {
+      const { data } = await supabase.rpc('get_connection_stats') as { data: any };
+      if (data && Array.isArray(data) && data.length > 0) {
         const stats = data[0];
         setConnectionStats({
           totalConnections: stats.total_connections,
