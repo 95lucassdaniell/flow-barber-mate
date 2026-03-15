@@ -127,18 +127,7 @@ const RegisterForm = () => {
       }
       console.log('Usuário criado:', authData.user.id);
 
-      // Verificar se email precisa ser confirmado
-      if (!authData.session) {
-        console.log('Email precisa ser confirmado - aguardando confirmação');
-        setStep(3); // Novo step para confirmação
-        toast({
-          title: "Confirme seu email",
-          description: "Enviamos um link de confirmação para seu email. Clique no link para continuar."
-        });
-        return;
-      }
-
-      // Se chegou aqui, sessão foi estabelecida - prosseguir com criação da barbearia
+      // Prosseguir com criação da barbearia
       await createBarbershopAndProfile(authData.user.id);
     } catch (error: any) {
       console.error('Erro no cadastro:', error);
