@@ -138,8 +138,8 @@ export const usePostgreSQLStats = () => {
 
   const fetchLockStats = async () => {
     try {
-      const { data } = await supabase.rpc('get_lock_stats');
-      if (data) {
+      const { data } = await supabase.rpc('get_lock_stats') as { data: any };
+      if (data && Array.isArray(data)) {
         setLockStats(data.map((lock: any) => ({
           lockType: lock.lock_type,
           databaseName: lock.database_name,
