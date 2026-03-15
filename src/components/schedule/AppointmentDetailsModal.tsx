@@ -266,14 +266,14 @@ export const AppointmentDetailsModal = ({
         
         const { data, error } = await supabase
           .from('commands')
-          .insert({
+          .insert([{
             client_id: appointment.client_id,
             barber_id: appointment.barber_id,
             appointment_id: appointment.id,
             barbershop_id: appointment.barbershop_id,
             status: 'open',
-            command_number: nextNumber || 1
-          })
+            command_number: nextNumber || '0001'
+          }])
           .select('*')
           .single();
 

@@ -175,8 +175,8 @@ export const usePostgreSQLStats = () => {
 
   const fetchVacuumStats = async () => {
     try {
-      const { data } = await supabase.rpc('get_vacuum_stats');
-      if (data) {
+      const { data } = await supabase.rpc('get_vacuum_stats') as { data: any };
+      if (data && Array.isArray(data)) {
         setVacuumStats(data.map((vacuum: any) => ({
           schemaName: vacuum.schema_name,
           tableName: vacuum.table_name,

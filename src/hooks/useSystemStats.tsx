@@ -45,7 +45,7 @@ export const useSystemStats = () => {
 
       // Buscar estatísticas das tabelas
       const { data: tableStatsData } = await supabase
-        .rpc('get_table_stats');
+        .rpc('get_table_stats') as { data: any };
 
       // Buscar total de usuários
       const { count: totalUsers } = await supabase

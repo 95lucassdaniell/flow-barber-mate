@@ -267,13 +267,14 @@ export function useSubscriptionValidation() {
       // Record usage in history
       const { error: historyError } = await supabase
         .from("subscription_usage_history")
-        .insert({
+        .insert([{
           subscription_id: subscriptionId,
           service_id: serviceId,
           command_id: commandId,
           original_price: originalPrice,
           discounted_price: 0,
-        });
+          barbershop_id: (await supabase.from('client_subscriptions').select('barbershop_id').eq('id', subscriptionId).single()).data?.barbershop_id || '',
+        }]);
 
       if (historyError) {
         console.error("Error recording usage history:", historyError);
