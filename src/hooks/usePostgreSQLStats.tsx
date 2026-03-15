@@ -157,8 +157,8 @@ export const usePostgreSQLStats = () => {
 
   const fetchRecommendations = async () => {
     try {
-      const { data } = await supabase.rpc('get_optimization_recommendations');
-      if (data) {
+      const { data } = await supabase.rpc('get_optimization_recommendations') as { data: any };
+      if (data && Array.isArray(data)) {
         setRecommendations(data.map((rec: any) => ({
           category: rec.category,
           recommendation: rec.recommendation,
