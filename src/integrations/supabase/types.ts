@@ -347,39 +347,51 @@ export type Database = {
         Row: {
           barbershop_id: string
           cash_register_id: string
+          closed_at: string | null
           closed_by: string | null
           closing_balance: number | null
           created_at: string
+          discrepancy: number | null
           id: string
           notes: string | null
+          opening_balance: number | null
           total_card: number | null
           total_cash: number | null
+          total_multiple: number | null
           total_pix: number | null
           total_sales: number | null
         }
         Insert: {
           barbershop_id: string
           cash_register_id: string
+          closed_at?: string | null
           closed_by?: string | null
           closing_balance?: number | null
           created_at?: string
+          discrepancy?: number | null
           id?: string
           notes?: string | null
+          opening_balance?: number | null
           total_card?: number | null
           total_cash?: number | null
+          total_multiple?: number | null
           total_pix?: number | null
           total_sales?: number | null
         }
         Update: {
           barbershop_id?: string
           cash_register_id?: string
+          closed_at?: string | null
           closed_by?: string | null
           closing_balance?: number | null
           created_at?: string
+          discrepancy?: number | null
           id?: string
           notes?: string | null
+          opening_balance?: number | null
           total_card?: number | null
           total_cash?: number | null
+          total_multiple?: number | null
           total_pix?: number | null
           total_sales?: number | null
         }
@@ -811,6 +823,80 @@ export type Database = {
           },
         ]
       }
+      commissions: {
+        Row: {
+          amount: number
+          barbershop_id: string
+          command_id: string | null
+          commission_rate: number | null
+          created_at: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          provider_id: string
+          sale_id: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          barbershop_id: string
+          command_id?: string | null
+          commission_rate?: number | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          provider_id: string
+          sale_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          barbershop_id?: string
+          command_id?: string | null
+          commission_rate?: number | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          provider_id?: string
+          sale_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commissions_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_command_id_fkey"
+            columns: ["command_id"]
+            isOneToOne: false
+            referencedRelation: "commands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coupon_applicable_items: {
         Row: {
           coupon_id: string
@@ -836,6 +922,58 @@ export type Database = {
             columns: ["coupon_id"]
             isOneToOne: false
             referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupon_redemptions: {
+        Row: {
+          client_id: string | null
+          coupon_id: string
+          created_at: string
+          discount_applied: number
+          id: string
+          redeemed_at: string
+          sale_id: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          coupon_id: string
+          created_at?: string
+          discount_applied?: number
+          id?: string
+          redeemed_at?: string
+          sale_id?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          coupon_id?: string
+          created_at?: string
+          discount_applied?: number
+          id?: string
+          redeemed_at?: string
+          sale_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_redemptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
             referencedColumns: ["id"]
           },
         ]
@@ -1596,6 +1734,138 @@ export type Database = {
             columns: ["barbershop_id"]
             isOneToOne: false
             referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_financial_records: {
+        Row: {
+          amount: number
+          barbershop_id: string
+          client_id: string | null
+          commission_amount: number | null
+          created_at: string
+          id: string
+          net_amount: number | null
+          notes: string | null
+          payment_date: string | null
+          payment_method: string | null
+          provider_id: string | null
+          status: string | null
+          subscription_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          barbershop_id: string
+          client_id?: string | null
+          commission_amount?: number | null
+          created_at?: string
+          id?: string
+          net_amount?: number | null
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          provider_id?: string | null
+          status?: string | null
+          subscription_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          barbershop_id?: string
+          client_id?: string | null
+          commission_amount?: number | null
+          created_at?: string
+          id?: string
+          net_amount?: number | null
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          provider_id?: string | null
+          status?: string | null
+          subscription_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_financial_records_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_financial_records_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_financial_records_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_financial_records_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "client_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_usage_history: {
+        Row: {
+          barbershop_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          service_id: string | null
+          subscription_id: string
+          used_at: string
+        }
+        Insert: {
+          barbershop_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          service_id?: string | null
+          subscription_id: string
+          used_at?: string
+        }
+        Update: {
+          barbershop_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          service_id?: string | null
+          subscription_id?: string
+          used_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_usage_history_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_usage_history_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_usage_history_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "client_subscriptions"
             referencedColumns: ["id"]
           },
         ]
