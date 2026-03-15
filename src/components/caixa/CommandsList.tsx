@@ -34,7 +34,7 @@ import { formatCurrency } from "@/lib/utils";
 
 interface Command {
   id: string;
-  command_number: number;
+  command_number: string;
   status: string;
   total_amount: number;
   payment_method: string;

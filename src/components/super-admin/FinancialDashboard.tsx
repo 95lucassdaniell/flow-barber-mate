@@ -30,9 +30,9 @@ interface Barbershop {
   monthly_revenue: number;
   trial_start_date: string;
   trial_end_date: string;
-  next_billing_date: string;
-  total_users: number;
-  total_appointments: number;
+  next_billing_date?: string;
+  total_users?: number;
+  total_appointments?: number;
 }
 
 const FinancialDashboard = () => {

@@ -21,7 +21,7 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
   const [instanceStatus, setInstanceStatus] = useState<string>('disconnected');
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
-  const [statusInterval, setStatusInterval] = useState<NodeJS.Timeout | null>(null);
+  const [statusInterval, setStatusInterval] = useState<ReturnType<typeof setInterval> | null>(null);
   const [settings, setSettings] = useState({
     businessName: "",
     autoReply: false,

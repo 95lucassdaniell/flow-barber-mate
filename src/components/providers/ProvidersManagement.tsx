@@ -86,7 +86,7 @@ const ProvidersManagement = () => {
   const handleResetPassword = async (provider: any) => {
     try {
       const { data, error } = await supabase.rpc('set_provider_password', {
-        provider_id: provider.id,
+        provider_user_id: provider.user_id,
         new_password: 'vargas321'
       });
 

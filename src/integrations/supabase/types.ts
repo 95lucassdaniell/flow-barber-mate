@@ -240,6 +240,7 @@ export type Database = {
           logo_url: string | null
           monthly_revenue: number | null
           name: string
+          next_billing_date: string | null
           opening_hours: Json | null
           payment_status: string | null
           phone: string | null
@@ -262,6 +263,7 @@ export type Database = {
           logo_url?: string | null
           monthly_revenue?: number | null
           name: string
+          next_billing_date?: string | null
           opening_hours?: Json | null
           payment_status?: string | null
           phone?: string | null
@@ -284,6 +286,7 @@ export type Database = {
           logo_url?: string | null
           monthly_revenue?: number | null
           name?: string
+          next_billing_date?: string | null
           opening_hours?: Json | null
           payment_status?: string | null
           phone?: string | null
@@ -393,6 +396,93 @@ export type Database = {
             columns: ["cash_register_id"]
             isOneToOne: false
             referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_register_items: {
+        Row: {
+          barber_id: string | null
+          cash_register_id: string
+          client_id: string | null
+          commission_amount: number | null
+          commission_rate: number | null
+          created_at: string
+          id: string
+          item_type: string
+          product_id: string | null
+          quantity: number
+          service_id: string | null
+          total_price: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          barber_id?: string | null
+          cash_register_id: string
+          client_id?: string | null
+          commission_amount?: number | null
+          commission_rate?: number | null
+          created_at?: string
+          id?: string
+          item_type?: string
+          product_id?: string | null
+          quantity?: number
+          service_id?: string | null
+          total_price?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string | null
+          cash_register_id?: string
+          client_id?: string | null
+          commission_amount?: number | null
+          commission_rate?: number | null
+          created_at?: string
+          id?: string
+          item_type?: string
+          product_id?: string | null
+          quantity?: number
+          service_id?: string | null
+          total_price?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_register_items_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_items_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_items_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
             referencedColumns: ["id"]
           },
         ]
@@ -1763,10 +1853,41 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      archive_old_data: {
+        Args: { retention_months?: number }
+        Returns: {
+          partitions_dropped: number
+          records_archived: number
+          table_name: string
+        }[]
+      }
+      cleanup_ancient_archives: {
+        Args: { years_to_keep?: number }
+        Returns: number
+      }
       generate_command_number: {
         Args: { p_barbershop_id: string }
         Returns: string
       }
+      get_archive_stats: {
+        Args: never
+        Returns: {
+          active_records: number
+          archived_records: number
+          oldest_archive_date: string
+          table_name: string
+          total_active_size: string
+          total_archive_size: string
+        }[]
+      }
+      get_barbershop_performance_stats: {
+        Args: { barbershop_uuid: string }
+        Returns: {
+          metric_name: string
+          metric_value: number
+        }[]
+      }
+      get_connection_stats: { Args: never; Returns: Json }
       get_financial_overview: {
         Args: never
         Returns: {
@@ -1778,6 +1899,10 @@ export type Database = {
           total_trial_accounts: number
         }[]
       }
+      get_lock_stats: { Args: never; Returns: Json }
+      get_memory_stats: { Args: never; Returns: Json }
+      get_optimization_recommendations: { Args: never; Returns: Json }
+      get_slow_queries: { Args: never; Returns: Json }
       set_provider_password: {
         Args: { new_password: string; provider_user_id: string }
         Returns: undefined
