@@ -25,7 +25,7 @@ export interface CommandItem {
 
 export interface Command {
   id: string;
-  command_number: number;
+  command_number: string;
   appointment_id?: string;
   client_id: string;
   barber_id: string;

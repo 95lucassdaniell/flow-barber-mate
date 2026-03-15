@@ -193,7 +193,7 @@ const CommandsListContent = () => {
           comparison = a.total_amount - b.total_amount;
           break;
         case 'number':
-          comparison = a.command_number - b.command_number;
+          comparison = Number(a.command_number) - Number(b.command_number);
           break;
       }
 
