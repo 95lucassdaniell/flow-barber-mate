@@ -2196,6 +2196,7 @@ export type Database = {
         }[]
       }
       get_connection_stats: { Args: never; Returns: Json }
+      get_current_user_barbershop_id: { Args: never; Returns: string }
       get_financial_overview: {
         Args: never
         Returns: {
@@ -2236,6 +2237,10 @@ export type Database = {
           table_name: string
           vacuum_count: number
         }[]
+      }
+      is_barbershop_admin: {
+        Args: { _barbershop_id: string }
+        Returns: boolean
       }
       set_provider_password: {
         Args: { new_password: string; provider_user_id: string }
