@@ -826,47 +826,66 @@ export type Database = {
       commissions: {
         Row: {
           amount: number
+          barber_id: string | null
           barbershop_id: string
+          base_amount: number | null
           command_id: string | null
           commission_rate: number | null
+          commission_type: string | null
           created_at: string
           id: string
           notes: string | null
           paid_at: string | null
           provider_id: string
           sale_id: string | null
+          sale_item_id: string | null
           status: string | null
           updated_at: string
         }
         Insert: {
           amount?: number
+          barber_id?: string | null
           barbershop_id: string
+          base_amount?: number | null
           command_id?: string | null
           commission_rate?: number | null
+          commission_type?: string | null
           created_at?: string
           id?: string
           notes?: string | null
           paid_at?: string | null
           provider_id: string
           sale_id?: string | null
+          sale_item_id?: string | null
           status?: string | null
           updated_at?: string
         }
         Update: {
           amount?: number
+          barber_id?: string | null
           barbershop_id?: string
+          base_amount?: number | null
           command_id?: string | null
           commission_rate?: number | null
+          commission_type?: string | null
           created_at?: string
           id?: string
           notes?: string | null
           paid_at?: string | null
           provider_id?: string
           sale_id?: string | null
+          sale_item_id?: string | null
           status?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "commissions_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "commissions_barbershop_id_fkey"
             columns: ["barbershop_id"]
@@ -1745,6 +1764,7 @@ export type Database = {
           client_id: string | null
           commission_amount: number | null
           created_at: string
+          due_date: string | null
           id: string
           net_amount: number | null
           notes: string | null
@@ -1761,6 +1781,7 @@ export type Database = {
           client_id?: string | null
           commission_amount?: number | null
           created_at?: string
+          due_date?: string | null
           id?: string
           net_amount?: number | null
           notes?: string | null
@@ -1777,6 +1798,7 @@ export type Database = {
           client_id?: string | null
           commission_amount?: number | null
           created_at?: string
+          due_date?: string | null
           id?: string
           net_amount?: number | null
           notes?: string | null
@@ -1821,27 +1843,36 @@ export type Database = {
       subscription_usage_history: {
         Row: {
           barbershop_id: string
+          command_id: string | null
           created_at: string
+          discounted_price: number | null
           id: string
           notes: string | null
+          original_price: number | null
           service_id: string | null
           subscription_id: string
           used_at: string
         }
         Insert: {
           barbershop_id: string
+          command_id?: string | null
           created_at?: string
+          discounted_price?: number | null
           id?: string
           notes?: string | null
+          original_price?: number | null
           service_id?: string | null
           subscription_id: string
           used_at?: string
         }
         Update: {
           barbershop_id?: string
+          command_id?: string | null
           created_at?: string
+          discounted_price?: number | null
           id?: string
           notes?: string | null
+          original_price?: number | null
           service_id?: string | null
           subscription_id?: string
           used_at?: string
@@ -1852,6 +1883,13 @@ export type Database = {
             columns: ["barbershop_id"]
             isOneToOne: false
             referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_usage_history_command_id_fkey"
+            columns: ["command_id"]
+            isOneToOne: false
+            referencedRelation: "commands"
             referencedColumns: ["id"]
           },
           {
@@ -2173,6 +2211,32 @@ export type Database = {
       get_memory_stats: { Args: never; Returns: Json }
       get_optimization_recommendations: { Args: never; Returns: Json }
       get_slow_queries: { Args: never; Returns: Json }
+      get_table_stats: {
+        Args: never
+        Returns: {
+          index_size: string
+          row_count: number
+          table_name: string
+          table_size: string
+        }[]
+      }
+      get_vacuum_stats: {
+        Args: never
+        Returns: {
+          analyze_count: number
+          autoanalyze_count: number
+          autovacuum_count: number
+          dead_tuples: number
+          last_analyze: string
+          last_autoanalyze: string
+          last_autovacuum: string
+          last_vacuum: string
+          live_tuples: number
+          schema_name: string
+          table_name: string
+          vacuum_count: number
+        }[]
+      }
       set_provider_password: {
         Args: { new_password: string; provider_user_id: string }
         Returns: undefined

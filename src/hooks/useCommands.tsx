@@ -357,14 +357,17 @@ export const useCommands = () => {
           await supabase
             .from('commissions')
             .insert({
+              provider_id: command.barber_id,
+              barbershop_id: command.barbershop_id,
+              command_id: command.id,
               sale_id: sale.id,
               sale_item_id: sale.id,
               barber_id: command.barber_id,
-              barbershop_id: command.barbershop_id,
               commission_type: item.item_type,
               base_amount: item.total_price,
               commission_rate: item.commission_rate,
               commission_amount: item.commission_amount,
+              amount: item.commission_amount,
               status: 'pending',
             });
         }

@@ -199,8 +199,8 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
       setInstanceStatus(data.status);
       
       // Start checking status periodically with optimized timing
-      let qrStatusInterval: NodeJS.Timeout;
-      let timeoutId: NodeJS.Timeout;
+      let qrStatusInterval: ReturnType<typeof setInterval>;
+      let timeoutId: ReturnType<typeof setTimeout>;
 
       const startStatusCheck = () => {
         qrStatusInterval = setInterval(async () => {

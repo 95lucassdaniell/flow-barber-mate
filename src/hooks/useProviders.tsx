@@ -165,7 +165,7 @@ export const useProviders = (barbershopId?: string) => {
         try {
           const password = providerData.password || 'vargas321';
           await supabase.rpc('set_provider_password', {
-            provider_id: data.id,
+            provider_user_id: data.user_id,
             new_password: password
           });
         } catch (passwordError) {
