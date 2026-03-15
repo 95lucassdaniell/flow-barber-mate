@@ -135,10 +135,10 @@ export const useScheduleBlocks = (barbershopId?: string) => {
     try {
       const { error } = await supabase
         .from('schedule_blocks')
-        .insert({
+        .insert([{
           ...blockData,
           barbershop_id: barbershopId,
-        });
+        }]);
 
       if (error) {
         console.error('❌ Erro Supabase ao criar bloqueio:', error);

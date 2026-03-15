@@ -78,8 +78,8 @@ export const usePostgreSQLStats = () => {
 
   const fetchConnectionStats = async () => {
     try {
-      const { data } = await supabase.rpc('get_connection_stats');
-      if (data && data.length > 0) {
+      const { data } = await supabase.rpc('get_connection_stats') as { data: any };
+      if (data && Array.isArray(data) && data.length > 0) {
         const stats = data[0];
         setConnectionStats({
           totalConnections: stats.total_connections,
@@ -97,8 +97,8 @@ export const usePostgreSQLStats = () => {
 
   const fetchMemoryStats = async () => {
     try {
-      const { data } = await supabase.rpc('get_memory_stats');
-      if (data && data.length > 0) {
+      const { data } = await supabase.rpc('get_memory_stats') as { data: any };
+      if (data && Array.isArray(data) && data.length > 0) {
         const stats = data[0];
         setMemoryStats({
           sharedBuffersSize: stats.shared_buffers_size,
@@ -119,8 +119,8 @@ export const usePostgreSQLStats = () => {
 
   const fetchSlowQueries = async () => {
     try {
-      const { data } = await supabase.rpc('get_slow_queries');
-      if (data) {
+      const { data } = await supabase.rpc('get_slow_queries') as { data: any };
+      if (data && Array.isArray(data)) {
         setSlowQueries(data.map((query: any) => ({
           queryText: query.query_text,
           calls: query.calls,
@@ -138,8 +138,8 @@ export const usePostgreSQLStats = () => {
 
   const fetchLockStats = async () => {
     try {
-      const { data } = await supabase.rpc('get_lock_stats');
-      if (data) {
+      const { data } = await supabase.rpc('get_lock_stats') as { data: any };
+      if (data && Array.isArray(data)) {
         setLockStats(data.map((lock: any) => ({
           lockType: lock.lock_type,
           databaseName: lock.database_name,
@@ -157,8 +157,8 @@ export const usePostgreSQLStats = () => {
 
   const fetchRecommendations = async () => {
     try {
-      const { data } = await supabase.rpc('get_optimization_recommendations');
-      if (data) {
+      const { data } = await supabase.rpc('get_optimization_recommendations') as { data: any };
+      if (data && Array.isArray(data)) {
         setRecommendations(data.map((rec: any) => ({
           category: rec.category,
           recommendation: rec.recommendation,
@@ -175,8 +175,8 @@ export const usePostgreSQLStats = () => {
 
   const fetchVacuumStats = async () => {
     try {
-      const { data } = await supabase.rpc('get_vacuum_stats');
-      if (data) {
+      const { data } = await supabase.rpc('get_vacuum_stats') as { data: any };
+      if (data && Array.isArray(data)) {
         setVacuumStats(data.map((vacuum: any) => ({
           schemaName: vacuum.schema_name,
           tableName: vacuum.table_name,

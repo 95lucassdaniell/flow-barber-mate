@@ -165,13 +165,15 @@ export const useSales = () => {
       // Criar comissões
       const commissions = saleItems.map(item => ({
         barbershop_id: profile.barbershop_id,
+        provider_id: saleData.barber_id,
         barber_id: saleData.barber_id,
         sale_id: sale.id,
-        sale_item_id: item.sale_id, // Será atualizado com o ID real
+        sale_item_id: item.sale_id,
         commission_type: item.item_type,
         base_amount: item.total_price,
         commission_rate: item.commission_rate,
         commission_amount: item.commission_amount,
+        amount: item.commission_amount,
       }));
 
       const { error: commissionsError } = await supabase

@@ -2,7 +2,7 @@
 class GlobalStateManager {
   private static instance: GlobalStateManager;
   private emergencyStopActive = false;
-  private operationTimeouts: Map<string, NodeJS.Timeout> = new Map();
+  private operationTimeouts: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private circuitBreakers = new Map<string, { count: number; lastReset: number; blocked: boolean }>();
   private rateLimiters = new Map<string, { calls: number; lastReset: number }>();
 

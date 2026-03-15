@@ -21,7 +21,7 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
   const [instanceStatus, setInstanceStatus] = useState<string>('disconnected');
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
-  const [statusInterval, setStatusInterval] = useState<NodeJS.Timeout | null>(null);
+  const [statusInterval, setStatusInterval] = useState<ReturnType<typeof setInterval> | null>(null);
   const [settings, setSettings] = useState({
     businessName: "",
     autoReply: false,
@@ -199,8 +199,8 @@ const WhatsAppConfig: React.FC<WhatsAppConfigProps> = ({ isConnected, setIsConne
       setInstanceStatus(data.status);
       
       // Start checking status periodically with optimized timing
-      let qrStatusInterval: NodeJS.Timeout;
-      let timeoutId: NodeJS.Timeout;
+      let qrStatusInterval: ReturnType<typeof setInterval>;
+      let timeoutId: ReturnType<typeof setTimeout>;
 
       const startStatusCheck = () => {
         qrStatusInterval = setInterval(async () => {
