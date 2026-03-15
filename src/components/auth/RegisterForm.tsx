@@ -207,7 +207,7 @@ const RegisterForm = () => {
       description: "Conta criada com sucesso! Redirecionando..."
     });
     setTimeout(() => {
-      navigate('/app');
+      navigate(`/app/${barbershop.slug}`);
     }, 1500);
   };
   const resendConfirmationEmail = async () => {
