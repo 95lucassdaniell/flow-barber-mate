@@ -238,11 +238,19 @@ export type Database = {
           email: string | null
           id: string
           logo_url: string | null
+          monthly_revenue: number | null
           name: string
           opening_hours: Json | null
+          payment_status: string | null
           phone: string | null
+          plan: string | null
           slug: string
           status: string
+          subscription_start_date: string | null
+          total_appointments: number | null
+          total_users: number | null
+          trial_end_date: string | null
+          trial_start_date: string | null
           updated_at: string
         }
         Insert: {
@@ -252,11 +260,19 @@ export type Database = {
           email?: string | null
           id?: string
           logo_url?: string | null
+          monthly_revenue?: number | null
           name: string
           opening_hours?: Json | null
+          payment_status?: string | null
           phone?: string | null
+          plan?: string | null
           slug: string
           status?: string
+          subscription_start_date?: string | null
+          total_appointments?: number | null
+          total_users?: number | null
+          trial_end_date?: string | null
+          trial_start_date?: string | null
           updated_at?: string
         }
         Update: {
@@ -266,11 +282,19 @@ export type Database = {
           email?: string | null
           id?: string
           logo_url?: string | null
+          monthly_revenue?: number | null
           name?: string
           opening_hours?: Json | null
+          payment_status?: string | null
           phone?: string | null
+          plan?: string | null
           slug?: string
           status?: string
+          subscription_start_date?: string | null
+          total_appointments?: number | null
+          total_users?: number | null
+          trial_end_date?: string | null
+          trial_start_date?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1516,6 +1540,8 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          message_template: string | null
+          name: string | null
           template_id: string | null
           trigger_conditions: Json | null
           trigger_type: string
@@ -1526,6 +1552,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          message_template?: string | null
+          name?: string | null
           template_id?: string | null
           trigger_conditions?: Json | null
           trigger_type: string
@@ -1536,6 +1564,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          message_template?: string | null
+          name?: string | null
           template_id?: string | null
           trigger_conditions?: Json | null
           trigger_type?: string
@@ -1687,27 +1717,36 @@ export type Database = {
       whatsapp_templates: {
         Row: {
           barbershop_id: string
+          category: string | null
           content: string
           created_at: string
           id: string
+          is_active: boolean | null
           name: string
           updated_at: string
+          variables: string[] | null
         }
         Insert: {
           barbershop_id: string
+          category?: string | null
           content: string
           created_at?: string
           id?: string
+          is_active?: boolean | null
           name: string
           updated_at?: string
+          variables?: string[] | null
         }
         Update: {
           barbershop_id?: string
+          category?: string | null
           content?: string
           created_at?: string
           id?: string
+          is_active?: boolean | null
           name?: string
           updated_at?: string
+          variables?: string[] | null
         }
         Relationships: [
           {
@@ -1727,6 +1766,17 @@ export type Database = {
       generate_command_number: {
         Args: { p_barbershop_id: string }
         Returns: string
+      }
+      get_financial_overview: {
+        Args: never
+        Returns: {
+          annual_revenue: number
+          monthly_revenue: number
+          total_active_accounts: number
+          total_cancelled_accounts: number
+          total_overdue_accounts: number
+          total_trial_accounts: number
+        }[]
       }
       set_provider_password: {
         Args: { new_password: string; provider_user_id: string }
