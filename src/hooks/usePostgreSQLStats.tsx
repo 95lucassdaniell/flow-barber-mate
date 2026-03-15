@@ -119,8 +119,8 @@ export const usePostgreSQLStats = () => {
 
   const fetchSlowQueries = async () => {
     try {
-      const { data } = await supabase.rpc('get_slow_queries');
-      if (data) {
+      const { data } = await supabase.rpc('get_slow_queries') as { data: any };
+      if (data && Array.isArray(data)) {
         setSlowQueries(data.map((query: any) => ({
           queryText: query.query_text,
           calls: query.calls,
