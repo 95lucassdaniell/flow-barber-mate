@@ -1650,7 +1650,7 @@ export type Database = {
           end_time: string | null
           id: string
           is_full_day: boolean | null
-          provider_id: string
+          provider_id: string | null
           recurrence_type: string | null
           start_date: string | null
           start_time: string | null
@@ -1669,7 +1669,7 @@ export type Database = {
           end_time?: string | null
           id?: string
           is_full_day?: boolean | null
-          provider_id: string
+          provider_id?: string | null
           recurrence_type?: string | null
           start_date?: string | null
           start_time?: string | null
@@ -1688,7 +1688,7 @@ export type Database = {
           end_time?: string | null
           id?: string
           is_full_day?: boolean | null
-          provider_id?: string
+          provider_id?: string | null
           recurrence_type?: string | null
           start_date?: string | null
           start_time?: string | null
